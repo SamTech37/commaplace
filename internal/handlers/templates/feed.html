@@ -1,0 +1,66 @@
+{{define "title"}}Feed · commaplace{{end}}
+{{define "content"}}
+  <h1>Feed</h1>
+  <nav class="feed-tabs">
+    <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
+    <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
+  </nav>
+
+  {{if .TagChips}}
+    <div class="filter-chips">
+      <a class="filter-chip{{if not .TagFilter}} active{{end}}" href="/feed{{if eq .Tab "following"}}?tab=following{{end}}">全部</a>
+      {{range .TagChips}}
+        <a class="filter-chip{{if .Active}} active{{end}}" href="/feed?tag={{.Tag}}{{if eq $.Tab "following"}}&tab=following{{end}}">#{{.Tag}} <span class="chip-count">{{.Count}}</span></a>
+      {{end}}
+    </div>
+  {{end}}
+
+  {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
+    <p class="folder-tree empty"><a href="/login">Log in</a> to see notes from people you follow.</p>
+  {{else if .Cards}}
+    <div class="masonry">
+      {{range .Cards}}
+        {{template "card" .}}
+      {{end}}
+    </div>
+    {{if .OlderURL}}
+      <p style="text-align:center;margin-top:2rem"><a class="older-link" href="{{.OlderURL}}">Older →</a></p>
+    {{end}}
+  {{else}}
+    <p class="folder-tree empty">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
+  {{end}}
+{{end}}
+
+{{define "card"}}
+<a class="masonry-card variant-{{.Variant}}" href="{{.URL}}">
+  <div class="card-title">{{.Title}}</div>
+  {{if eq .Variant "text"}}
+    {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
+  {{else if eq .Variant "list"}}
+    <ul class="card-list">
+      {{range .ListItems}}<li>{{.}}</li>{{end}}
+    </ul>
+  {{else if eq .Variant "quote"}}
+    <blockquote class="card-quote">{{.Quote}}</blockquote>
+  {{else if eq .Variant "links"}}
+    {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
+    <div class="card-connections">
+      {{range $i, $chip := .LinkChips}}
+        {{if lt $i 2}}<div class="connection">→ {{$chip}}</div>{{end}}
+      {{end}}
+      {{if gt (len .LinkChips) 2}}
+        <div class="connection-more">+ {{sub (len .LinkChips) 2}} 篇相關筆記</div>
+      {{end}}
+    </div>
+  {{end}}
+  <div class="card-meta">
+    <span class="avatar-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
+    <span class="meta-handle">@{{.AuthorHandle}}</span>
+    {{if .FolderPath}}<span class="meta-folder">in {{.FolderPath}}</span>{{end}}
+    <span class="meta-spacer"></span>
+    {{if gt .LikeCount 0}}<span class="meta-like">♡ {{.LikeCount}}</span>{{end}}
+    {{if gt .LinkCount 0}}<span class="meta-links">→ {{.LinkCount}}</span>{{end}}
+    {{if gt .CrossCount 0}}<span class="meta-cross">→ {{.CrossCount}} 跨</span>{{end}}
+  </div>
+</a>
+{{end}}

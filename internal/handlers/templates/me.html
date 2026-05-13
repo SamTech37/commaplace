@@ -1,0 +1,16 @@
+{{define "title"}}@{{.User.Handle}} · commaplace{{end}}
+{{define "content"}}
+  <h1>@{{.User.Handle}}</h1>
+  <p class="note-meta">
+    <span>{{.User.Email}}</span>
+    <span class="crumb-sep">·</span>
+    <a href="/{{.User.Handle}}">view public profile</a>
+  </p>
+  {{if .Pinned}}
+    <div class="pinned-card">
+      <div class="pinned-label">📌 Pinned</div>
+      <a href="{{.Pinned.URL}}" class="pinned-link">{{.Pinned.Title}}</a>
+    </div>
+  {{end}}
+  <p><a href="/write">Write a note</a></p>
+{{end}}

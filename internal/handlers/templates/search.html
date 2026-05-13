@@ -1,0 +1,34 @@
+{{define "title"}}{{if .Query}}{{.Query}} · search{{else}}Search{{end}} · commaplace{{end}}
+{{define "content"}}
+  <h1>Search</h1>
+  <form method="GET" action="/search" style="margin-bottom:1rem">
+    <label>Query
+      <input type="search" name="q" value="{{.Query}}" autofocus>
+    </label>
+    {{if .Scope}}<input type="hidden" name="scope" value="{{.Scope}}">{{end}}
+    <button type="submit">Search</button>
+  </form>
+
+  {{if .Query}}
+    <div class="filter-chips">
+      <a class="filter-chip{{if not .Scope}} active{{end}}" href="/search?q={{.Query}}">全部</a>
+      {{if .ViewerLoggedIn}}
+        <a class="filter-chip{{if eq .Scope "mine"}} active{{end}}" href="/search?q={{.Query}}&scope=mine">我的</a>
+        <a class="filter-chip{{if eq .Scope "following"}} active{{end}}" href="/search?q={{.Query}}&scope=following">我追蹤的人</a>
+      {{end}}
+    </div>
+
+    {{if .Hits}}
+      <p class="note-meta">{{len .Hits}} result{{if ne (len .Hits) 1}}s{{end}}</p>
+      {{range .Hits}}
+        <a class="note-card" href="{{.URL}}">
+          <div class="note-title">{{.Title}}</div>
+          <div class="note-excerpt">{{.Snippet}}</div>
+          <div class="note-foot">@{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}} · {{.UpdatedRel}}</div>
+        </a>
+      {{end}}
+    {{else}}
+      <p class="folder-tree empty">No matches.</p>
+    {{end}}
+  {{end}}
+{{end}}

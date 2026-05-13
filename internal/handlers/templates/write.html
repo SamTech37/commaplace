@@ -1,0 +1,40 @@
+{{define "title"}}Write · commaplace{{end}}
+{{define "content"}}
+  <h1>Write a note</h1>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <form method="POST" action="/write">
+    <label>Title
+      <input type="text" name="title" required maxlength="200" value="{{.Form.Title}}" autofocus>
+    </label>
+    <label>Folder path <small style="font-weight:400;color:var(--muted)">(optional, e.g. <code>music/mixing</code>)</small>
+      <input type="text" name="folder_path" maxlength="200" value="{{.Form.FolderPath}}">
+    </label>
+    <label>Tags <small style="font-weight:400;color:var(--muted)">(comma-separated, e.g. <code>混音, workflow</code>)</small>
+      <input type="text" name="tags" maxlength="500" value="{{.Form.Tags}}">
+    </label>
+    <label>Body (markdown) <small style="font-weight:400;color:var(--muted)">— type <code>[[</code> to link to another note</small>
+      <textarea name="body_md"
+                data-autocomplete="1"
+                hx-post="/preview"
+                hx-trigger="input changed delay:400ms"
+                hx-target="#preview"
+                hx-swap="innerHTML"
+                hx-indicator="#preview-skeleton">{{.Form.BodyMD}}</textarea>
+      <div id="ac-popup" class="ac-popup" hidden>
+        <ul></ul>
+      </div>
+    </label>
+    <div class="editor-actions">
+      <button type="submit">Publish</button>
+    </div>
+  </form>
+  <section class="preview">
+    <h2>Preview</h2>
+    <div id="preview-skeleton" class="skeleton-group htmx-indicator" aria-hidden="true">
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-line medium"></div>
+      <div class="skeleton skeleton-line short"></div>
+    </div>
+    <div id="preview"></div>
+  </section>
+{{end}}

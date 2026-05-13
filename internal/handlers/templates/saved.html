@@ -1,0 +1,16 @@
+{{define "title"}}Saved · commaplace{{end}}
+{{define "content"}}
+  <h1>Saved</h1>
+  <p class="note-meta">Notes you've hearted, newest first.</p>
+  {{if .Items}}
+    {{range .Items}}
+      <a class="note-card" href="{{.URL}}">
+        <div class="note-title">{{.Title}}</div>
+        {{if .Excerpt}}<div class="note-excerpt">{{.Excerpt}}</div>{{end}}
+        <div class="note-foot">@{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}} · {{.UpdatedRel}}</div>
+      </a>
+    {{end}}
+  {{else}}
+    <p class="folder-tree empty">Nothing here yet. Heart a note to save it.</p>
+  {{end}}
+{{end}}

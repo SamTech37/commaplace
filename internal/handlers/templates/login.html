@@ -1,0 +1,18 @@
+{{define "title"}}Log in · commaplace{{end}}
+{{define "content"}}
+  <h1>Log in</h1>
+  {{if .Sent}}
+    <p class="flash">Magic link sent. Check your inbox (or the dev console where this server is running) and click the link to finish signing in. Links expire in 15 minutes.</p>
+    <p><a href="/login">Send another</a></p>
+  {{else}}
+    {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    <p>Enter your email and we'll send a sign-in link.</p>
+    <form method="POST" action="/login">
+      <label>Email
+        <input type="email" name="email" required autofocus value="{{.Email}}">
+      </label>
+      {{if .Next}}<input type="hidden" name="next" value="{{.Next}}">{{end}}
+      <button type="submit">Send magic link</button>
+    </form>
+  {{end}}
+{{end}}

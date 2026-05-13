@@ -1,0 +1,82 @@
+{{define "title"}}{{.Note.Title}} · @{{.AuthorHandle}} · commaplace{{end}}
+{{define "meta"}}
+  <meta property="og:site_name" content="commaplace">
+  <meta property="og:title" content="{{.Note.Title}} · @{{.AuthorHandle}}">
+  <meta property="og:type" content="article">
+  <meta property="og:article:author" content="@{{.AuthorHandle}}">
+  <meta name="twitter:card" content="summary">
+{{end}}
+{{define "content"}}
+  {{if .From}}
+    <p class="from-banner"><a href="{{.From.URL}}">← 回 {{.From.Title}}</a></p>
+  {{end}}
+  {{if .IsHidden}}
+    <p class="error">This note is hidden by an admin. Only you (the author) and admins can see it.</p>
+  {{end}}
+  <article class="note">
+    <h1>{{.Note.Title}}</h1>
+    <p class="note-meta">
+      <a href="/{{.AuthorHandle}}">@{{.AuthorHandle}}</a>
+      {{range .Crumbs}}<span class="crumb-sep">/</span>{{.}}{{end}}
+      <span class="crumb-sep">·</span>
+      <span>{{.UpdatedRel}}</span>
+    </p>
+    {{if .Tags}}
+      <p class="tag-row">
+        {{range .Tags}}<a class="tag-chip" href="/tag/{{.}}">#{{.}}</a>{{end}}
+      </p>
+    {{end}}
+    <div class="note-body">{{.BodyHTML}}</div>
+    <p class="editor-actions" style="margin-top:2rem">
+      {{if .ViewerLoggedIn}}
+        <form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML">
+          <input type="hidden" name="note_id" value="{{.Note.ID}}">
+          <button type="submit" class="heart{{if .Liked}} liked{{end}}" aria-pressed="{{.Liked}}">{{if .Liked}}♥{{else}}♡{{end}} <span class="count">{{.LikeCount}}</span></button>
+        </form>
+      {{else}}
+        <span class="heart-static">♡ {{.LikeCount}}</span>
+      {{end}}
+      <a class="download-link" href="/api/notes/{{.Note.ID}}/raw">⬇ download .md</a>
+      {{if and .ViewerLoggedIn (not .IsAuthor)}}
+        <span class="report-mount">
+          <button type="button" class="link-btn" onclick="this.nextElementSibling.hidden=false;this.hidden=true">report</button>
+          <form class="inline-form" hx-post="/api/report" hx-target="this" hx-swap="outerHTML" hidden style="display:inline-flex;gap:0.4em;align-items:center">
+            <input type="hidden" name="note_id" value="{{.Note.ID}}">
+            <input type="text" name="reason" placeholder="reason (optional)" maxlength="200" style="font-size:0.85rem;padding:0.2em 0.5em">
+            <button type="submit" class="link-btn">send</button>
+          </form>
+        </span>
+      {{end}}
+    </p>
+  </article>
+  {{if or .BacklinksSame .BacklinksCross}}
+  <section class="backlinks">
+    {{if .BacklinksSame}}
+      <h2>本 vault · linked from</h2>
+      <ul style="list-style:none;padding:0;margin:0 0 1em">
+        {{range .BacklinksSame}}
+        <li class="note-card" style="border:0;padding:0.4em 0">
+          <a href="{{.URL}}" style="text-decoration:none;color:inherit">
+            <div class="note-title">{{.Title}}</div>
+            <div class="note-foot">{{if .FolderPath}}{{.FolderPath}} · {{end}}{{.UpdatedRel}}</div>
+          </a>
+        </li>
+        {{end}}
+      </ul>
+    {{end}}
+    {{if .BacklinksCross}}
+      <h2>跨 vault · 連到別人</h2>
+      <ul style="list-style:none;padding:0;margin:0">
+        {{range .BacklinksCross}}
+        <li class="note-card" style="border:0;padding:0.4em 0">
+          <a href="{{.URL}}" style="text-decoration:none;color:inherit">
+            <div class="note-title">{{.Title}}</div>
+            <div class="note-foot">@{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}} · {{.UpdatedRel}}</div>
+          </a>
+        </li>
+        {{end}}
+      </ul>
+    {{end}}
+  </section>
+  {{end}}
+{{end}}

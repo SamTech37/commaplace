@@ -1,0 +1,45 @@
+{{define "title"}}@{{.Profile.Handle}} · commaplace{{end}}
+{{define "content"}}
+  <h1 style="margin-bottom:0.25em">@{{.Profile.Handle}}</h1>
+  <p class="note-meta">
+    {{.FollowerCount}} follower{{if ne .FollowerCount 1}}s{{end}}
+    <span class="crumb-sep">·</span>
+    {{.FollowingCount}} following
+  </p>
+  {{if and .ViewerLoggedIn (not .IsSelf)}}
+    <form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML" style="margin-bottom:1.25em">
+      <input type="hidden" name="user_id" value="{{.Profile.ID}}">
+      <button type="submit" class="follow-btn{{if .Following}} following{{end}}" aria-pressed="{{.Following}}">{{if .Following}}Following{{else}}Follow{{end}}</button>
+    </form>
+  {{end}}
+  <h2 style="margin-top:1.25em">Folders</h2>
+  {{if .FolderTree}}
+    {{template "folder-node" .FolderTree}}
+  {{else}}
+    <p class="folder-tree empty">No folders yet.</p>
+  {{end}}
+
+  <h2 style="margin-top:1.5em">Recent notes</h2>
+  {{if .Recent}}
+    {{range .Recent}}
+      <a class="note-card" href="{{.URL}}">
+        <div class="note-title">{{.Title}}</div>
+        {{if .Excerpt}}<div class="note-excerpt">{{.Excerpt}}</div>{{end}}
+        <div class="note-foot">{{if .FolderPath}}{{.FolderPath}} · {{end}}{{.UpdatedRel}}</div>
+      </a>
+    {{end}}
+  {{else}}
+    <p class="folder-tree empty">No notes yet.</p>
+  {{end}}
+{{end}}
+
+{{define "folder-node"}}
+<ul class="folder-tree">
+  {{range .Children}}
+    <li>
+      {{if .Path}}<span class="folder-name">{{.Name}}</span>{{end}}
+      {{if .Children}}{{template "folder-node" .}}{{end}}
+    </li>
+  {{end}}
+</ul>
+{{end}}

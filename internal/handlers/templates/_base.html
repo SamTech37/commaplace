@@ -1,0 +1,45 @@
+{{define "base"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{block "title" .}}commaplace{{end}}</title>
+  {{block "meta" .}}
+    <meta property="og:site_name" content="commaplace">
+    <meta property="og:title" content="commaplace">
+    <meta property="og:description" content="Markdown notes that link to each other, including across other people's vaults.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+  {{end}}
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/editor.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="/">commaplace</a>
+      <nav class="nav">
+        <form method="GET" action="/search" class="search-form" role="search">
+          <input type="search" name="q" placeholder="搜尋…" value="{{.SearchQuery}}" aria-label="search">
+        </form>
+        {{if .User}}
+          <a href="/{{.User.Handle}}">@{{.User.Handle}}</a>
+          <a href="/write">write</a>
+          <a href="/feed">feed</a>
+          <form method="POST" action="/logout" class="inline-form">
+            <button type="submit" class="link-btn">logout</button>
+          </form>
+        {{else}}
+          <a href="/feed">feed</a>
+          <a href="/login">login</a>
+        {{end}}
+      </nav>
+    </header>
+    <main class="content">
+      {{block "content" .}}{{end}}
+    </main>
+  </div>
+</body>
+</html>
+{{end}}

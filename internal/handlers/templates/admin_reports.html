@@ -1,0 +1,44 @@
+{{define "title"}}Reports · admin · commaplace{{end}}
+{{define "content"}}
+  <h1>Reports</h1>
+  <p class="note-meta">Open reports first, then resolved.</p>
+  {{if .Reports}}
+    <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--border)">
+          <th style="padding:0.5em 0.5em 0.5em 0">When</th>
+          <th style="padding:0.5em">Note</th>
+          <th style="padding:0.5em">Reporter</th>
+          <th style="padding:0.5em">Reason</th>
+          <th style="padding:0.5em">Status</th>
+          <th style="padding:0.5em">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Reports}}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:0.5em 0.5em 0.5em 0">{{.CreatedRel}}</td>
+            <td style="padding:0.5em"><a href="{{.NoteURL}}">{{.NoteTitle}}</a><br><small>@{{.AuthorHandle}}{{if .NoteHidden}} · <em>hidden</em>{{end}}</small></td>
+            <td style="padding:0.5em">@{{.ReporterHandle}}</td>
+            <td style="padding:0.5em">{{.Reason}}</td>
+            <td style="padding:0.5em">{{.Status}}</td>
+            <td style="padding:0.5em">
+              <form method="POST" action="/admin/hide" class="inline-form">
+                <input type="hidden" name="note_id" value="{{.NoteID}}">
+                {{if .NoteHidden}}
+                  <input type="hidden" name="action" value="unhide">
+                  <button type="submit" class="secondary">Unhide</button>
+                {{else}}
+                  <input type="hidden" name="action" value="hide">
+                  <button type="submit">Hide</button>
+                {{end}}
+              </form>
+            </td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  {{else}}
+    <p class="folder-tree empty">No reports yet.</p>
+  {{end}}
+{{end}}

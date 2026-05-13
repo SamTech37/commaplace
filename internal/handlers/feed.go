@@ -1,0 +1,311 @@
+package handlers
+
+import (
+	"context"
+	"database/sql"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"commaplace/internal/markdown"
+)
+
+
+// feedItem powers list-style cards (/tag, /me/saved, profile recent).
+type feedItem struct {
+	Title        string
+	URL          string
+	Excerpt      string
+	AuthorHandle string
+	FolderPath   string
+	UpdatedRel   string
+}
+
+// feedCard powers the masonry feed: meta-rich card with variant selection.
+type feedCard struct {
+	NoteID       int64
+	Title        string
+	URL          string
+	AuthorHandle string
+	FolderPath   string
+	UpdatedAt    int64
+	UpdatedRel   string
+	LikeCount    int
+	LinkCount    int
+	CrossCount   int
+	Variant      string   // "text" | "list" | "quote" | "links"
+	Excerpt      string   // text variant
+	ListItems    []string // list variant
+	Quote        string   // quote variant
+	LinkChips    []string // links variant
+}
+
+type tagChip struct {
+	Tag    string
+	Count  int
+	Active bool
+}
+
+func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	tab := q.Get("tab")
+	if tab != "following" {
+		tab = "recommended"
+	}
+	tagFilter := normalizeTag(q.Get("tag"))
+	var older int64
+	if v := q.Get("older"); v != "" {
+		older, _ = strconv.ParseInt(v, 10, 64)
+	}
+
+	viewer, _ := s.Auth.CurrentUser(r)
+
+	var (
+		cards []feedCard
+		err   error
+	)
+	if tab == "following" {
+		if viewer == nil {
+			cards = nil
+		} else {
+			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, older, 50)
+		}
+	} else {
+		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, older, 50)
+	}
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	tagChips, _ := loadTopTagChips(r.Context(), s.DB, 8, tagFilter)
+
+	// "older" cursor for pagination — last item's updated_at, or empty.
+	var olderURL string
+	if len(cards) == 50 {
+		last := cards[len(cards)-1]
+		v := r.URL.Query()
+		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+		olderURL = "/feed?" + v.Encode()
+	}
+
+	s.render(w, r, "feed", map[string]any{
+		"Cards":          cards,
+		"Tab":            tab,
+		"TagFilter":      tagFilter,
+		"TagChips":       tagChips,
+		"ViewerLoggedIn": viewer != nil,
+		"OlderURL":       olderURL,
+	})
+}
+
+func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, older int64, limit int) ([]feedCard, error) {
+	args := []any{}
+	q := strings.Builder{}
+	q.WriteString(`
+		SELECT n.id, n.title, n.folder_path, n.slug, n.body_md, n.updated_at, u.handle,
+		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
+		FROM notes n
+		JOIN users u ON u.id = n.author_id
+		WHERE n.hidden_at IS NULL`)
+	if tagFilter != "" {
+		q.WriteString(` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = ?)`)
+		args = append(args, tagFilter)
+	}
+	if older > 0 {
+		q.WriteString(` AND n.updated_at < ?`)
+		args = append(args, older)
+	}
+	q.WriteString(` ORDER BY n.updated_at DESC LIMIT ?`)
+	args = append(args, limit)
+	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	return scanCards(rows)
+}
+
+func (s *Server) queryFollowingCards(ctx context.Context, viewerID int64, tagFilter string, older int64, limit int) ([]feedCard, error) {
+	args := []any{viewerID}
+	q := strings.Builder{}
+	q.WriteString(`
+		SELECT n.id, n.title, n.folder_path, n.slug, n.body_md, n.updated_at, u.handle,
+		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
+		FROM notes n
+		JOIN users u   ON u.id = n.author_id
+		JOIN follows f ON f.followed_id = n.author_id
+		WHERE f.follower_id = ? AND n.hidden_at IS NULL`)
+	if tagFilter != "" {
+		q.WriteString(` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = ?)`)
+		args = append(args, tagFilter)
+	}
+	if older > 0 {
+		q.WriteString(` AND n.updated_at < ?`)
+		args = append(args, older)
+	}
+	q.WriteString(` ORDER BY n.updated_at DESC LIMIT ?`)
+	args = append(args, limit)
+	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	return scanCards(rows)
+}
+
+func scanCards(rows *sql.Rows) ([]feedCard, error) {
+	defer rows.Close()
+	var out []feedCard
+	for rows.Next() {
+		var (
+			c          feedCard
+			folderPath string
+			slug       string
+			body       string
+			handle     string
+		)
+		if err := rows.Scan(&c.NoteID, &c.Title, &folderPath, &slug, &body, &c.UpdatedAt, &handle,
+			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
+			return nil, err
+		}
+		c.FolderPath = folderPath
+		c.AuthorHandle = handle
+		c.URL = noteURL(handle, folderPath, slug)
+		c.UpdatedRel = relativeTime(c.UpdatedAt)
+		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// analyzeCardBody picks a card variant by the body's structural signal.
+// Rules (first match wins):
+//   - starts with ">"           -> quote
+//   - 3+ wiki links             -> links
+//   - top of body is bullet list (3+ bullets) -> list
+//   - else                      -> text excerpt
+// matchBullet returns (text, true) if ln is "- ...", "* ...", or "12. ...".
+func matchBullet(ln string) (string, bool) {
+	if strings.HasPrefix(ln, "- ") {
+		return strings.TrimSpace(ln[2:]), true
+	}
+	if strings.HasPrefix(ln, "* ") {
+		return strings.TrimSpace(ln[2:]), true
+	}
+	for i, r := range ln {
+		if r >= '0' && r <= '9' {
+			continue
+		}
+		if i > 0 && r == '.' && i+1 < len(ln) && ln[i+1] == ' ' {
+			return strings.TrimSpace(ln[i+2:]), true
+		}
+		break
+	}
+	return "", false
+}
+
+func analyzeCardBody(body string) (variant, excerpt string, listItems []string, quote string, linkChips []string) {
+	s := strings.TrimSpace(body)
+
+	if strings.HasPrefix(s, ">") {
+		var qb strings.Builder
+		for _, line := range strings.SplitN(s, "\n", 30) {
+			ln := strings.TrimSpace(line)
+			if strings.HasPrefix(ln, ">") {
+				qb.WriteString(strings.TrimSpace(strings.TrimPrefix(ln, ">")))
+				qb.WriteByte(' ')
+			} else if qb.Len() > 0 {
+				break
+			}
+		}
+		q := strings.TrimSpace(qb.String())
+		if len(q) > 220 {
+			q = string([]rune(q)[:200]) + "…"
+		}
+		return "quote", "", nil, q, nil
+	}
+
+	links := markdown.Extract(body)
+	if len(links) >= 3 {
+		seen := map[string]bool{}
+		chips := make([]string, 0, 6)
+		for _, l := range links {
+			label := l.Slug
+			if l.User != "" {
+				label = "@" + l.User + "/" + l.Slug
+			}
+			if seen[label] {
+				continue
+			}
+			seen[label] = true
+			chips = append(chips, label)
+			if len(chips) >= 6 {
+				break
+			}
+		}
+		return "links", markdown.Excerpt(body, 160), nil, "", chips
+	}
+
+	var bullets []string
+	started := false
+	for _, line := range strings.SplitN(s, "\n", 60) {
+		ln := strings.TrimSpace(line)
+		if ln == "" {
+			if started {
+				break
+			}
+			continue
+		}
+		// before we've started collecting, skip leading headings
+		if !started && strings.HasPrefix(ln, "#") {
+			continue
+		}
+		item, ok := matchBullet(ln)
+		if !ok {
+			if started {
+				break
+			}
+			continue
+		}
+		started = true
+		bullets = append(bullets, item)
+		if len(bullets) >= 5 {
+			break
+		}
+	}
+	if len(bullets) >= 3 {
+		return "list", "", bullets, "", nil
+	}
+
+	return "text", markdown.Excerpt(body, 160), nil, "", nil
+}
+
+func loadTopTagChips(ctx context.Context, db *sql.DB, limit int, active string) ([]tagChip, error) {
+	cutoff := time.Now().Add(-30 * 24 * time.Hour).Unix()
+	rows, err := db.QueryContext(ctx, `
+		SELECT nt.tag, COUNT(*) c
+		FROM note_tags nt
+		JOIN notes n ON n.id = nt.note_id
+		WHERE n.updated_at > ?
+		GROUP BY nt.tag
+		ORDER BY c DESC, nt.tag
+		LIMIT ?`, cutoff, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []tagChip
+	for rows.Next() {
+		var t tagChip
+		if err := rows.Scan(&t.Tag, &t.Count); err != nil {
+			return nil, err
+		}
+		t.Active = t.Tag == active
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}

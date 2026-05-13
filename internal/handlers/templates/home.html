@@ -1,0 +1,10 @@
+{{define "title"}}commaplace{{end}}
+{{define "content"}}
+  <h1>commaplace</h1>
+  <p>A markdown-based social knowledge platform. Publish folders of notes; follow <code>[[wiki links]]</code> across vaults.</p>
+  {{if .User}}
+    <p><a href="/write">Write a note</a> · <a href="/feed">Browse the feed</a></p>
+  {{else}}
+    <p><a href="/login">Log in</a> to start writing, or <a href="/feed">peek at the feed</a>.</p>
+  {{end}}
+{{end}}

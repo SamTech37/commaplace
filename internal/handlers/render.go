@@ -1,0 +1,220 @@
+// Package handlers contains all HTTP handlers, the templated response
+// pipeline, and the embedded HTML/CSS/JS assets.
+package handlers
+
+import (
+	"database/sql"
+	"embed"
+	"fmt"
+	"hash/fnv"
+	"html/template"
+	"io/fs"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"commaplace/internal/auth"
+)
+
+//go:embed all:templates all:static
+var assetsFS embed.FS
+
+// StaticFS exposes the embedded static/ subtree, mounted at /static/ by Routes.
+func StaticFS() fs.FS {
+	sub, err := fs.Sub(assetsFS, "static")
+	if err != nil {
+		panic(err)
+	}
+	return sub
+}
+
+// Funcs available inside templates.
+var funcs = template.FuncMap{
+	"avatarColor":   avatarColor,
+	"avatarInitial": avatarInitial,
+	"sub":           func(a, b int) int { return a - b },
+}
+
+// Pages is a name -> parsed template cache. Each page template is parsed
+// alongside _base.html so that {{block "content"}} / {{block "title"}}
+// overrides apply.
+type Pages struct {
+	cache map[string]*template.Template
+}
+
+func LoadPages() (*Pages, error) {
+	pageNames := []string{
+		"home", "login", "me", "write", "note", "profile", "feed", "error",
+		"tag", "saved", "search", "onboarding", "admin_reports",
+	}
+	p := &Pages{cache: make(map[string]*template.Template, len(pageNames))}
+	for _, name := range pageNames {
+		t, err := template.New("").Funcs(funcs).ParseFS(assetsFS,
+			"templates/_base.html",
+			"templates/"+name+".html",
+		)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", name, err)
+		}
+		p.cache[name] = t
+	}
+	return p, nil
+}
+
+func (p *Pages) Render(w http.ResponseWriter, name string, data map[string]any) {
+	t, ok := p.cache[name]
+	if !ok {
+		http.Error(w, "template not found: "+name, http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = map[string]any{}
+	}
+	if _, has := data["User"]; !has {
+		data["User"] = nil
+	}
+	if _, has := data["SearchQuery"]; !has {
+		data["SearchQuery"] = ""
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := t.ExecuteTemplate(w, "base", data); err != nil {
+		log.Printf("render %s: %v", name, err)
+	}
+}
+
+// ---------- Server ----------
+
+type Server struct {
+	DB          *sql.DB
+	Auth        *auth.Auth
+	Pages       *Pages
+	Debug       bool
+	AdminHandle string // empty disables admin entirely
+}
+
+// render is a small wrapper that injects the current user automatically.
+func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data map[string]any) {
+	if data == nil {
+		data = map[string]any{}
+	}
+	u, _ := s.Auth.CurrentUser(r)
+	data["User"] = u
+	s.Pages.Render(w, name, data)
+}
+
+// renderError writes a templated error page with the given status code.
+func (s *Server) renderError(w http.ResponseWriter, r *http.Request, code int, msg string) {
+	w.WriteHeader(code)
+	s.render(w, r, "error", map[string]any{
+		"Code":    fmt.Sprintf("%d %s", code, http.StatusText(code)),
+		"Message": msg,
+	})
+}
+
+// requireUser redirects to /login if no user is logged in.
+// Returns nil in that case so the handler should `if u == nil { return }`.
+func (s *Server) requireUser(w http.ResponseWriter, r *http.Request) *auth.User {
+	u, err := s.Auth.CurrentUser(r)
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return nil
+	}
+	if u == nil {
+		next := r.URL.Path
+		if r.URL.RawQuery != "" {
+			next += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, "/login?next="+template.URLQueryEscaper(next), http.StatusSeeOther)
+		return nil
+	}
+	return u
+}
+
+// ---------- helpers ----------
+
+func relativeTime(unix int64) string {
+	if unix == 0 {
+		return ""
+	}
+	d := time.Since(time.Unix(unix, 0))
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	case d < 30*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	case d < 365*24*time.Hour:
+		return fmt.Sprintf("%dmo ago", int(d.Hours()/(24*30)))
+	default:
+		return fmt.Sprintf("%dy ago", int(d.Hours()/(24*365)))
+	}
+}
+
+// kebabSlug normalises a free-text title into an ASCII kebab slug.
+// Anything outside [a-z0-9] becomes "-"; runs collapse; ends are trimmed.
+func kebabSlug(title string) string {
+	var b strings.Builder
+	prevDash := true
+	for _, r := range strings.ToLower(title) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			prevDash = false
+		default:
+			if !prevDash {
+				b.WriteByte('-')
+				prevDash = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
+// avatarPalette is a small fixed palette so dot colors stay consistent
+// across renders for the same handle.
+var avatarPalette = []string{
+	"#fb7185", "#fbbf24", "#a78bfa", "#34d399",
+	"#60a5fa", "#f472b6", "#94a3b8", "#fb923c",
+}
+
+func avatarColor(handle string) string {
+	if handle == "" {
+		return avatarPalette[0]
+	}
+	h := fnv.New32a()
+	h.Write([]byte(handle))
+	return avatarPalette[int(h.Sum32())%len(avatarPalette)]
+}
+
+func avatarInitial(handle string) string {
+	if handle == "" {
+		return "?"
+	}
+	for _, r := range handle {
+		return strings.ToUpper(string(r))
+	}
+	return "?"
+}
+
+// normalizeFolder cleans user-supplied folder paths.
+func normalizeFolder(p string) string {
+	p = strings.TrimSpace(p)
+	p = strings.Trim(p, "/")
+	if p == "" {
+		return ""
+	}
+	parts := strings.Split(p, "/")
+	out := parts[:0]
+	for _, seg := range parts {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		out = append(out, kebabSlug(seg))
+	}
+	return strings.Join(out, "/")
+}
