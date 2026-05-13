@@ -13,6 +13,7 @@ import (
 
 const TourHandle = "commaplace-tour"
 const MakerHandle = "maker"
+const DemoHandle = "shawn"
 
 type TourNote struct {
 	Author    string // TourHandle or MakerHandle
@@ -22,6 +23,76 @@ type TourNote struct {
 	Body      string
 	Tags      []string
 	IsWelcome bool // pin this note on the new user's /me when forked
+}
+
+// DemoNote is the curated content that ships with the repo so a fresh
+// `go run ./cmd/server` lands on a feed full of real notes instead of empty.
+type DemoNote struct {
+	Folder string
+	Slug   string
+	Title  string
+	Body   string
+	Tags   []string
+}
+
+// ApplyDemo ensures the demo user + DemoNotes exist. Idempotent — if the
+// demo user already exists we assume the seed has already run.
+func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID int64, authorHandle, body string) error) error {
+	var existing int
+	if err := db.QueryRowContext(ctx,
+		`SELECT 1 FROM users WHERE handle = ?`, DemoHandle,
+	).Scan(&existing); err == nil {
+		return nil
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := time.Now().Unix()
+	res, err := tx.ExecContext(ctx,
+		`INSERT INTO users(handle, email, created_at, onboarded_at) VALUES(?, ?, ?, ?)`,
+		DemoHandle, DemoHandle+"@demo.local", now, now)
+	if err != nil {
+		return err
+	}
+	authorID, _ := res.LastInsertId()
+
+	for _, n := range DemoNotes {
+		res, err := tx.ExecContext(ctx, `
+			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
+			VALUES(?, ?, ?, ?, ?, ?, ?)`,
+			authorID, n.Folder, n.Slug, n.Title, n.Body, now, now,
+		)
+		if err != nil {
+			return err
+		}
+		nid, _ := res.LastInsertId()
+		for _, t := range n.Tags {
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+				nid, t, now,
+			); err != nil {
+				return err
+			}
+		}
+		if err := recompute(ctx, tx, nid, DemoHandle, n.Body); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE links SET resolved_target_id = ?
+			WHERE resolved_target_id IS NULL
+			  AND target_user_handle = ? AND target_folder_path = ? AND target_slug = ?`,
+			nid, DemoHandle, n.Folder, n.Slug,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // TourNotes is the curated content. Order matters because earlier notes are

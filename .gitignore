@@ -16,3 +16,7 @@ cookies.txt
 
 CLAUDE.md
 *-build-plan.md
+
+# local-only tooling that references personal paths
+cmd/import-vault/
+cmd/dump-seed/

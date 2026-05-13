@@ -27,7 +27,12 @@ func main() {
 	if err := db.Migrate(d); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
-	// Tour seed is opt-in. Set SEED_TOUR=1 to install the example vault.
+	// Demo seed: idempotent, runs on every startup so a fresh clone lands
+	// on a populated feed. SEED_TOUR=1 additionally installs the legacy
+	// English onboarding-fork content.
+	if err := seed.ApplyDemo(context.Background(), d, handlers.RecomputeLinks); err != nil {
+		log.Fatalf("seed demo: %v", err)
+	}
 	if os.Getenv("SEED_TOUR") == "1" {
 		if err := seed.Apply(context.Background(), d, handlers.RecomputeLinks); err != nil {
 			log.Fatalf("seed: %v", err)
