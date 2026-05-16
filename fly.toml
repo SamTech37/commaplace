@@ -1,0 +1,35 @@
+# commaplace deployment config for Fly.io
+# Single-region, single-machine setup with a persistent SQLite volume.
+
+app = "comma"
+primary_region = "nrt"  # Tokyo — closest to Taiwan
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ADDR     = ":8080"
+  DB_PATH  = "/data/commonplace.db"
+  # Set via `fly secrets set` (not in this file): SESSION_SECRET, BASE_URL,
+  # SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, ADMIN_HANDLE.
+
+[[mounts]]
+  source      = "commonplace_data"
+  destination = "/data"
+
+[http_service]
+  internal_port       = 8080
+  force_https         = true
+  auto_stop_machines  = "stop"  # idle → sleep; first request wakes it
+  auto_start_machines = true
+  min_machines_running = 0
+  processes           = ["app"]
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
