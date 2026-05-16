@@ -14,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"commaplace/internal/auth"
+	"commonplace/internal/auth"
+	"commonplace/internal/external"
 )
 
 //go:embed all:templates all:static
@@ -40,15 +41,24 @@ var funcs = template.FuncMap{
 // alongside _base.html so that {{block "content"}} / {{block "title"}}
 // overrides apply.
 type Pages struct {
-	cache map[string]*template.Template
+	cache    map[string]*template.Template
+	partials map[string]*template.Template
 }
 
 func LoadPages() (*Pages, error) {
 	pageNames := []string{
-		"home", "login", "me", "write", "note", "profile", "feed", "error",
-		"tag", "saved", "search", "onboarding", "admin_reports",
+		"login", "me", "write", "note", "profile", "feed", "error",
+		"tag", "saved", "search", "onboarding", "admin_reports", "graph",
+		"admin_external", "external_vault", "external_note",
 	}
-	p := &Pages{cache: make(map[string]*template.Template, len(pageNames))}
+	// Partials are standalone fragments (no _base.html wrapper) used for
+	// HTMX swap responses — e.g. infinite-scroll feed batches.
+	partialNames := []string{"feed_partial"}
+
+	p := &Pages{
+		cache:    make(map[string]*template.Template, len(pageNames)),
+		partials: make(map[string]*template.Template, len(partialNames)),
+	}
 	for _, name := range pageNames {
 		t, err := template.New("").Funcs(funcs).ParseFS(assetsFS,
 			"templates/_base.html",
@@ -58,6 +68,18 @@ func LoadPages() (*Pages, error) {
 			return nil, fmt.Errorf("parse %s: %w", name, err)
 		}
 		p.cache[name] = t
+	}
+	// Partials get the feed page parsed alongside so they can reuse the
+	// {{template "card" .}} definition.
+	for _, name := range partialNames {
+		t, err := template.New("").Funcs(funcs).ParseFS(assetsFS,
+			"templates/feed.html",
+			"templates/"+name+".html",
+		)
+		if err != nil {
+			return nil, fmt.Errorf("parse partial %s: %w", name, err)
+		}
+		p.partials[name] = t
 	}
 	return p, nil
 }
@@ -83,6 +105,20 @@ func (p *Pages) Render(w http.ResponseWriter, name string, data map[string]any) 
 	}
 }
 
+// RenderPartial executes a fragment template (no _base.html wrapper).
+// Used for HTMX swap responses.
+func (p *Pages) RenderPartial(w http.ResponseWriter, name, defined string, data map[string]any) {
+	t, ok := p.partials[name]
+	if !ok {
+		http.Error(w, "partial not found: "+name, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := t.ExecuteTemplate(w, defined, data); err != nil {
+		log.Printf("render partial %s: %v", name, err)
+	}
+}
+
 // ---------- Server ----------
 
 type Server struct {
@@ -90,7 +126,11 @@ type Server struct {
 	Auth        *auth.Auth
 	Pages       *Pages
 	Debug       bool
-	AdminHandle string // empty disables admin entirely
+	AdminHandle string          // empty disables admin entirely
+	Crawler     ExternalCrawler // optional; nil disables admin-triggered crawls
+
+	// extStore is initialised lazily on first call to externalStore().
+	extStore *external.Store
 }
 
 // render is a small wrapper that injects the current user automatically.

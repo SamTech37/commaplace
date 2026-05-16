@@ -1,5 +1,6 @@
-{{define "title"}}Write · commaplace{{end}}
+{{define "title"}}Write · commonplace{{end}}
 {{define "content"}}
+  <script src="/static/editor.js" defer></script>
   <h1>Write a note</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form method="POST" action="/write">

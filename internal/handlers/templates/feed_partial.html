@@ -1,0 +1,12 @@
+{{define "feed_partial"}}{{range .Cards}}{{template "card" .}}{{end}}
+{{if .OlderURL -}}
+<div id="feed-sentinel" hx-swap-oob="outerHTML"
+     class="feed-sentinel"
+     hx-get="{{.OlderURL}}&partial=1"
+     hx-trigger="revealed"
+     hx-target=".masonry"
+     hx-swap="beforeend">載入更多…</div>
+{{- else -}}
+<div id="feed-sentinel" hx-swap-oob="outerHTML" class="feed-end">— 沒有更多了 —</div>
+{{- end}}
+{{end}}

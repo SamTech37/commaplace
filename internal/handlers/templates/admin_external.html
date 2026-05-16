@@ -1,0 +1,57 @@
+{{define "title"}}external vaults · admin · commonplace{{end}}
+{{define "content"}}
+  <h1>External vaults</h1>
+  <p class="note-meta">
+    <a href="/admin/reports">reports</a> ·
+    <a href="/admin/external">external vaults</a>
+  </p>
+  <p class="note-meta">把任何 publish.obsidian.md 的網址貼進來，我們就會把它的筆記收進索引，混入 feed / search / graph。</p>
+
+  {{if .Flash}}<p class="flash">{{.Flash}}</p>{{end}}
+  {{if .Err}}<p class="error">{{.Err}}</p>{{end}}
+
+  <form method="POST" action="/admin/external/add" class="add-vault-form">
+    <input type="url" name="url" placeholder="https://publish.obsidian.md/example" required style="flex:1;min-width:240px">
+    <button type="submit">加入</button>
+  </form>
+
+  {{if .Vaults}}
+  <table class="admin-table" style="margin-top:1.5em">
+    <thead>
+      <tr>
+        <th>vault</th>
+        <th>狀態</th>
+        <th>筆記</th>
+        <th>上次爬取</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Vaults}}
+      <tr>
+        <td>
+          <a href="{{.BrowseURL}}"><strong>{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Slug}}{{end}}</strong></a>
+          <div class="note-meta" style="font-size:0.78rem"><a href="{{.SourceURL}}" target="_blank" rel="noopener">{{.SourceURL}} ↗</a></div>
+          {{if .ErrorMessage}}<div class="error" style="font-size:0.78rem;margin-top:0.3em">{{.ErrorMessage}}</div>{{end}}
+        </td>
+        <td><span class="status status-{{.Status}}">{{.StatusBadge}}</span></td>
+        <td>{{.NoteCount}}</td>
+        <td>{{if .LastCrawlRel}}{{.LastCrawlRel}}{{else}}—{{end}}</td>
+        <td class="row-actions">
+          <form method="POST" action="/admin/external/recrawl" class="inline-form">
+            <input type="hidden" name="vault_id" value="{{.ID}}">
+            <button type="submit" class="link-btn">重爬</button>
+          </form>
+          <form method="POST" action="/admin/external/delete" class="inline-form" onsubmit="return confirm('刪除 {{.Slug}} 及其所有筆記？')">
+            <input type="hidden" name="vault_id" value="{{.ID}}">
+            <button type="submit" class="link-btn danger">刪除</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="note-meta" style="margin-top:1.5em">還沒有外部 vault。貼一個網址試試。</p>
+  {{end}}
+{{end}}

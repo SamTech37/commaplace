@@ -3,12 +3,13 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"commaplace/internal/markdown"
+	"commonplace/internal/markdown"
 )
 
 
@@ -39,6 +40,8 @@ type feedCard struct {
 	ListItems    []string // list variant
 	Quote        string   // quote variant
 	LinkChips    []string // links variant
+	IsExternal   bool     // card is from an indexed Obsidian Publish vault
+	ExternalSite string   // display name of the source vault (when IsExternal)
 }
 
 type tagChip struct {
@@ -73,13 +76,21 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, older, 50)
+		if err == nil {
+			// Merge in external (indexed) notes only on the recommended tab
+			// — they don't belong to anyone you can follow.
+			extCards, ferr := s.queryExternalCards(r.Context(), older, 50)
+			if ferr != nil {
+				log.Printf("feed: external cards query failed: %v", ferr)
+			} else {
+				cards = mergeAndSortCards(cards, extCards, 50)
+			}
+		}
 	}
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	tagChips, _ := loadTopTagChips(r.Context(), s.DB, 8, tagFilter)
 
 	// "older" cursor for pagination — last item's updated_at, or empty.
 	var olderURL string
@@ -87,8 +98,20 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+		v.Del("partial")
 		olderURL = "/feed?" + v.Encode()
 	}
+
+	// HTMX request for the next batch → return only cards + a new sentinel.
+	if q.Get("partial") == "1" {
+		s.Pages.RenderPartial(w, "feed_partial", "feed_partial", map[string]any{
+			"Cards":    cards,
+			"OlderURL": olderURL,
+		})
+		return
+	}
+
+	tagChips, _ := loadTopTagChips(r.Context(), s.DB, 8, tagFilter)
 
 	s.render(w, r, "feed", map[string]any{
 		"Cards":          cards,
@@ -282,6 +305,68 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 	}
 
 	return "text", markdown.Excerpt(body, 160), nil, "", nil
+}
+
+func (s *Server) queryExternalCards(ctx context.Context, older int64, limit int) ([]feedCard, error) {
+	args := []any{}
+	q := strings.Builder{}
+	q.WriteString(`
+		SELECT en.id, en.title, en.body_md, en.updated_at, en.slug,
+		       ev.slug, COALESCE(NULLIF(ev.display_name, ''), ev.slug)
+		FROM external_notes en
+		JOIN external_vaults ev ON ev.id = en.vault_id
+		WHERE 1=1`)
+	if older > 0 {
+		q.WriteString(` AND en.updated_at < ?`)
+		args = append(args, older)
+	}
+	q.WriteString(` ORDER BY en.updated_at DESC LIMIT ?`)
+	args = append(args, limit)
+	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []feedCard
+	for rows.Next() {
+		var (
+			c            feedCard
+			body         string
+			noteSlug     string
+			vaultSlug    string
+			displayName  string
+		)
+		if err := rows.Scan(&c.NoteID, &c.Title, &body, &c.UpdatedAt, &noteSlug, &vaultSlug, &displayName); err != nil {
+			return nil, err
+		}
+		c.IsExternal = true
+		c.ExternalSite = displayName
+		c.AuthorHandle = vaultSlug
+		c.URL = "/x/" + vaultSlug + "/" + noteSlug
+		c.UpdatedRel = relativeTime(c.UpdatedAt)
+		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// mergeAndSortCards interleaves internal + external cards by updated_at desc.
+func mergeAndSortCards(a, b []feedCard, limit int) []feedCard {
+	merged := make([]feedCard, 0, len(a)+len(b))
+	merged = append(merged, a...)
+	merged = append(merged, b...)
+	// simple sort by UpdatedAt desc
+	for i := 1; i < len(merged); i++ {
+		j := i
+		for j > 0 && merged[j-1].UpdatedAt < merged[j].UpdatedAt {
+			merged[j-1], merged[j] = merged[j], merged[j-1]
+			j--
+		}
+	}
+	if len(merged) > limit {
+		merged = merged[:limit]
+	}
+	return merged
 }
 
 func loadTopTagChips(ctx context.Context, db *sql.DB, limit int, active string) ([]tagChip, error) {

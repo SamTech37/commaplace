@@ -3,11 +3,12 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
-	"commaplace/internal/auth"
+	"commonplace/internal/auth"
 )
 
 // IsAdmin returns true when u.Handle matches the configured AdminHandle.
@@ -109,8 +110,10 @@ func (s *Server) PostAdminHide(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if action == "hide" {
-		_, _ = s.DB.ExecContext(r.Context(),
-			`UPDATE reports SET status = 'resolved' WHERE note_id = ?`, noteID)
+		if _, err := s.DB.ExecContext(r.Context(),
+			`UPDATE reports SET status = 'resolved' WHERE note_id = ?`, noteID); err != nil {
+			log.Printf("admin hide: resolve reports for note %d: %v", noteID, err)
+		}
 	}
 	http.Redirect(w, r, "/admin/reports", http.StatusSeeOther)
 }

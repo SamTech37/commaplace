@@ -1,4 +1,4 @@
-module commaplace
+module commonplace
 
 go 1.26.3
 

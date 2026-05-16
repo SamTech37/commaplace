@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"commaplace/internal/markdown"
+	"commonplace/internal/markdown"
 )
 
 // ---------- write ----------
@@ -57,8 +57,7 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tags := parseTags(r.PostFormValue("tags"))
-	noteID, err := s.saveNote(r.Context(), u.ID, u.Handle, folder, slug, title, body, tags)
-	if err != nil {
+	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, folder, slug, title, body, tags); err != nil {
 		msg := err.Error()
 		if isUniqueViolation(err) {
 			msg = "A note with this title already exists in that folder. Pick a different title."
@@ -69,7 +68,6 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	_ = noteID
 	http.Redirect(w, r, noteURL(u.Handle, folder, slug), http.StatusSeeOther)
 }
 

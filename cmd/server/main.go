@@ -1,4 +1,4 @@
-// Command commaplace runs the HTTP server.
+// Command commonplace runs the HTTP server.
 package main
 
 import (
@@ -10,10 +10,11 @@ import (
 	"os"
 	"strings"
 
-	"commaplace/internal/auth"
-	"commaplace/internal/db"
-	"commaplace/internal/handlers"
-	"commaplace/internal/seed"
+	"commonplace/internal/auth"
+	"commonplace/internal/db"
+	"commonplace/internal/external"
+	"commonplace/internal/handlers"
+	"commonplace/internal/seed"
 )
 
 func main() {
@@ -56,15 +57,26 @@ func main() {
 		log.Fatalf("load pages: %v", err)
 	}
 
+	// External-vault crawler worker (background goroutine).
+	store := &external.Store{DB: d}
+	fetchers := map[string]external.Fetcher{
+		"publish": external.NewPublishFetcher(),
+		"quartz":  external.NewQuartzFetcher(),
+	}
+	crawler := external.NewCrawler(store, fetchers)
+	worker := external.NewWorker(crawler)
+	worker.Start(context.Background())
+
 	srv := &handlers.Server{
 		DB:          d,
 		Auth:        a,
 		Pages:       pages,
 		Debug:       cfg.Debug,
 		AdminHandle: cfg.AdminHandle,
+		Crawler:     worker,
 	}
 
-	log.Printf("commaplace listening on %s (db=%s, mailer=%s)",
+	log.Printf("commonplace listening on %s (db=%s, mailer=%s)",
 		cfg.Addr, cfg.DBPath, mailerKind(cfg))
 	if cfg.Mailer == "stdout" {
 		log.Printf("[dev mode] magic-link emails will be printed to stdout")
@@ -95,14 +107,14 @@ type config struct {
 func loadConfig() config {
 	c := config{
 		Addr:          envOr("ADDR", ":8080"),
-		DBPath:        envOr("DB_PATH", "./commaplace.db"),
+		DBPath:        envOr("DB_PATH", "./commonplace.db"),
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 		BaseURL:       envOr("BASE_URL", ""),
 		SMTPHost:      os.Getenv("SMTP_HOST"),
 		SMTPPort:      envOr("SMTP_PORT", "587"),
 		SMTPUser:      os.Getenv("SMTP_USER"),
 		SMTPPass:      os.Getenv("SMTP_PASS"),
-		SMTPFrom:      envOr("SMTP_FROM", "commaplace <noreply@example.com>"),
+		SMTPFrom:      envOr("SMTP_FROM", "commonplace <noreply@example.com>"),
 		AdminHandle:   strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
 		Debug:         os.Getenv("DEBUG") == "1",
 	}

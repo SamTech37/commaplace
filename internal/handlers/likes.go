@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"commaplace/internal/markdown"
+	"commonplace/internal/markdown"
 )
 
 // PostLike toggles a like row for the current user on the given note.

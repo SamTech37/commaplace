@@ -1,0 +1,28 @@
+{{define "title"}}{{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}} · external · commonplace{{end}}
+{{define "content"}}
+  <p class="from-banner">
+    <span class="external-badge">外部索引</span>
+    <a href="{{.Vault.SourceURL}}" target="_blank" rel="noopener">{{.Vault.SourceURL}} ↗</a>
+  </p>
+  <h1 style="margin:0.2em 0 0.4em">{{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}}</h1>
+  <p class="note-meta">
+    {{.Vault.NoteCount}} 篇筆記
+    {{if .CrawlRel}} · 上次爬取 {{.CrawlRel}}{{end}}
+  </p>
+
+  {{if .Notes}}
+    <ul style="list-style:none;padding:0;margin:1.5em 0 0">
+      {{range .Notes}}
+      <li class="note-card" style="border:0;padding:0.6em 0;border-bottom:1px solid var(--border)">
+        <a href="{{.URL}}" style="text-decoration:none;color:inherit">
+          <div class="note-title">{{.Title}}</div>
+          {{if .Excerpt}}<div class="note-foot" style="margin-top:0.3em">{{.Excerpt}}</div>{{end}}
+          <div class="note-foot">{{.UpdatedRel}}</div>
+        </a>
+      </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="note-meta" style="margin-top:1.5em">這個 vault 目前沒有筆記（可能還在爬，或上游沒公開檔案）。</p>
+  {{end}}
+{{end}}
