@@ -41,6 +41,7 @@ var funcs = template.FuncMap{
 	"avatarColor":   avatarColor,
 	"avatarInitial": avatarInitial,
 	"sub":           func(a, b int) int { return a - b },
+	"add":           func(a, b int) int { return a + b },
 }
 
 // Pages is a name -> parsed template cache. Each page template is parsed

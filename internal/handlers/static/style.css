@@ -63,6 +63,24 @@ body {
 }
 .nav { display: flex; gap: 0.85rem; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
 .search-form { margin: 0; display: inline; flex: 1; max-width: 22rem; }
+/* Round profile button in the top nav (logged-in users). */
+.nav .profile-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.nav .profile-dot:hover { filter: brightness(1.15); }
 .search-form input {
   width: 100%;
   padding: 0.45em 0.85em;
@@ -131,13 +149,33 @@ img { max-width: 100%; height: auto; }
 /* Wiki links */
 :root { --teal: #0d9488; --teal-soft: #ccfbf1; }
 
-.wiki-resolved        { color: var(--accent); }
+.wiki-resolved {
+  color: var(--accent);
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.wiki-resolved:hover {
+  text-decoration-style: solid;
+  background: rgba(122, 169, 255, 0.10);
+  border-radius: 2px;
+}
 .wiki-unresolved {
   color: var(--muted);
   text-decoration: underline dashed;
   text-underline-offset: 3px;
 }
-.wiki-cross-resolved   { color: var(--teal); }
+.wiki-cross-resolved {
+  color: var(--teal);
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.wiki-cross-resolved:hover {
+  text-decoration-style: solid;
+  background: rgba(95, 208, 192, 0.10);
+  border-radius: 2px;
+}
 .wiki-cross-unresolved {
   color: var(--teal);
   opacity: 0.65;
@@ -340,6 +378,9 @@ button.secondary { background: var(--card); color: var(--fg); border: 1px solid 
 }
 .feed-tab.active { color: var(--fg); border-bottom-color: var(--fg); font-weight: 500; }
 
+/* tone down chip count */
+.chip-count { opacity: 0.45; font-size: 0.68rem; margin-left: 0.15em; }
+
 /* Filter chips (above feed) */
 .filter-chips {
   display: flex;
@@ -437,6 +478,16 @@ button.secondary { background: var(--card); color: var(--fg); border: 1px solid 
 }
 .card-meta .meta-links { color: var(--info); font-weight: 500; }
 .card-meta .meta-cross { color: var(--teal); font-weight: 500; font-variant-numeric: tabular-nums; }
+.card-tags {
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: wrap;
+  margin: 0 0 0.55em;
+}
+.card-tag {
+  color: var(--muted-2);
+  font-size: 0.74rem;
+}
 .avatar-dot {
   display: inline-flex;
   align-items: center;
@@ -718,3 +769,264 @@ pre.mermaid {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 1; }
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Note view: author bar, article meta row, mini-card connections, backlinks
+   (matches atrium_note_view_bishop.html mockup, dark warm palette)
+   ────────────────────────────────────────────────────────────────────── */
+
+.author-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  margin: 0 0 1.25rem;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+.author-bar .author-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.author-bar .author-info { flex: 1; min-width: 0; }
+.author-bar .author-name-row { display: flex; align-items: center; gap: 0.5em; font-size: 0.95rem; flex-wrap: wrap; }
+.author-bar .author-name { font-weight: 500; color: var(--fg); text-decoration: none; }
+.author-bar .author-name:hover { color: var(--accent); }
+.author-bar .author-context { color: var(--muted-2); }
+.author-bar .author-stats { color: var(--muted-2); font-size: 0.78rem; margin-top: 0.2em; }
+
+/* Article meta row (time + tags on the left, action buttons on the right) */
+.article-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin: 0.5rem 0 1rem;
+  flex-wrap: wrap;
+}
+.article-info {
+  font-size: 0.78rem;
+  color: var(--muted-2);
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  flex-wrap: wrap;
+}
+.article-info .article-tag { color: var(--muted-2); }
+.article-info .article-tag:hover { color: var(--fg); text-decoration: none; }
+.article-actions { display: flex; gap: 0.4em; flex-wrap: wrap; }
+.action-btn {
+  padding: 0.4em 0.85em;
+  border: 0.5px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.8rem;
+}
+.action-btn:hover { border-color: var(--border-2); background: var(--surface-2); }
+.action-btn.primary {
+  background: rgba(122, 169, 255, 0.18);
+  color: var(--accent);
+  border-color: transparent;
+}
+.action-btn.primary:hover { background: rgba(122, 169, 255, 0.28); }
+.action-btn.liked { color: var(--danger); border-color: var(--danger); }
+.action-btn .count { font-variant-numeric: tabular-nums; }
+.action-menu { position: relative; }
+.action-menu summary { list-style: none; cursor: pointer; }
+.action-menu summary::-webkit-details-marker { display: none; }
+.action-menu[open] .action-menu-list { display: flex; }
+.action-menu-list {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  flex-direction: column;
+  min-width: 11em;
+  padding: 0.3em 0;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  z-index: 5;
+}
+.action-menu-list a,
+.action-menu-list button {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.45em 0.85em;
+  font-size: 0.85rem;
+  color: var(--fg);
+  background: none;
+  border: 0;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.action-menu-list a:hover,
+.action-menu-list button:hover { background: var(--surface-2); }
+
+/* Article body — bigger title, more breathing room */
+.article {
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 1.4rem 1.6rem 1.6rem;
+}
+.article-title {
+  font-size: 1.65rem;
+  font-weight: 500;
+  margin: 0 0 0.3em;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.article-body { font-size: 0.97rem; line-height: 1.78; margin-top: 0.6em; }
+.article-body > :first-child { margin-top: 0; }
+.article-body h2 { font-size: 1.12rem; margin: 1.7em 0 0.55em; }
+.article-body h3 { font-size: 1rem;    margin: 1.4em 0 0.4em; }
+.article-body p  { margin: 0 0 1.05em; }
+.article-body hr { margin: 1.6em 0; }
+
+/* "這篇連到的筆記" connected-notes section */
+.connected-section {
+  margin-top: 1.5rem;
+  padding: 1.1rem 1.1rem 1.2rem;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.88rem;
+  font-weight: 500;
+  margin-bottom: 0.6em;
+  color: var(--fg);
+}
+.section-header .section-count { color: var(--muted-2); font-weight: 400; font-size: 0.78rem; margin-left: 0.2em; }
+.subsection-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 0.74rem;
+  color: var(--muted-2);
+  margin: 0.9em 0 0.5em;
+  letter-spacing: 0.01em;
+}
+.subsection-label .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.subsection-label.cross .dot { background: var(--teal); }
+.connected-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+@media (min-width: 560px) {
+  .connected-grid { grid-template-columns: 1fr 1fr; }
+}
+.mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  padding: 0.65em 0.8em;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 7px;
+  text-decoration: none;
+  color: inherit;
+}
+.mini-card:hover { border-color: var(--border-2); }
+.mini-card .mini-card-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--fg);
+  display: flex;
+  gap: 0.4em;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.mini-card .mini-card-meta {
+  font-size: 0.68rem;
+  color: var(--muted-2);
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-top: auto;
+}
+.mini-card-author-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.cross-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  color: var(--teal);
+  background: var(--teal-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: auto;
+  font-weight: 500;
+}
+
+/* "引用了這篇筆記的人" — backlinks as horizontal rows */
+.backlinks-section {
+  margin-top: 1rem;
+  padding: 1.1rem 1.1rem 0.5rem;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+.backlinks-list { display: flex; flex-direction: column; }
+.backlink-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.7em 0;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 0.82rem;
+  text-decoration: none;
+  color: inherit;
+}
+.backlink-row:last-child { border-bottom: 0; }
+.backlink-row:hover .backlink-title { color: var(--accent); }
+.backlink-icon { color: var(--muted-2); font-size: 0.9rem; flex-shrink: 0; }
+.backlink-title { font-weight: 500; flex: 1; color: var(--fg); }
+.backlink-author {
+  font-size: 0.74rem;
+  color: var(--muted-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+.backlink-author .mini-card-author-dot { width: 14px; height: 14px; font-size: 0.6rem; }

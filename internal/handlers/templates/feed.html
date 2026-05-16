@@ -4,6 +4,7 @@
   <nav class="feed-tabs">
     <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
     <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
+    {{if .User}}<a href="/{{.User.Handle}}" class="feed-tab">我的</a>{{end}}
   </nav>
 
   {{if .TagChips}}
@@ -58,6 +59,11 @@
       {{if gt (len .LinkChips) 2}}
         <div class="connection-more">+ {{sub (len .LinkChips) 2}} 篇相關筆記</div>
       {{end}}
+    </div>
+  {{end}}
+  {{if .Tags}}
+    <div class="card-tags">
+      {{range .Tags}}<span class="card-tag">#{{.}}</span>{{end}}
     </div>
   {{end}}
   <div class="card-meta">

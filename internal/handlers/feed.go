@@ -43,6 +43,7 @@ type feedCard struct {
 	ListItems    []string // list variant
 	Quote        string   // quote variant
 	LinkChips    []string // links variant
+	Tags         []string // shown as #hashtag row on the card
 	IsExternal   bool     // card is from an indexed Obsidian Publish vault
 	ExternalSite string   // display name of the source vault (when IsExternal)
 }
@@ -94,6 +95,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+	attachTagsToCards(r.Context(), s.DB, cards)
 
 	// "older" cursor for pagination — last item's updated_at, or empty.
 	var olderURL string
@@ -183,6 +185,42 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID int64, tagFil
 	return scanCards(rows)
 }
 
+// attachTagsToCards batch-loads tags for the given cards in one query and
+// fills c.Tags in place. External cards (NoteID==0) are skipped.
+func attachTagsToCards(ctx context.Context, db *sql.DB, cards []feedCard) {
+	if len(cards) == 0 {
+		return
+	}
+	ids := make([]any, 0, len(cards))
+	idx := make(map[int64]int, len(cards))
+	for i, c := range cards {
+		if c.NoteID == 0 {
+			continue
+		}
+		ids = append(ids, c.NoteID)
+		idx[c.NoteID] = i
+	}
+	if len(ids) == 0 {
+		return
+	}
+	q := "SELECT note_id, tag FROM note_tags WHERE note_id IN (?" + strings.Repeat(",?", len(ids)-1) + ") ORDER BY note_id, tag"
+	rows, err := db.QueryContext(ctx, q, ids...)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		var tag string
+		if err := rows.Scan(&id, &tag); err != nil {
+			return
+		}
+		if i, ok := idx[id]; ok {
+			cards[i].Tags = append(cards[i].Tags, tag)
+		}
+	}
+}
+
 func scanCards(rows *sql.Rows) ([]feedCard, error) {
 	defer rows.Close()
 	var out []feedCard
@@ -249,8 +287,8 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 			}
 		}
 		q := strings.TrimSpace(qb.String())
-		if len(q) > 220 {
-			q = string([]rune(q)[:200]) + "…"
+		if runes := []rune(q); len(runes) > 200 {
+			q = string(runes[:200]) + "…"
 		}
 		return "quote", "", nil, q, nil
 	}

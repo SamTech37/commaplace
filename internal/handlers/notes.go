@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"commonplace/internal/markdown"
 )
@@ -168,6 +169,8 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 
 	tags, _ := loadTagsForNote(r.Context(), s.DB, n.ID)
 	sameVaultBL, crossVaultBL, _ := s.loadBacklinksSplit(r.Context(), n.ID, handle)
+	outgoingSame, outgoingCross, _ := s.loadOutgoingSplit(r.Context(), n.ID, handle)
+	authorStats, _ := loadAuthorStats(r.Context(), s.DB, n.AuthorID)
 
 	// "From" banner: ?from=N points back to the note that brought us here.
 	var fromNote *fromBanner
@@ -184,6 +187,7 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	}
 	likeN, _ := likeCount(r.Context(), s.DB, n.ID)
 	liked, _ := userHasLiked(r.Context(), s.DB, viewerID, n.ID)
+	viewerFollows, _ := userFollows(r.Context(), s.DB, viewerID, n.AuthorID)
 
 	var crumbs []string
 	if folder != "" {
@@ -191,20 +195,26 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.render(w, r, "note", map[string]any{
-		"Note":             n,
-		"AuthorHandle":     handle,
-		"Crumbs":           crumbs,
-		"BodyHTML":         bodyHTML,
-		"Tags":             tags,
-		"BacklinksSame":    sameVaultBL,
-		"BacklinksCross":   crossVaultBL,
-		"From":             fromNote,
-		"UpdatedRel":       relativeTime(n.UpdatedAt),
-		"LikeCount":        likeN,
-		"Liked":            liked,
-		"ViewerLoggedIn":   viewer != nil,
-		"IsAuthor":         viewer != nil && viewer.ID == n.AuthorID,
-		"IsHidden":         n.HiddenAt.Valid,
+		"Note":            n,
+		"AuthorHandle":    handle,
+		"AuthorID":        n.AuthorID,
+		"AuthorStats":     authorStats,
+		"ViewerFollows":   viewerFollows,
+		"Crumbs":          crumbs,
+		"BodyHTML":        bodyHTML,
+		"Tags":            tags,
+		"BacklinksSame":   sameVaultBL,
+		"BacklinksCross":  crossVaultBL,
+		"OutgoingSame":    outgoingSame,
+		"OutgoingCross":   outgoingCross,
+		"From":            fromNote,
+		"UpdatedRel":      relativeTime(n.UpdatedAt),
+		"ReadingMinutes":  readingMinutes(n.BodyMD),
+		"LikeCount":       likeN,
+		"Liked":           liked,
+		"ViewerLoggedIn":  viewer != nil,
+		"IsAuthor":        viewer != nil && viewer.ID == n.AuthorID,
+		"IsHidden":        n.HiddenAt.Valid,
 	})
 }
 
@@ -291,6 +301,85 @@ func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHand
 		}
 	}
 	return sameVault, crossVault, rows.Err()
+}
+
+// loadOutgoingSplit returns notes this note links to, split into same-vault
+// and cross-vault. Only resolved links are returned. URLs carry ?from=<id>.
+type outlink struct {
+	Title        string
+	AuthorHandle string
+	FolderPath   string
+	URL          string
+	SameVault    bool
+}
+
+func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandle string) (same, cross []outlink, err error) {
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT DISTINCT n.id, n.title, n.folder_path, n.slug, u.handle
+		FROM links l
+		JOIN notes n ON n.id = l.resolved_target_id
+		JOIN users u ON u.id = n.author_id
+		WHERE l.source_note_id = ? AND l.resolved_target_id IS NOT NULL
+		  AND n.hidden_at IS NULL
+		ORDER BY n.updated_at DESC`, noteID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	from := "?from=" + strconv.FormatInt(noteID, 10)
+	for rows.Next() {
+		var id int64
+		var title, folderPath, slug, handle string
+		if err := rows.Scan(&id, &title, &folderPath, &slug, &handle); err != nil {
+			return nil, nil, err
+		}
+		ol := outlink{
+			Title:        title,
+			AuthorHandle: handle,
+			FolderPath:   folderPath,
+			URL:          noteURL(handle, folderPath, slug) + from,
+			SameVault:    handle == vaultHandle,
+		}
+		if ol.SameVault {
+			same = append(same, ol)
+		} else {
+			cross = append(cross, ol)
+		}
+	}
+	return same, cross, rows.Err()
+}
+
+// authorStats powers the author bar at the top of a note view.
+type authorStats struct {
+	Followers int
+	Notes     int
+	Folders   int
+}
+
+func loadAuthorStats(ctx context.Context, db *sql.DB, authorID int64) (authorStats, error) {
+	var s authorStats
+	_ = db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM follows WHERE followed_id = ?`, authorID,
+	).Scan(&s.Followers)
+	_ = db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM notes WHERE author_id = ? AND hidden_at IS NULL`, authorID,
+	).Scan(&s.Notes)
+	_ = db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT folder_path) FROM notes
+		WHERE author_id = ? AND hidden_at IS NULL AND folder_path != ''`, authorID,
+	).Scan(&s.Folders)
+	return s, nil
+}
+
+// readingMinutes estimates reading time. ~400 CJK chars/min, ~250 words/min
+// for ASCII — we approximate by counting runes and dividing by 350.
+func readingMinutes(body string) int {
+	n := utf8.RuneCountInString(body)
+	m := n / 350
+	if m < 1 {
+		return 1
+	}
+	return m
 }
 
 // ---------- save + link recomputation ----------

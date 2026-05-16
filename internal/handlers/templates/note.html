@@ -13,79 +13,135 @@
   {{if .IsHidden}}
     <p class="error">This note is hidden by an admin. Only you (the author) and admins can see it.</p>
   {{end}}
-  <article class="note">
-    <h1>{{.Note.Title}}</h1>
-    <p class="note-meta">
-      <a href="/{{.AuthorHandle}}">@{{.AuthorHandle}}</a>
-      {{range .Crumbs}}<span class="crumb-sep">/</span>{{.}}{{end}}
-      <span class="crumb-sep">·</span>
-      <span>{{.UpdatedRel}}</span>
-    </p>
-    {{if .Tags}}
-      <p class="tag-row">
-        {{range .Tags}}<a class="tag-chip" href="/tag/{{.}}">#{{.}}</a>{{end}}
-      </p>
+
+  {{/* ── Author bar ── */}}
+  <div class="author-bar">
+    <a class="author-avatar" href="/{{.AuthorHandle}}" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</a>
+    <div class="author-info">
+      <div class="author-name-row">
+        <a class="author-name" href="/{{.AuthorHandle}}">@{{.AuthorHandle}}</a>
+        {{if .Note.FolderPath}}<span class="author-context">/ {{.Note.FolderPath}}</span>{{end}}
+      </div>
+      <div class="author-stats">
+        {{.AuthorStats.Followers}} 訂閱者 · {{.AuthorStats.Notes}} 篇筆記{{if gt .AuthorStats.Folders 0}} · {{.AuthorStats.Folders}} 個資料夾{{end}}
+      </div>
+    </div>
+    {{if and .ViewerLoggedIn (not .IsAuthor)}}
+      <form class="inline-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
+        <input type="hidden" name="user_id" value="{{.AuthorID}}">
+        <button type="submit" class="follow-btn{{if .ViewerFollows}} following{{end}}">{{if .ViewerFollows}}已追蹤{{else}}+ 追蹤{{end}}</button>
+      </form>
     {{end}}
-    <div class="note-body">{{.BodyHTML}}</div>
-    <p class="editor-actions" style="margin-top:2rem">
-      {{if .ViewerLoggedIn}}
-        <form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML">
-          <input type="hidden" name="note_id" value="{{.Note.ID}}">
-          <button type="submit" class="heart{{if .Liked}} liked{{end}}" aria-pressed="{{.Liked}}">{{if .Liked}}♥{{else}}♡{{end}} <span class="count">{{.LikeCount}}</span></button>
-        </form>
-      {{else}}
-        <span class="heart-static">♡ {{.LikeCount}}</span>
-      {{end}}
-      <a class="download-link" href="/api/notes/{{.Note.ID}}/raw">⬇ download .md</a>
-      <button type="button" class="link-btn copy-md" data-raw="/api/notes/{{.Note.ID}}/raw">📋 copy markdown</button>
-      {{if and .ViewerLoggedIn (not .IsAuthor)}}
-        <span class="report-mount">
-          <button type="button" class="link-btn" onclick="this.nextElementSibling.hidden=false;this.hidden=true">report</button>
-          <form class="inline-form" hx-post="/api/report" hx-target="this" hx-swap="outerHTML" hidden style="display:inline-flex;gap:0.4em;align-items:center">
-            <input type="hidden" name="note_id" value="{{.Note.ID}}">
-            <input type="text" name="reason" placeholder="reason (optional)" maxlength="200" style="font-size:0.85rem;padding:0.2em 0.5em">
-            <button type="submit" class="link-btn">send</button>
-          </form>
-        </span>
-      {{end}}
-    </p>
-  </article>
-  <h2 class="local-graph-heading">local graph</h2>
-  <div class="local-graph-wrap"
-       data-graph-source="/api/graph/local?note=n:{{.Note.ID}}"
-       data-graph-height="280">
-    <canvas></canvas>
-    <div class="graph-empty" hidden>這篇還沒有連到別的筆記。</div>
-    <div class="graph-tooltip" hidden></div>
   </div>
+
+  {{/* ── Article ── */}}
+  <article class="article">
+    <div class="article-meta-row">
+      <div class="article-info">
+        更新於 {{.UpdatedRel}} · 約 {{.ReadingMinutes}} 分鐘
+        {{if .Tags}}
+          {{range .Tags}}<a class="article-tag" href="/tag/{{.}}">#{{.}}</a>{{end}}
+        {{end}}
+      </div>
+      <div class="article-actions">
+        {{if .ViewerLoggedIn}}
+          <form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML">
+            <input type="hidden" name="note_id" value="{{.Note.ID}}">
+            <button type="submit" class="action-btn{{if .Liked}} liked{{end}}" aria-pressed="{{.Liked}}">{{if .Liked}}♥{{else}}♡{{end}} <span class="count">{{.LikeCount}}</span></button>
+          </form>
+        {{else}}
+          <span class="action-btn" aria-disabled="true">♡ <span class="count">{{.LikeCount}}</span></span>
+        {{end}}
+        <a class="action-btn primary" href="/api/notes/{{.Note.ID}}/raw" download>⬇ 匯入到我的 vault</a>
+        <details class="action-menu">
+          <summary class="action-btn" aria-label="more">⋯</summary>
+          <div class="action-menu-list">
+            <button type="button" class="copy-md" data-raw="/api/notes/{{.Note.ID}}/raw">📋 複製 markdown</button>
+            <a href="/api/notes/{{.Note.ID}}/raw">⬇ 下載 .md</a>
+            {{if and .ViewerLoggedIn (not .IsAuthor)}}
+              <button type="button" onclick="this.closest('.action-menu-list').querySelector('.report-form').hidden=false;this.hidden=true">⚑ 檢舉</button>
+              <form class="inline-form report-form" hx-post="/api/report" hx-target="this" hx-swap="outerHTML" hidden style="padding:0.45em 0.85em;gap:0.4em">
+                <input type="hidden" name="note_id" value="{{.Note.ID}}">
+                <input type="text" name="reason" placeholder="原因（可省略）" maxlength="200" style="font-size:0.8rem;padding:0.25em 0.5em">
+                <button type="submit" class="link-btn" style="font-size:0.8rem">送出</button>
+              </form>
+            {{end}}
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <h1 class="article-title">{{.Note.Title}}</h1>
+    <div class="article-body">{{.BodyHTML}}</div>
+  </article>
+
+  {{/* ── 這篇連到的筆記 ── */}}
+  {{if or .OutgoingSame .OutgoingCross}}
+  <section class="connected-section">
+    <div class="section-header">
+      → 這篇連到的筆記
+      <span class="section-count">{{add (len .OutgoingSame) (len .OutgoingCross)}} 篇</span>
+    </div>
+    {{if .OutgoingSame}}
+      <div class="subsection-label"><span class="dot"></span>在 {{.AuthorHandle}} 的同個 vault · {{len .OutgoingSame}} 篇</div>
+      <div class="connected-grid">
+        {{range .OutgoingSame}}
+          <a class="mini-card" href="{{.URL}}">
+            <div class="mini-card-title">{{.Title}}</div>
+            <div class="mini-card-meta">
+              <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
+              @{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}}
+            </div>
+          </a>
+        {{end}}
+      </div>
+    {{end}}
+    {{if .OutgoingCross}}
+      <div class="subsection-label cross"><span class="dot"></span>跨 vault · 連到其他人的筆記 · {{len .OutgoingCross}} 篇</div>
+      <div class="connected-grid">
+        {{range .OutgoingCross}}
+          <a class="mini-card" href="{{.URL}}">
+            <div class="mini-card-title">{{.Title}} <span class="cross-badge">跨 vault</span></div>
+            <div class="mini-card-meta">
+              <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
+              @{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}}
+            </div>
+          </a>
+        {{end}}
+      </div>
+    {{end}}
+  </section>
+  {{end}}
+
+  {{/* ── 引用了這篇筆記的人 ── */}}
   {{if or .BacklinksSame .BacklinksCross}}
-  <section class="backlinks">
-    {{if .BacklinksSame}}
-      <h2>本 vault · linked from</h2>
-      <ul style="list-style:none;padding:0;margin:0 0 1em">
-        {{range .BacklinksSame}}
-        <li class="note-card" style="border:0;padding:0.4em 0">
-          <a href="{{.URL}}" style="text-decoration:none;color:inherit">
-            <div class="note-title">{{.Title}}</div>
-            <div class="note-foot">{{if .FolderPath}}{{.FolderPath}} · {{end}}{{.UpdatedRel}}</div>
-          </a>
-        </li>
-        {{end}}
-      </ul>
-    {{end}}
-    {{if .BacklinksCross}}
-      <h2>跨 vault · 連到別人</h2>
-      <ul style="list-style:none;padding:0;margin:0">
-        {{range .BacklinksCross}}
-        <li class="note-card" style="border:0;padding:0.4em 0">
-          <a href="{{.URL}}" style="text-decoration:none;color:inherit">
-            <div class="note-title">{{.Title}}</div>
-            <div class="note-foot">@{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}} · {{.UpdatedRel}}</div>
-          </a>
-        </li>
-        {{end}}
-      </ul>
-    {{end}}
+  <section class="backlinks-section">
+    <div class="section-header">
+      ↺ 引用了這篇筆記的人
+      <span class="section-count">{{add (len .BacklinksSame) (len .BacklinksCross)}} 篇</span>
+    </div>
+    <div class="backlinks-list">
+      {{range .BacklinksSame}}
+        <a class="backlink-row" href="{{.URL}}">
+          <span class="backlink-icon">↩</span>
+          <span class="backlink-title">{{.Title}}</span>
+          <span class="backlink-author">
+            <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
+            @{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}}
+          </span>
+        </a>
+      {{end}}
+      {{range .BacklinksCross}}
+        <a class="backlink-row" href="{{.URL}}">
+          <span class="backlink-icon">↩</span>
+          <span class="backlink-title">{{.Title}} <span class="cross-badge">跨 vault</span></span>
+          <span class="backlink-author">
+            <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
+            @{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}}
+          </span>
+        </a>
+      {{end}}
+    </div>
   </section>
   {{end}}
 {{end}}

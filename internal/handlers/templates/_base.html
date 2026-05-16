@@ -45,13 +45,13 @@
           <input type="search" name="q" placeholder="搜尋…" value="{{.SearchQuery}}" aria-label="search">
         </form>
         {{if .User}}
-          <a href="/{{.User.Handle}}">@{{.User.Handle}}</a>
           <a href="/write">write</a>
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
           <form method="POST" action="/logout" class="inline-form">
             <button type="submit" class="link-btn">logout</button>
           </form>
+          <a class="profile-dot" href="/{{.User.Handle}}" style="background-color:{{avatarColor .User.Handle}}" title="@{{.User.Handle}}">{{avatarInitial .User.Handle}}</a>
         {{else}}
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
