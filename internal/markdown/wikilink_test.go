@@ -27,6 +27,24 @@ func TestParseLink(t *testing.T) {
 		// unicode in slug allowed (DB will decide what's actually valid)
 		{"日記", true, WikiLink{Slug: "日記", Raw: "日記"}},
 
+		// aliases
+		{"foo|Custom Label", true, WikiLink{Slug: "foo", Alias: "Custom Label", Raw: "foo|Custom Label"}},
+		{"bar/baz|My Note", true, WikiLink{Folder: "bar", Slug: "baz", Alias: "My Note", Raw: "bar/baz|My Note"}},
+		{"@alice/foo|Her Note", true, WikiLink{User: "alice", Slug: "foo", Alias: "Her Note", Raw: "@alice/foo|Her Note"}},
+
+		// heading anchors
+		{"foo#Introduction", true, WikiLink{Slug: "foo", Anchor: "Introduction", Raw: "foo#Introduction"}},
+		{"bar/baz#Section 2", true, WikiLink{Folder: "bar", Slug: "baz", Anchor: "Section 2", Raw: "bar/baz#Section 2"}},
+		{"@alice/foo#Header", true, WikiLink{User: "alice", Slug: "foo", Anchor: "Header", Raw: "@alice/foo#Header"}},
+
+		// same-note heading links
+		{"#Introduction", true, WikiLink{Anchor: "Introduction", Raw: "#Introduction"}},
+		{"#形式謬誤", true, WikiLink{Anchor: "形式謬誤", Raw: "#形式謬誤"}},
+
+		// combined alias + anchor
+		{"foo#Section|See this", true, WikiLink{Slug: "foo", Anchor: "Section", Alias: "See this", Raw: "foo#Section|See this"}},
+		{"#Intro|Click here", true, WikiLink{Anchor: "Intro", Alias: "Click here", Raw: "#Intro|Click here"}},
+
 		// invalid
 		{"", false, WikiLink{}},
 		{"   ", false, WikiLink{}},
@@ -37,6 +55,7 @@ func TestParseLink(t *testing.T) {
 		{"/foo", false, WikiLink{}},
 		{"foo/", false, WikiLink{}},
 		{"foo//bar", false, WikiLink{}},
+		{"#", false, WikiLink{}},
 	}
 	for _, c := range cases {
 		t.Run(c.in, func(t *testing.T) {
@@ -62,6 +81,13 @@ func TestURL(t *testing.T) {
 		{WikiLink{User: "alice", Slug: "foo"}, "shawn", "/alice/foo"},
 		{WikiLink{User: "alice", Folder: "music", Slug: "why"}, "shawn", "/alice/music/why"},
 		{WikiLink{User: "alice", Folder: "a/b", Slug: "c"}, "shawn", "/alice/a/b/c"},
+		// with anchor
+		{WikiLink{Slug: "foo", Anchor: "Introduction"}, "shawn", "/shawn/foo#introduction"},
+		{WikiLink{Slug: "foo", Anchor: "Section 2"}, "shawn", "/shawn/foo#section-2"},
+		{WikiLink{Slug: "foo", Anchor: "形式謬誤"}, "shawn", "/shawn/foo#形式謬誤"},
+		// same-note
+		{WikiLink{Anchor: "Introduction"}, "shawn", "#introduction"},
+		{WikiLink{Anchor: "形式謬誤"}, "shawn", "#形式謬誤"},
 	}
 	for _, c := range cases {
 		got := c.l.URL(c.me)
@@ -83,5 +109,90 @@ some text [[@bob/folder/x]] and a duplicate [[foo]] and broken [[]] and unclosed
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Extract\n got: %+v\nwant: %+v", got, want)
+	}
+}
+
+func TestExtractSkipsSameNoteLinks(t *testing.T) {
+	body := `See [[#Introduction]] and [[foo#Section]] and [[bar]]`
+	got := Extract(body)
+	// [[#Introduction]] is same-note, skipped
+	// [[foo#Section]] links to note "foo" (Slug="foo"), included
+	// [[bar]] included
+	want := []WikiLink{
+		{Slug: "foo", Anchor: "Section", Raw: "foo#Section"},
+		{Slug: "bar", Raw: "bar"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ExtractSkipsSameNote\n got: %+v\nwant: %+v", got, want)
+	}
+}
+
+func TestHeadingAnchor(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"Introduction", "introduction"},
+		{"Section 2", "section-2"},
+		{"Hello, World!", "hello-world"},
+		{"形式謬誤", "形式謬誤"},
+		{"  Trim Me  ", "trim-me"},
+		{"", ""},
+		{"---", ""},
+	}
+	for _, c := range cases {
+		got := headingAnchor(c.in)
+		if got != c.want {
+			t.Errorf("headingAnchor(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestExtractInlineTags(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want []string
+	}{
+		{
+			"basic tags",
+			"I like #philosophy and #logic.",
+			[]string{"philosophy", "logic"},
+		},
+		{
+			"dedup",
+			"#foo and #foo again",
+			[]string{"foo"},
+		},
+		{
+			"word boundary blocks mid-word",
+			"foo#bar and baz2#tag",
+			nil,
+		},
+		{
+			"all digits rejected",
+			"#123 is not a tag",
+			nil,
+		},
+		{
+			"nested tag",
+			"tagged as #philosophy/logic here",
+			[]string{"philosophy/logic"},
+		},
+		{
+			"CJK tag",
+			"tag is #哲學",
+			[]string{"哲學"},
+		},
+		{
+			"frontmatter skipped",
+			"---\ntags: [philosophy]\n---\n\n#logic is cool",
+			[]string{"logic"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := ExtractInlineTags(c.body)
+			if !reflect.DeepEqual(got, c.want) {
+				t.Errorf("ExtractInlineTags(%q)\n got: %v\nwant: %v", c.body, got, c.want)
+			}
+		})
 	}
 }

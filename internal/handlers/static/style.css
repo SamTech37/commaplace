@@ -651,6 +651,59 @@ button.secondary { background: var(--card); color: var(--fg); border: 1px solid 
   color: var(--fg);
 }
 
+/* ── Callouts ──────────────────────────────────────────────────────── */
+.callout {
+  border-left: 4px solid var(--border-2);
+  border-radius: 4px;
+  background: var(--surface-2);
+  margin: 1em 0;
+  padding: 0.75em 1em;
+}
+.callout-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.4em;
+  opacity: 0.85;
+}
+.callout-body > :last-child { margin-bottom: 0; }
+
+/* foldable (details/summary) */
+details.callout > summary { list-style: none; cursor: pointer; }
+details.callout > summary::-webkit-details-marker { display: none; }
+details.callout > summary.callout-title { margin-bottom: 0; }
+details.callout[open] > summary.callout-title { margin-bottom: 0.4em; }
+
+/* per-type accent colours */
+.callout-note    { border-color: var(--accent); }
+.callout-tip,
+.callout-hint,
+.callout-success,
+.callout-check,
+.callout-done    { border-color: var(--teal); }
+.callout-warning,
+.callout-caution,
+.callout-attention { border-color: var(--warning); }
+.callout-danger,
+.callout-error,
+.callout-bug,
+.callout-failure,
+.callout-fail,
+.callout-missing { border-color: var(--danger); }
+.callout-info,
+.callout-todo    { border-color: var(--info); }
+
+/* ── Math ──────────────────────────────────────────────────────────── */
+.math-inline { font-style: italic; }
+.math-block  { text-align: center; margin: 1.2em 0; overflow-x: auto; }
+
+/* ── Mermaid ───────────────────────────────────────────────────────── */
+pre.mermaid {
+  background: var(--surface-2);
+  border-radius: 6px;
+  padding: 1em;
+  text-align: center;
+}
+
 /* Infinite scroll sentinel */
 .feed-sentinel,
 .feed-end {

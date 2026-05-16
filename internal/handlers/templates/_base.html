@@ -12,9 +12,29 @@
     <meta name="twitter:card" content="summary">
   {{end}}
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/copy.js" defer></script>
   <script src="/static/graph.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.katex) {
+        document.querySelectorAll('.math-inline').forEach(function(el) {
+          var src = el.textContent.replace(/^\$|\$$/g, '');
+          try { el.innerHTML = katex.renderToString(src, {displayMode: false, throwOnError: false}); }
+          catch(e) {}
+        });
+        document.querySelectorAll('.math-block').forEach(function(el) {
+          var src = el.textContent;
+          try { el.innerHTML = katex.renderToString(src, {displayMode: true, throwOnError: false}); }
+          catch(e) {}
+        });
+      }
+      if (window.mermaid) { mermaid.initialize({startOnLoad: true, theme: 'dark'}); }
+    });
+  </script>
 </head>
 <body>
   <div class="page">

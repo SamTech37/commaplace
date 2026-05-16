@@ -56,7 +56,11 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tags := parseTags(r.PostFormValue("tags"))
+	tagsInput := r.PostFormValue("tags")
+	if inline := markdown.ExtractInlineTags(body); len(inline) > 0 {
+		tagsInput += "," + strings.Join(inline, ",")
+	}
+	tags := parseTags(tagsInput)
 	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, folder, slug, title, body, tags); err != nil {
 		msg := err.Error()
 		if isUniqueViolation(err) {
