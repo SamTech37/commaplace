@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"commaplace/internal/auth"
-	"commaplace/internal/markdown"
+	"commonplace/internal/auth"
+	"commonplace/internal/markdown"
 )
 
 type folderNode struct {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"commaplace/internal/seed"
+	"commonplace/internal/seed"
 )
 
 // GetOnboarding shows the "fork the tour / start fresh" choice. Auth

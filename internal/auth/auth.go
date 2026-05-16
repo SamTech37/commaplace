@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	SessionCookie = "commaplace_session"
+	SessionCookie = "commonplace_session"
 	sessionMaxAge = 60 * 60 * 24 * 30 // 30 days
 	tokenTTL      = 15 * time.Minute
 )
@@ -139,13 +139,13 @@ func (a *Auth) IssueToken(ctx context.Context, email string) error {
 		return err
 	}
 	link := strings.TrimRight(a.BaseURL, "/") + "/auth/" + token
-	body := fmt.Sprintf("Sign in to commaplace:\n\n%s\n\nThis link expires in %d minutes.\n",
+	body := fmt.Sprintf("Sign in to commonplace:\n\n%s\n\nThis link expires in %d minutes.\n",
 		link, int(tokenTTL.Minutes()))
 	if a.Mailer == nil {
 		log.Printf("[magic-link] %s -> %s", email, link)
 		return nil
 	}
-	return a.Mailer.Send(email, "Your commaplace sign-in link", body)
+	return a.Mailer.Send(email, "Your commonplace sign-in link", body)
 }
 
 // ConsumeToken validates the token and returns the corresponding user

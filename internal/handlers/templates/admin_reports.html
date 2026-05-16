@@ -1,6 +1,10 @@
-{{define "title"}}Reports · admin · commaplace{{end}}
+{{define "title"}}Reports · admin · commonplace{{end}}
 {{define "content"}}
   <h1>Reports</h1>
+  <p class="note-meta">
+    <a href="/admin/reports">reports</a> ·
+    <a href="/admin/external">external vaults</a>
+  </p>
   <p class="note-meta">Open reports first, then resolved.</p>
   {{if .Reports}}
     <table style="width:100%;border-collapse:collapse;font-size:0.9rem">

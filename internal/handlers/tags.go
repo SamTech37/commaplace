@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"commaplace/internal/markdown"
+	"commonplace/internal/markdown"
 )
 
 // normalizeTag lowercases ASCII, collapses runs of non-letter/digit into '-'

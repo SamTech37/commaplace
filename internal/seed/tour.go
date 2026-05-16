@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const TourHandle = "commaplace-tour"
+const TourHandle = "commonplace-tour"
 const MakerHandle = "maker"
 const DemoHandle = "shawn"
 
@@ -100,10 +100,10 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 // succeeds without needing a second pass.
 var TourNotes = []TourNote{
 	{
-		Author: TourHandle, Folder: "", Slug: "welcome", Title: "Welcome to commaplace",
+		Author: TourHandle, Folder: "", Slug: "welcome", Title: "Welcome to commonplace",
 		IsWelcome: true,
 		Tags:      []string{"tour"},
-		Body: `commaplace is markdown notes that **link to each other**, including across other people's vaults.
+		Body: `commonplace is markdown notes that **link to each other**, including across other people's vaults.
 
 Take the tour:
 
@@ -170,7 +170,7 @@ The top-nav search box does full-text search across every note on the site. Filt
 	{
 		Author: TourHandle, Folder: "features", Slug: "markdown-support",
 		Title: "Markdown support", Tags: []string{"tour", "features"},
-		Body: `commaplace ships GitHub-Flavored Markdown:
+		Body: `commonplace ships GitHub-Flavored Markdown:
 
 - headings ` + "`# ## ###`" + `
 - **bold**, *italic*, ` + "`code`" + `
@@ -245,7 +245,7 @@ A note that opens with a blockquote renders as a **quote callout** card on the f
 		Title: "My process", Tags: []string{"art", "process"},
 		Body: `Two phases: morning is generative — fast sketches, no editing. Afternoon is critical — pick the strongest, take it to finish.
 
-I learned this from reading about other people's workflows on [[@commaplace-tour/features/cross-vault]] — there's value in publishing the messy steps publicly.`,
+I learned this from reading about other people's workflows on [[@commonplace-tour/features/cross-vault]] — there's value in publishing the messy steps publicly.`,
 	},
 	{
 		Author: MakerHandle, Folder: "art", Slug: "tools-i-use",
@@ -255,12 +255,12 @@ I learned this from reading about other people's workflows on [[@commaplace-tour
 - A two-monitor setup for reference
 - Music: ambient, no lyrics
 
-See [[@commaplace-tour/welcome]] if you want to see how this whole linking thing works.`,
+See [[@commonplace-tour/welcome]] if you want to see how this whole linking thing works.`,
 	},
 }
 
 // Apply ensures the seed users and their notes exist in db. Idempotent —
-// if @commaplace-tour already exists we assume the seed has already run.
+// if @commonplace-tour already exists we assume the seed has already run.
 func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID int64, authorHandle, body string) error) error {
 	var existing int
 	if err := db.QueryRowContext(ctx,

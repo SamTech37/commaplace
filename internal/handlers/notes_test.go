@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"commaplace/internal/auth"
-	"commaplace/internal/db"
-	"commaplace/internal/markdown"
+	"commonplace/internal/auth"
+	"commonplace/internal/db"
+	"commonplace/internal/markdown"
 )
 
 func newTestServer(t *testing.T) *Server {

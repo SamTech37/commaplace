@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	htmlpkg "html"
 	"net/http"
@@ -146,6 +145,3 @@ func buildWikiInsert(s wikiSuggestion, myHandle string) string {
 	}
 	return "@" + s.Handle + "/" + s.Slug
 }
-
-// satisfy `import "database/sql"` if all consumers are inlined above.
-var _ = sql.ErrNoRows

@@ -1,6 +1,6 @@
-{{define "title"}}{{.Note.Title}} · @{{.AuthorHandle}} · commaplace{{end}}
+{{define "title"}}{{.Note.Title}} · @{{.AuthorHandle}} · commonplace{{end}}
 {{define "meta"}}
-  <meta property="og:site_name" content="commaplace">
+  <meta property="og:site_name" content="commonplace">
   <meta property="og:title" content="{{.Note.Title}} · @{{.AuthorHandle}}">
   <meta property="og:type" content="article">
   <meta property="og:article:author" content="@{{.AuthorHandle}}">
@@ -37,6 +37,7 @@
         <span class="heart-static">♡ {{.LikeCount}}</span>
       {{end}}
       <a class="download-link" href="/api/notes/{{.Note.ID}}/raw">⬇ download .md</a>
+      <button type="button" class="link-btn copy-md" data-raw="/api/notes/{{.Note.ID}}/raw">📋 copy markdown</button>
       {{if and .ViewerLoggedIn (not .IsAuthor)}}
         <span class="report-mount">
           <button type="button" class="link-btn" onclick="this.nextElementSibling.hidden=false;this.hidden=true">report</button>
@@ -49,6 +50,14 @@
       {{end}}
     </p>
   </article>
+  <h2 class="local-graph-heading">local graph</h2>
+  <div class="local-graph-wrap"
+       data-graph-source="/api/graph/local?note=n:{{.Note.ID}}"
+       data-graph-height="280">
+    <canvas></canvas>
+    <div class="graph-empty" hidden>這篇還沒有連到別的筆記。</div>
+    <div class="graph-tooltip" hidden></div>
+  </div>
   {{if or .BacklinksSame .BacklinksCross}}
   <section class="backlinks">
     {{if .BacklinksSame}}

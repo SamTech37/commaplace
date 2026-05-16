@@ -16,6 +16,11 @@ func (s *Server) Routes() *http.ServeMux {
 	// Home
 	mux.HandleFunc("GET /{$}", s.GetHome)
 
+	// Graph view
+	mux.HandleFunc("GET /graph", s.GetGraph)
+	mux.HandleFunc("GET /api/graph", s.GetGraphData)
+	mux.HandleFunc("GET /api/graph/local", s.GetGraphLocal)
+
 	// Auth
 	mux.HandleFunc("GET /login", s.GetLogin)
 	mux.HandleFunc("POST /login", s.PostLogin)
@@ -56,6 +61,15 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /admin/reports", s.GetAdminReports)
 	mux.HandleFunc("POST /admin/hide", s.PostAdminHide)
 
+	// External (indexed Obsidian Publish vaults)
+	mux.HandleFunc("GET /admin/external", s.GetAdminExternal)
+	mux.HandleFunc("POST /admin/external/add", s.PostAdminExternalAdd)
+	mux.HandleFunc("POST /admin/external/recrawl", s.PostAdminExternalRecrawl)
+	mux.HandleFunc("POST /admin/external/delete", s.PostAdminExternalDelete)
+	mux.HandleFunc("GET /x/{vault}", s.GetExternalIndex)
+	mux.HandleFunc("GET /x/{vault}/{path...}", s.GetExternalNote)
+	mux.HandleFunc("GET /api/x/notes/{id}/raw", s.GetExternalNoteRaw)
+
 	// Markdown export
 	mux.HandleFunc("GET /api/notes/{id}/raw", s.GetNoteRaw)
 
@@ -67,7 +81,8 @@ func (s *Server) Routes() *http.ServeMux {
 	return mux
 }
 
-// GetHome renders the landing page.
+// GetHome sends visitors straight to the feed — the landing page IS the feed,
+// so logged-out visitors land on content instead of a welcome/login prompt.
 func (s *Server) GetHome(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, "home", nil)
+	http.Redirect(w, r, "/feed", http.StatusSeeOther)
 }
