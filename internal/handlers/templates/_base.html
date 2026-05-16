@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{block "title" .}}commonplace{{end}}</title>
+  <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
   {{block "meta" .}}
-    <meta property="og:site_name" content="commonplace">
-    <meta property="og:title" content="commonplace">
-    <meta property="og:description" content="Markdown notes that link to each other, including across other people's vaults.">
+    <meta property="og:site_name" content="{{.Site.Title}}">
+    <meta property="og:title" content="{{.Site.Title}}">
+    <meta property="og:description" content="{{.Site.Description}}">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary">
   {{end}}
@@ -19,7 +19,7 @@
 <body>
   <div class="page">
     <header class="topbar">
-      <a class="brand" href="/">commonplace</a>
+      <a class="brand" href="/">{{.Site.Title}}</a>
       <nav class="nav">
         <form method="GET" action="/search" class="search-form" role="search">
           <input type="search" name="q" placeholder="搜尋…" value="{{.SearchQuery}}" aria-label="search">

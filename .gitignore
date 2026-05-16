@@ -7,15 +7,18 @@ bin/
 .session_secret
 .DS_Store
 
-# local dev junk
+# local dev junk and binaries
 server.log
 cookies.txt
 *.txt
 /import-vault
 /commaplace
+server
 
-CLAUDE.md
 *-build-plan.md
+
+# Local Claude Code config (private, not shared with teammates)
+.claude/
 
 # local-only tooling that references personal paths
 cmd/import-vault/

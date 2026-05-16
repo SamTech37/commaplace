@@ -45,7 +45,7 @@ func (s *Server) PostReport(w http.ResponseWriter, r *http.Request) {
 		_ = s.DB.QueryRowContext(r.Context(),
 			`SELECT email FROM users WHERE handle = ?`, s.AdminHandle).Scan(&adminEmail)
 		if adminEmail != "" {
-			_ = s.Auth.Mailer.Send(adminEmail, "[commonplace] new report",
+			_ = s.Auth.Mailer.Send(adminEmail, emailCfg.ReportSubj,
 				fmt.Sprintf("Note id %d reported by @%s.\nReason: %s\n",
 					noteID, u.Handle, reason))
 		}

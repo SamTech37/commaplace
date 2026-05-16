@@ -18,12 +18,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"commonplace/internal/config"
 )
 
-const (
-	SessionCookie = "commonplace_session"
-	sessionMaxAge = 60 * 60 * 24 * 30 // 30 days
-	tokenTTL      = 15 * time.Minute
+const sessionMaxAge = 60 * 60 * 24 * 30 // 30 days
+
+var (
+	cfg        = config.DefaultAuth()
+	emailCfg   = config.DefaultEmail()
+	siteCfg    = config.DefaultSite()
+	SessionCookie = siteCfg.SessionName
 )
 
 type User struct {
@@ -127,11 +132,11 @@ func (a *Auth) IssueToken(ctx context.Context, email string) error {
 	if !looksLikeEmail(email) {
 		return errors.New("invalid email")
 	}
-	token, err := randomHex(32)
+	token, err := randomHex(cfg.TokenLength)
 	if err != nil {
 		return err
 	}
-	expires := time.Now().Add(tokenTTL).Unix()
+	expires := time.Now().Add(cfg.TokenTTL).Unix()
 	if _, err := a.DB.ExecContext(ctx,
 		`INSERT INTO auth_tokens(token, email, expires_at) VALUES(?, ?, ?)`,
 		token, email, expires,
@@ -139,13 +144,13 @@ func (a *Auth) IssueToken(ctx context.Context, email string) error {
 		return err
 	}
 	link := strings.TrimRight(a.BaseURL, "/") + "/auth/" + token
-	body := fmt.Sprintf("Sign in to commonplace:\n\n%s\n\nThis link expires in %d minutes.\n",
-		link, int(tokenTTL.Minutes()))
+	body := fmt.Sprintf("%s\n\n%s\n\nThis link expires in %d minutes.\n",
+		emailCfg.SignInIntro, link, int(cfg.TokenTTL.Minutes()))
 	if a.Mailer == nil {
 		log.Printf("[magic-link] %s -> %s", email, link)
 		return nil
 	}
-	return a.Mailer.Send(email, "Your commonplace sign-in link", body)
+	return a.Mailer.Send(email, emailCfg.SignInSubj, body)
 }
 
 // ConsumeToken validates the token and returns the corresponding user
@@ -267,7 +272,7 @@ func findOrCreateUser(ctx context.Context, tx *sql.Tx, email string) (*User, err
 
 func uniqueHandle(ctx context.Context, tx *sql.Tx, base string) (string, error) {
 	candidate := base
-	for i := 2; i < 10000; i++ {
+	for i := 2; i < cfg.MaxCollisions; i++ {
 		var one int
 		err := tx.QueryRowContext(ctx,
 			`SELECT 1 FROM users WHERE handle = ?`, candidate,

@@ -9,8 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"commonplace/internal/config"
 	"commonplace/internal/markdown"
 )
+
+var pageCfg = config.DefaultPagination()
 
 
 // feedItem powers list-style cards (/tag, /me/saved, profile recent).
@@ -72,18 +75,18 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		if viewer == nil {
 			cards = nil
 		} else {
-			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, older, 50)
+			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, older, pageCfg.FeedPageSize)
 		}
 	} else {
-		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, older, 50)
+		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, older, pageCfg.FeedPageSize)
 		if err == nil {
 			// Merge in external (indexed) notes only on the recommended tab
 			// — they don't belong to anyone you can follow.
-			extCards, ferr := s.queryExternalCards(r.Context(), older, 50)
+			extCards, ferr := s.queryExternalCards(r.Context(), older, pageCfg.FeedPageSize)
 			if ferr != nil {
 				log.Printf("feed: external cards query failed: %v", ferr)
 			} else {
-				cards = mergeAndSortCards(cards, extCards, 50)
+				cards = mergeAndSortCards(cards, extCards, pageCfg.FeedPageSize)
 			}
 		}
 	}
@@ -94,7 +97,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 
 	// "older" cursor for pagination — last item's updated_at, or empty.
 	var olderURL string
-	if len(cards) == 50 {
+	if len(cards) == pageCfg.FeedPageSize {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))

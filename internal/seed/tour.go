@@ -9,9 +9,11 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"commonplace/internal/config"
 )
 
-const TourHandle = "commonplace-tour"
+var TourHandle = config.DefaultEmail().TourHandle
 const MakerHandle = "maker"
 const DemoHandle = "shawn"
 

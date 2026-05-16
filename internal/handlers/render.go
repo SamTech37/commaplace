@@ -15,7 +15,13 @@ import (
 	"time"
 
 	"commonplace/internal/auth"
+	"commonplace/internal/config"
 	"commonplace/internal/external"
+)
+
+var (
+	siteCfg = config.DefaultSite()
+	emailCfg = config.DefaultEmail()
 )
 
 //go:embed all:templates all:static
@@ -133,13 +139,14 @@ type Server struct {
 	extStore *external.Store
 }
 
-// render is a small wrapper that injects the current user automatically.
+// render is a small wrapper that injects the current user and site config automatically.
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data map[string]any) {
 	if data == nil {
 		data = map[string]any{}
 	}
 	u, _ := s.Auth.CurrentUser(r)
 	data["User"] = u
+	data["Site"] = siteCfg
 	s.Pages.Render(w, name, data)
 }
 
