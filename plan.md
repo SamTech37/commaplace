@@ -17,6 +17,7 @@
   - [ ] timeline
   - [ ] tree
 - [ ] 好的資料模型 — 現用 SQLite、未來改 Postgres；GraphDB vs SQL、是否走 GraphQL 待評估。
+  - [ ] postgres > 100 users 再考慮
 - [ ] 逆向 Obsidian 的殺手功能 — 
   - [x] 例如 [obsidian-flavored markdown](https://obsidian.md/help/syntax)
   - [ ] others… check [Home - Developer Documentation](https://docs.obsidian.md/Home)
@@ -68,7 +69,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] 繁簡轉換。
   - [ ] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
 - [ ] 思源宋體（or 源漾明體、源流明體）
-  - [ ] https://github.com/adobe-fonts/source-han-serif
+  - [x] https://github.com/adobe-fonts/source-han-serif
   - [ ] https://github.com/ButTaiwan/genyo-font
 - [x] 明暗主題（已完成）。
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
@@ -109,4 +110,5 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
 - [x] need quick reply to others note
 - [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
+- [ ] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
