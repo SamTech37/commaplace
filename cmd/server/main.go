@@ -67,6 +67,7 @@ func main() {
 	fetchers := map[string]external.Fetcher{
 		"publish": external.NewPublishFetcher(),
 		"quartz":  external.NewQuartzFetcher(),
+		"github":  external.NewGitHubFetcher(),
 	}
 	crawler := external.NewCrawler(store, fetchers)
 	worker := external.NewWorker(crawler)

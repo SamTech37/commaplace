@@ -12,7 +12,7 @@ build:
 run: build
 	$(BINARY)
 
-## dev: local dev mode — DEBUG=1, dev login at /_dev/login?as=<handle>
+## dev: local dev mode — DEBUG=1, dev login at /_dev/login?as=alice
 dev:	
 	DEBUG=1 DB_PATH=$(DB) ADDR=:$(PORT) go run ./cmd/server
 

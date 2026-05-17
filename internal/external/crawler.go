@@ -48,7 +48,7 @@ func (c *Crawler) CrawlByID(ctx context.Context, id int64) error {
 	}
 	// just fetch the row directly
 	row := c.Store.DB.QueryRowContext(ctx, `
-		SELECT id, source_url, site_id, display_name, slug, added_at, last_crawled_at, status, error_message, note_count
+		SELECT id, source_url, site_id, display_name, slug, kind, added_at, last_crawled_at, status, error_message, note_count
 		FROM external_vaults WHERE id = ?`, id)
 	v, err = scanVault(row)
 	if err != nil {

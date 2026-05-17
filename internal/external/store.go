@@ -52,6 +52,26 @@ func NormalizeSourceURL(raw string) (canon, slug, kind string, err error) {
 		kind = "publish"
 		return
 	}
+	if host == "github.com" {
+		owner, repo, branch, subpath, perr := parseGitHubURL(raw)
+		if perr != nil {
+			return "", "", "", perr
+		}
+		canon = "https://github.com/" + owner + "/" + repo
+		if branch != "" {
+			canon += "/tree/" + branch
+			if subpath != "" {
+				canon += "/" + subpath
+			}
+		}
+		s := strings.ToLower(owner + "-" + repo)
+		if subpath != "" {
+			s += "-" + strings.ToLower(strings.ReplaceAll(subpath, "/", "-"))
+		}
+		slug = s
+		kind = "github"
+		return
+	}
 	// Treat anything else as a candidate Quartz site at the root of the host.
 	canon = "https://" + host
 	slug = hostToSlug(host)

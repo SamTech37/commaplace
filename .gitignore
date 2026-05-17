@@ -1,8 +1,7 @@
 bin/
 *.db
-*.db-journal
-*.db-wal
-*.db-shm
+*.db.*
+*.db-[shm|wal|journal]*
 .env
 .session_secret
 .DS_Store
