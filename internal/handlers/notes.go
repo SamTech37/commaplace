@@ -99,6 +99,165 @@ func (s *Server) PostPreview(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(html))
 }
 
+// ---------- edit ----------
+
+func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	noteID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || noteID <= 0 {
+		s.renderError(w, r, http.StatusNotFound, "note not found")
+		return
+	}
+
+	var (
+		authorID                  int64
+		folder, slug, title, body string
+	)
+	err = s.DB.QueryRowContext(r.Context(), `
+		SELECT author_id, folder_path, slug, title, body_md
+		FROM notes WHERE id = ?`, noteID,
+	).Scan(&authorID, &folder, &slug, &title, &body)
+	if errors.Is(err, sql.ErrNoRows) {
+		s.renderError(w, r, http.StatusNotFound, "note not found")
+		return
+	}
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if authorID != u.ID {
+		s.renderError(w, r, http.StatusForbidden, "you can only edit your own notes")
+		return
+	}
+
+	tags, _ := loadTagsForNote(r.Context(), s.DB, noteID)
+	tagsStr := strings.Join(tags, ", ")
+
+	s.render(w, r, "write", map[string]any{
+		"Form": map[string]string{
+			"Title": title, "FolderPath": folder, "BodyMD": body, "Tags": tagsStr,
+		},
+		"Action":      "/edit/" + strconv.FormatInt(noteID, 10),
+		"Heading":     "編輯筆記",
+		"SubmitLabel": "儲存",
+		"EditNote": map[string]any{
+			"ID":         noteID,
+			"FolderPath": folder,
+			"Slug":       slug,
+		},
+	})
+}
+
+func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	noteID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || noteID <= 0 {
+		s.renderError(w, r, http.StatusNotFound, "note not found")
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		s.renderError(w, r, http.StatusBadRequest, "bad form")
+		return
+	}
+
+	var (
+		authorID     int64
+		folder, slug string
+	)
+	err = s.DB.QueryRowContext(r.Context(), `
+		SELECT author_id, folder_path, slug FROM notes WHERE id = ?`, noteID,
+	).Scan(&authorID, &folder, &slug)
+	if errors.Is(err, sql.ErrNoRows) {
+		s.renderError(w, r, http.StatusNotFound, "note not found")
+		return
+	}
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if authorID != u.ID {
+		s.renderError(w, r, http.StatusForbidden, "you can only edit your own notes")
+		return
+	}
+
+	title := strings.TrimSpace(r.PostFormValue("title"))
+	body := r.PostFormValue("body_md")
+	tagsInput := r.PostFormValue("tags")
+
+	form := map[string]string{
+		"Title": title, "FolderPath": folder, "BodyMD": body, "Tags": tagsInput,
+	}
+	rerender := func(msg string) {
+		s.render(w, r, "write", map[string]any{
+			"Form":        form,
+			"Action":      "/edit/" + strconv.FormatInt(noteID, 10),
+			"Heading":     "編輯筆記",
+			"SubmitLabel": "儲存",
+			"EditNote": map[string]any{
+				"ID": noteID, "FolderPath": folder, "Slug": slug,
+			},
+			"Error": msg,
+		})
+	}
+	if title == "" {
+		rerender("Title is required.")
+		return
+	}
+
+	if inline := markdown.ExtractInlineTags(body); len(inline) > 0 {
+		tagsInput += "," + strings.Join(inline, ",")
+	}
+	tags := parseTags(tagsInput)
+
+	if err := s.updateNote(r.Context(), noteID, u.Handle, title, body, tags); err != nil {
+		rerender(err.Error())
+		return
+	}
+	http.Redirect(w, r, noteURL(u.Handle, folder, slug), http.StatusSeeOther)
+}
+
+// updateNote updates an existing note's title/body/tags and recomputes its
+// outgoing links. Folder and slug are intentionally not editable here so
+// that inbound wiki-links remain valid.
+func (s *Server) updateNote(ctx context.Context, noteID int64, authorHandle, title, body string, tags []string) error {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	now := nowUnix()
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE notes SET title = ?, body_md = ?, updated_at = ?
+		WHERE id = ?`, title, body, now, noteID,
+	); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id = ?`, noteID); err != nil {
+		return err
+	}
+	for _, t := range tags {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+			noteID, t, now,
+		); err != nil {
+			return err
+		}
+	}
+
+	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 // ---------- note view ----------
 
 type backlink struct {

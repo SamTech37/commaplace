@@ -1,15 +1,23 @@
-{{define "title"}}Write · commonplace{{end}}
+{{define "title"}}{{if .EditNote}}編輯筆記{{else}}Write{{end}} · commonplace{{end}}
 {{define "content"}}
   <script src="/static/editor.js" defer></script>
-  <h1>Write a note</h1>
+  <h1>{{if .Heading}}{{.Heading}}{{else}}Write a note{{end}}</h1>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <form method="POST" action="/write">
+  <form method="POST" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
     <label>Title
       <input type="text" name="title" required maxlength="200" value="{{.Form.Title}}" autofocus>
     </label>
-    <label>Folder path <small style="font-weight:400;color:var(--muted)">(optional, e.g. <code>music/mixing</code>)</small>
-      <input type="text" name="folder_path" maxlength="200" value="{{.Form.FolderPath}}">
-    </label>
+    {{if .EditNote}}
+      <p style="color:var(--muted);font-size:0.9rem;margin:0">
+        路徑：<code>/{{if .EditNote.FolderPath}}{{.EditNote.FolderPath}}/{{end}}{{.EditNote.Slug}}</code>
+        <small>（資料夾與 slug 不可變更，避免破壞他人對這篇的 <code>[[wiki-link]]</code>）</small>
+      </p>
+      <input type="hidden" name="folder_path" value="{{.Form.FolderPath}}">
+    {{else}}
+      <label>Folder path <small style="font-weight:400;color:var(--muted)">(optional, e.g. <code>music/mixing</code>)</small>
+        <input type="text" name="folder_path" maxlength="200" value="{{.Form.FolderPath}}">
+      </label>
+    {{end}}
     <label>Tags <small style="font-weight:400;color:var(--muted)">(comma-separated, e.g. <code>混音, workflow</code>)</small>
       <input type="text" name="tags" maxlength="500" value="{{.Form.Tags}}">
     </label>
@@ -26,7 +34,10 @@
       </div>
     </label>
     <div class="editor-actions">
-      <button type="submit">Publish</button>
+      <button type="submit">{{if .SubmitLabel}}{{.SubmitLabel}}{{else}}Publish{{end}}</button>
+      {{if .EditNote}}
+        <a href="/{{.User.Handle}}/{{if .EditNote.FolderPath}}{{.EditNote.FolderPath}}/{{end}}{{.EditNote.Slug}}" style="margin-left:0.75em;color:var(--muted)">取消</a>
+      {{end}}
     </div>
   </form>
   <section class="preview">

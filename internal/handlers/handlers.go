@@ -26,12 +26,17 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("POST /login", s.PostLogin)
 	mux.HandleFunc("GET /auth/{token}", s.GetAuthCallback)
 	mux.HandleFunc("POST /logout", s.PostLogout)
+	mux.HandleFunc("GET /_dev/login", s.GetDevLogin)
 	mux.HandleFunc("GET /me", s.GetMe)
 
 	// Write + preview
 	mux.HandleFunc("GET /write", s.GetWrite)
 	mux.HandleFunc("POST /write", s.PostWrite)
 	mux.HandleFunc("POST /preview", s.PostPreview)
+
+	// Edit
+	mux.HandleFunc("GET /edit/{id}", s.GetEdit)
+	mux.HandleFunc("POST /edit/{id}", s.PostEdit)
 
 	// Feed
 	mux.HandleFunc("GET /feed", s.GetFeed)
