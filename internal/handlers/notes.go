@@ -66,7 +66,7 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	if slug == "" {
 		s.render(w, r, "write", map[string]any{
 			"Form":  form,
-			"Error": "Title must contain at least one ASCII letter or digit (it's used as the URL slug).",
+			"Error": "Title must contain at least one letter or digit (it's used as the URL slug).",
 		})
 		return
 	}

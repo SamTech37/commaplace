@@ -130,7 +130,8 @@ func TestSlugAndFolderNormalization(t *testing.T) {
 		{"Hello World", "hello-world"},
 		{"Why I rate by mood", "why-i-rate-by-mood"},
 		{"   leading/trailing   ", "leading-trailing"},
-		{"non-ASCII 日記 mix", "non-ascii-mix"},
+		{"non-ASCII 日記 mix", "non-ascii-日記-mix"},
+		{"日記", "日記"},
 		{"...", ""},
 	}
 	for _, c := range cases {

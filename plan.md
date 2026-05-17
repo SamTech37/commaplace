@@ -108,4 +108,5 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] migrations: in early dev it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
 - [x] need quick reply to others note
+- [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
 

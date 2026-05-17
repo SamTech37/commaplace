@@ -59,7 +59,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 
 	slug := kebabSlug(title)
 	if slug == "" {
-		s.render(w, r, "import", map[string]any{"Error": "Title must contain at least one ASCII letter or digit."})
+		s.render(w, r, "import", map[string]any{"Error": "Title must contain at least one letter or digit."})
 		return
 	}
 

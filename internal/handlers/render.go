@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"commonplace/internal/auth"
 	"commonplace/internal/config"
@@ -214,17 +215,16 @@ func relativeTime(unix int64) string {
 	}
 }
 
-// kebabSlug normalises a free-text title into an ASCII kebab slug.
-// Anything outside [a-z0-9] becomes "-"; runs collapse; ends are trimmed.
+// kebabSlug normalises a free-text title into a URL slug.
+// Non-letter/digit runes become "-"; runs collapse; ends are trimmed.
 func kebabSlug(title string) string {
 	var b strings.Builder
 	prevDash := true
 	for _, r := range strings.ToLower(title) {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			b.WriteRune(r)
 			prevDash = false
-		default:
+		} else {
 			if !prevDash {
 				b.WriteByte('-')
 				prevDash = true
