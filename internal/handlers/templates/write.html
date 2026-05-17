@@ -1,52 +1,88 @@
-{{define "title"}}{{if .EditNote}}編輯筆記{{else}}Write{{end}} · {{.Site.Title}}{{end}}
-{{define "content"}}
-  <script src="/static/editor.js" defer></script>
-  <h1>{{if .Heading}}{{.Heading}}{{else}}Write a note{{end}}</h1>
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  <form method="POST" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
-    <label>Title
-      <input type="text" name="title" required maxlength="200" value="{{.Form.Title}}" autofocus>
-    </label>
+{{define "title"}}{{if .EditNote}}編輯筆記{{else}}Write{{end}} ·
+{{.Site.Title}}{{end}} {{define "content"}}
+<script src="/static/editor.js" defer></script>
+<h1>{{if .Heading}}{{.Heading}}{{else}}Write a note{{end}}</h1>
+{{if .Error}}
+<p class="error">{{.Error}}</p>
+{{end}}
+<form method="POST" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
+  <label
+    >Title
+    <input
+      type="text"
+      name="title"
+      required
+      maxlength="200"
+      value="{{.Form.Title}}"
+      autofocus
+    />
+  </label>
+  {{if .EditNote}}
+  <p style="color: var(--muted); font-size: 0.9rem; margin: 0">
+    路徑：<code
+      >/{{if
+      .EditNote.FolderPath}}{{.EditNote.FolderPath}}/{{end}}{{.EditNote.Slug}}</code
+    >
+    <small
+      >（資料夾與 slug 不可變更，避免破壞他人對這篇的
+      <code>[[wiki-link]]</code>）</small
+    >
+  </p>
+  <input type="hidden" name="folder_path" value="{{.Form.FolderPath}}" />
+  {{else}}
+  <label
+    >Folder path
+    <small style="font-weight: 400; color: var(--muted)"
+      >(optional, e.g. <code>music/mixing</code>)</small
+    >
+    <input
+      type="text"
+      name="folder_path"
+      maxlength="200"
+      value="{{.Form.FolderPath}}"
+    />
+  </label>
+  {{end}}
+  <label
+    >Tags
+    <small style="font-weight: 400; color: var(--muted)"
+      >(comma-separated, e.g. <code>混音, workflow</code>)</small
+    >
+    <input type="text" name="tags" maxlength="500" value="{{.Form.Tags}}" />
+  </label>
+  <label
+    >Markdown Body<small style="font-weight: 400; color: var(--muted)"
+      >— type <code>[[</code> to link to another note</small
+    >
+    <textarea
+      name="body_md"
+      data-autocomplete="1"
+      hx-post="/preview"
+      hx-trigger="input changed delay:400ms"
+      hx-target="#preview"
+      hx-swap="innerHTML"
+    >
+{{.Form.BodyMD}}</textarea
+    >
+    <div id="ac-popup" class="ac-popup" hidden>
+      <ul></ul>
+    </div>
+  </label>
+  <div class="editor-actions">
+    <button type="submit">
+      {{if .SubmitLabel}}{{.SubmitLabel}}{{else}}Publish{{end}}
+    </button>
     {{if .EditNote}}
-      <p style="color:var(--muted);font-size:0.9rem;margin:0">
-        路徑：<code>/{{if .EditNote.FolderPath}}{{.EditNote.FolderPath}}/{{end}}{{.EditNote.Slug}}</code>
-        <small>（資料夾與 slug 不可變更，避免破壞他人對這篇的 <code>[[wiki-link]]</code>）</small>
-      </p>
-      <input type="hidden" name="folder_path" value="{{.Form.FolderPath}}">
-    {{else}}
-      <label>Folder path <small style="font-weight:400;color:var(--muted)">(optional, e.g. <code>music/mixing</code>)</small>
-        <input type="text" name="folder_path" maxlength="200" value="{{.Form.FolderPath}}">
-      </label>
+    <a
+      href="/{{.User.Handle}}/{{if .EditNote.FolderPath}}{{.EditNote.FolderPath}}/{{end}}{{.EditNote.Slug}}"
+      style="margin-left: 0.75em; color: var(--muted)"
+      >取消</a
+    >
     {{end}}
-    <label>Tags <small style="font-weight:400;color:var(--muted)">(comma-separated, e.g. <code>混音, workflow</code>)</small>
-      <input type="text" name="tags" maxlength="500" value="{{.Form.Tags}}">
-    </label>
-    <label>Body (markdown) <small style="font-weight:400;color:var(--muted)">— type <code>[[</code> to link to another note</small>
-      <textarea name="body_md"
-                data-autocomplete="1"
-                hx-post="/preview"
-                hx-trigger="input changed delay:400ms"
-                hx-target="#preview"
-                hx-swap="innerHTML"
-                hx-indicator="#preview-skeleton">{{.Form.BodyMD}}</textarea>
-      <div id="ac-popup" class="ac-popup" hidden>
-        <ul></ul>
-      </div>
-    </label>
-    <div class="editor-actions">
-      <button type="submit">{{if .SubmitLabel}}{{.SubmitLabel}}{{else}}Publish{{end}}</button>
-      {{if .EditNote}}
-        <a href="/{{.User.Handle}}/{{if .EditNote.FolderPath}}{{.EditNote.FolderPath}}/{{end}}{{.EditNote.Slug}}" style="margin-left:0.75em;color:var(--muted)">取消</a>
-      {{end}}
-    </div>
-  </form>
-  <section class="preview">
-    <h2>Preview</h2>
-    <div id="preview-skeleton" class="skeleton-group htmx-indicator" aria-hidden="true">
-      <div class="skeleton skeleton-line"></div>
-      <div class="skeleton skeleton-line medium"></div>
-      <div class="skeleton skeleton-line short"></div>
-    </div>
-    <div id="preview"></div>
-  </section>
+  </div>
+</form>
+<section class="preview">
+  <h2>Preview</h2>
+  <div id="preview"></div>
+</section>
 {{end}}

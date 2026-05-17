@@ -286,8 +286,8 @@ button.secondary { background: var(--card); color: var(--fg); border: 1px solid 
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-#preview { transition: opacity 0.12s ease; }
-#preview.htmx-settling { opacity: 0.5; }
+#preview { transition: opacity 0.15s ease; }
+#preview.preview-loading { opacity: 0.35; }
 .preview > h2 {
   position: absolute;
   top: -0.6rem;

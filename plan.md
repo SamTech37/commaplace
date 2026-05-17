@@ -98,3 +98,4 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - linked by self or by others
  - need random / suprise-me / I'm feeling lucky button or page
  - can users change their @handle (ID)? 
+ - maybe no "folders"?  how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders?
