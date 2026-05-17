@@ -1,5 +1,13 @@
 /* commonplace — mobile-first, single column. Desktop just gets margins. */
 
+@font-face {
+  font-family: "Source Han Serif";
+  src: url("/static/SourceHanSerifTC-VF.otf.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+}
+
 :root {
   --fg: #ececec; /* primary text */
   --muted: #b0b0ad; /* secondary text */
@@ -19,8 +27,8 @@
   --maxw: 900px;
   --gap: 1rem;
   --font-serif:
-    "Iowan Old Style", "Apple Garamond", Baskerville, "Times New Roman",
-    "Droid Serif", Times, "Source Serif Pro", serif;
+    "Source Han Serif", "Iowan Old Style", "Apple Garamond", Baskerville,
+    "Times New Roman", "Droid Serif", Times, "Source Serif Pro", serif;
 }
 
 * {
@@ -35,8 +43,8 @@ body {
 
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", system-ui,
-    "PingFang TC", "Hiragino Sans", "Noto Sans CJK TC", sans-serif;
+    "Source Han Serif", "Iowan Old Style", "Apple Garamond", Baskerville,
+    "Times New Roman", "Droid Serif", Times, "Source Serif Pro", serif;
   font-size: 13px;
   line-height: 1.55;
   color: var(--fg);
