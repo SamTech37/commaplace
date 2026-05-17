@@ -55,7 +55,7 @@ type Pages struct {
 func LoadPages() (*Pages, error) {
 	pageNames := []string{
 		"login", "me", "write", "note", "profile", "feed", "error",
-		"tag", "saved", "search", "onboarding", "admin_reports", "graph",
+		"tag", "saved", "search", "onboarding", "admin_dashboard", "admin_reports", "graph",
 		"admin_external", "external_vault", "external_note",
 	}
 	// Partials are standalone fragments (no _base.html wrapper) used for

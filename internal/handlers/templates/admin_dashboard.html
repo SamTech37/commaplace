@@ -1,0 +1,99 @@
+{{define "title"}}admin · commonplace{{end}}
+{{define "content"}}
+  <h1>Admin</h1>
+  <p class="note-meta">
+    <a href="/admin">dashboard</a> ·
+    <a href="/admin/reports">reports</a> ·
+    <a href="/admin/external">external vaults</a>
+  </p>
+
+  <h2 style="margin-top:1.5em">Numbers</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75em;margin-top:0.75em">
+    {{range .Stats}}
+      <div style="border:1px solid var(--border);border-radius:8px;padding:0.75em 1em">
+        <div style="font-size:1.6rem;font-weight:600">{{.Value}}</div>
+        <div style="font-size:0.85rem">{{.Label}}</div>
+        {{if .Hint}}<div class="note-meta" style="font-size:0.75rem">{{.Hint}}</div>{{end}}
+      </div>
+    {{end}}
+  </div>
+
+  <h2 style="margin-top:2em">Recent signups</h2>
+  {{if .RecentUsers}}
+    <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--border)">
+          <th style="padding:0.5em 0.5em 0.5em 0">Handle</th>
+          <th style="padding:0.5em">Email</th>
+          <th style="padding:0.5em">Notes</th>
+          <th style="padding:0.5em">Joined</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .RecentUsers}}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:0.5em 0.5em 0.5em 0"><a href="/{{.Handle}}">@{{.Handle}}</a></td>
+            <td style="padding:0.5em">{{.Email}}</td>
+            <td style="padding:0.5em">{{.NoteCount}}</td>
+            <td style="padding:0.5em">{{.CreatedRel}}</td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  {{else}}
+    <p class="note-meta">No users yet.</p>
+  {{end}}
+
+  <h2 style="margin-top:2em">Recent notes</h2>
+  {{if .RecentNotes}}
+    <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--border)">
+          <th style="padding:0.5em 0.5em 0.5em 0">Title</th>
+          <th style="padding:0.5em">Author</th>
+          <th style="padding:0.5em">Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .RecentNotes}}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:0.5em 0.5em 0.5em 0">
+              <a href="{{.URL}}">{{.Title}}</a>
+              {{if .Hidden}} <small><em>hidden</em></small>{{end}}
+            </td>
+            <td style="padding:0.5em">@{{.AuthorHandle}}</td>
+            <td style="padding:0.5em">{{.UpdatedRel}}</td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  {{else}}
+    <p class="note-meta">No notes yet.</p>
+  {{end}}
+
+  <h2 style="margin-top:2em">External vaults</h2>
+  {{if .Vaults}}
+    <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--border)">
+          <th style="padding:0.5em 0.5em 0.5em 0">Slug</th>
+          <th style="padding:0.5em">Status</th>
+          <th style="padding:0.5em">Notes</th>
+          <th style="padding:0.5em">Last crawl</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Vaults}}
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:0.5em 0.5em 0.5em 0"><a href="{{.BrowseURL}}">{{.Slug}}</a></td>
+            <td style="padding:0.5em">{{.Status}}</td>
+            <td style="padding:0.5em">{{.NoteCount}}</td>
+            <td style="padding:0.5em">{{if .LastCrawlRel}}{{.LastCrawlRel}}{{else}}—{{end}}</td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  {{else}}
+    <p class="note-meta">No external vaults indexed.</p>
+  {{end}}
+{{end}}

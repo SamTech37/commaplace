@@ -13,6 +13,10 @@ func (s *Server) Routes() *http.ServeMux {
 	// Static assets
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(StaticFS())))
 
+	// Dev-only: skip-login cookie issuer. The handler is a no-op (404)
+	// when Debug is false, so registering unconditionally is safe.
+	mux.HandleFunc("GET /_dev/login", s.GetDevLogin)
+
 	// Home
 	mux.HandleFunc("GET /{$}", s.GetHome)
 
@@ -26,7 +30,6 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("POST /login", s.PostLogin)
 	mux.HandleFunc("GET /auth/{token}", s.GetAuthCallback)
 	mux.HandleFunc("POST /logout", s.PostLogout)
-	mux.HandleFunc("GET /_dev/login", s.GetDevLogin)
 	mux.HandleFunc("GET /me", s.GetMe)
 
 	// Write + preview
@@ -66,6 +69,8 @@ func (s *Server) Routes() *http.ServeMux {
 
 	// Moderation
 	mux.HandleFunc("POST /api/report", s.PostReport)
+	mux.HandleFunc("GET /admin", s.GetAdminDashboard)
+	mux.HandleFunc("GET /admin/{$}", s.GetAdminDashboard)
 	mux.HandleFunc("GET /admin/reports", s.GetAdminReports)
 	mux.HandleFunc("POST /admin/hide", s.PostAdminHide)
 
