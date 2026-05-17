@@ -69,6 +69,40 @@ func (s *Server) GetAuthCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
+// GetDevLogin is a debug-only shortcut that signs you in as ?as=<handle>,
+// creating the user on the fly if needed. Only mounted when s.Debug is true.
+func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
+	if !s.Debug {
+		s.renderError(w, r, http.StatusNotFound, "not found")
+		return
+	}
+	handle := strings.TrimSpace(r.URL.Query().Get("as"))
+	if handle == "" {
+		handle = "dev"
+	}
+	var userID int64
+	err := s.DB.QueryRowContext(r.Context(),
+		`SELECT id FROM users WHERE handle = ?`, handle,
+	).Scan(&userID)
+	if err != nil {
+		res, err := s.DB.ExecContext(r.Context(),
+			`INSERT INTO users(handle, email, created_at) VALUES(?, ?, ?)`,
+			handle, handle+"@dev.local", nowUnix(),
+		)
+		if err != nil {
+			s.renderError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		userID, _ = res.LastInsertId()
+	}
+	s.Auth.SetSession(w, userID)
+	next := r.URL.Query().Get("next")
+	if next == "" || !strings.HasPrefix(next, "/") {
+		next = "/me"
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther)
+}
+
 func (s *Server) PostLogout(w http.ResponseWriter, r *http.Request) {
 	s.Auth.ClearSession(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)

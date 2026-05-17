@@ -52,6 +52,7 @@
         {{else}}
           <span class="action-btn" aria-disabled="true">♡ <span class="count">{{.LikeCount}}</span></span>
         {{end}}
+        {{if .IsAuthor}}<a class="action-btn" href="/edit/{{.Note.ID}}">✎ 編輯</a>{{end}}
         <a class="action-btn primary" href="/api/notes/{{.Note.ID}}/raw" download>⬇ 匯入到我的 vault</a>
         <details class="action-menu">
           <summary class="action-btn" aria-label="more">⋯</summary>
