@@ -39,6 +39,11 @@ func main() {
 			log.Fatalf("seed: %v", err)
 		}
 	}
+	if os.Getenv("SEED_DEV") == "1" {
+		if err := seed.ApplyDev(context.Background(), d, handlers.RecomputeLinks); err != nil {
+			log.Fatalf("seed dev: %v", err)
+		}
+	}
 
 	secret, err := loadOrCreateSecret(cfg.SessionSecret)
 	if err != nil {

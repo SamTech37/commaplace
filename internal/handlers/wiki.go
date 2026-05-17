@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	htmlpkg "html"
 	"net/http"
@@ -10,12 +11,13 @@ import (
 
 // GetWikiSuggest returns an HTML <li> fragment for autocomplete in the editor.
 //
-// Ranking when q has no @ prefix:
-//  1. notes I authored
-//  2. notes by users I follow
-//  3. site-wide, most recently updated
-//
-// When q starts with @, suggests user handles instead.
+// Query routing:
+//   - ""           → nothing
+//   - "foo"        → note title search (own vault first, followed, then global)
+//   - "@"          → user handle prefix search
+//   - "@bob"       → user handle prefix search for "bob"
+//   - "@bob/"      → all of bob's notes
+//   - "@bob/wiki"  → bob's notes whose title contains "wiki"
 func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
@@ -23,7 +25,19 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(q, "@") {
-		s.suggestUsers(r.Context(), w, q[1:])
+		rest := q[1:] // everything after @
+		if idx := strings.Index(rest, "/"); idx >= 0 {
+			// @user/query — search notes within that specific vault
+			viewer, _ := s.Auth.CurrentUser(r)
+			viewerHandle := ""
+			if viewer != nil {
+				viewerHandle = viewer.Handle
+			}
+			s.suggestNotesForUser(r.Context(), w, rest[:idx], rest[idx+1:], viewerHandle)
+		} else {
+			// @prefix — suggest matching user handles
+			s.suggestUsers(r.Context(), w, rest)
+		}
 		return
 	}
 	user, _ := s.Auth.CurrentUser(r)
@@ -53,6 +67,48 @@ func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix
 		insert := "@" + handle + "/"
 		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">@%s</span><span class="ac-secondary">user</span></li>`,
 			insert, htmlpkg.EscapeString(handle))
+	}
+}
+
+// suggestNotesForUser searches notes in a specific user's vault.
+// Called when the editor query is "@handle/..." — user is resolved, now narrow by title.
+func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter, handle, q, viewerHandle string) {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if q == "" {
+		rows, err = s.DB.QueryContext(ctx, `
+			SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+			FROM notes n
+			JOIN users u ON u.id = n.author_id
+			WHERE u.handle = ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			ORDER BY n.updated_at DESC LIMIT 10`, handle)
+	} else {
+		rows, err = s.DB.QueryContext(ctx, `
+			SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+			FROM notes n
+			JOIN users u ON u.id = n.author_id
+			WHERE u.handle = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			ORDER BY n.updated_at DESC LIMIT 10`,
+			handle, "%"+strings.ToLower(q)+"%")
+	}
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sg wikiSuggestion
+		if err := rows.Scan(&sg.NoteID, &sg.Title, &sg.Folder, &sg.Slug, &sg.Handle); err != nil {
+			return
+		}
+		insert := buildWikiInsert(sg, viewerHandle)
+		secondary := "@" + sg.Handle
+		if sg.Folder != "" {
+			secondary += "/" + sg.Folder
+		}
+		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
+			insert, htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
 	}
 }
 

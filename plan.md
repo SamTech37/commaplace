@@ -30,6 +30,36 @@
 10. 付費牆管理。
   - stripe or something?
 
+## Dev & Testing
+
+### Running locally
+
+```bash
+make dev          # DEBUG=1, demo seed, dev login enabled
+make dev-full     # above + SEED_DEV=1 (multi-user fake data)
+```
+
+Log in without email at `/_dev/login?as=alice` (creates user if needed).
+
+### Google OAuth local testing
+
+Google OAuth requires real credentials — there is no mock mode. Steps:
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials
+2. Create OAuth 2.0 Client ID → Web application
+3. Add authorized redirect URI: `http://localhost:8080/auth/google/callback`
+4. Copy Client ID and Client Secret into `.claude/CLAUDE.md` (gitignored)
+5. Run:
+   ```bash
+   GOOGLE_CLIENT_ID=xxx GOOGLE_CLIENT_SECRET=yyy make dev
+   ```
+6. The "Continue with Google" button appears on `/login` only when both vars are set.
+
+**Debugging OAuth failures:**
+- `invalid OAuth state` → state cookie expired (>5 min between start and callback) or browser blocked cookies
+- `token exchange` error → wrong client secret, or redirect URI doesn't exactly match what's in Google Console
+- `no email in Google userinfo` → scopes missing; ensure `openid` and `email` are listed
+
 ## Should Have
 
 1. 繁簡轉換。
@@ -56,3 +86,15 @@
 - concurrent users issue
   - writing queue?
   - reading? 
+
+
+
+# some concerns (iterative)
+
+ - liked and saved should be separated
+  - e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
+ - distinctions
+  - inbound/outbount links
+  - linked by self or by others
+ - need random / suprise-me / I'm feeling lucky button or page
+ - can users change their @handle (ID)? 

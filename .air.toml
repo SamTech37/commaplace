@@ -1,0 +1,17 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/server ./cmd/server"
+  bin = "./tmp/server"
+  full_bin = "DEBUG=1 DB_PATH=./dev.db ADDR=:8080 SEED_DEV=1 ./tmp/server"
+  include_ext = ["go", "html", "css", "js", "sql"]
+  exclude_dir  = ["tmp", "vendor"]
+  delay = 500
+
+[log]
+  time = false
+
+[color]
+  build = "yellow"
+  runner = "green"
