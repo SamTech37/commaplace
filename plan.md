@@ -107,4 +107,5 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ]   what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already?
 - [ ] migrations: in early dev it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
+- [ ] need quick reply to others note
 

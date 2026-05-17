@@ -3,6 +3,7 @@
 @font-face {
   font-family: "Source Han Serif";
   src: url("/static/SourceHanSerifTC-VF.otf.woff2") format("woff2");
+  /* url("/static/SourceHanSerifTC-VF.otf.woff") format("woff"); */
   font-style: normal;
   font-weight: 300 900;
   font-display: swap;
