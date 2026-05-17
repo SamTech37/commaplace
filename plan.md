@@ -26,7 +26,7 @@
   - [ ] specialized direct import to obsidian: 參考 [Obsidian URI](https://obsidian.md/help/uri)。
 - [x] 簡單的上傳與編輯。
   - [x] empty slate
-  - [ ] or start from a markdown
+  - [x] or start from a markdown
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
 - [ ] 權限與授權管控。
 - [x] 管理後台（SQLite 不附，要自己做）。
@@ -107,5 +107,5 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ]   what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already?
 - [ ] migrations: in early dev it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
-- [ ] need quick reply to others note
+- [x] need quick reply to others note
 
