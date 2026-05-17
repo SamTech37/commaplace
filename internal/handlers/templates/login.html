@@ -6,6 +6,10 @@
     <p><a href="/login">Send another</a></p>
   {{else}}
     {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+    {{if .OAuthEnabled}}
+      <a class="btn-google" href="/auth/google{{if .Next}}?next={{.Next}}{{end}}">Continue with Google</a>
+      <p class="login-divider">or</p>
+    {{end}}
     <p>Enter your email and we'll send a sign-in link.</p>
     <form method="POST" action="/login">
       <label>Email

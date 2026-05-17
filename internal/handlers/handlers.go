@@ -29,6 +29,8 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /login", s.GetLogin)
 	mux.HandleFunc("POST /login", s.PostLogin)
 	mux.HandleFunc("GET /auth/{token}", s.GetAuthCallback)
+	mux.HandleFunc("GET /auth/google", s.GetOAuthGoogleStart)
+	mux.HandleFunc("GET /auth/google/callback", s.GetOAuthGoogleCallback)
 	mux.HandleFunc("POST /logout", s.PostLogout)
 	mux.HandleFunc("GET /me", s.GetMe)
 
@@ -37,9 +39,14 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("POST /write", s.PostWrite)
 	mux.HandleFunc("POST /preview", s.PostPreview)
 
-	// Edit
+	// Edit + delete
 	mux.HandleFunc("GET /edit/{id}", s.GetEdit)
 	mux.HandleFunc("POST /edit/{id}", s.PostEdit)
+	mux.HandleFunc("POST /delete/{id}", s.PostDeleteNote)
+
+	// Import
+	mux.HandleFunc("GET /import", s.GetImport)
+	mux.HandleFunc("POST /import", s.PostImport)
 
 	// Feed
 	mux.HandleFunc("GET /feed", s.GetFeed)

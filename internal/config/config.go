@@ -44,9 +44,9 @@ type Email struct {
 // DefaultSite returns default site configuration.
 func DefaultSite() Site {
 	return Site{
-		Title:       "commonplace",
+		Title:       "Comma,",
 		Description: "Markdown notes that link to each other, including across other people's vaults.",
-		SessionName: "commonplace_session",
+		SessionName: "Comma_session",
 	}
 }
 

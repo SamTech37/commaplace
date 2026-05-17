@@ -231,6 +231,11 @@ button {
 }
 button:hover { background: var(--accent); color: var(--bg); }
 button.secondary { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+.btn-primary { display: inline-block; font-weight: 600; padding: 0.6em 1em; border-radius: 6px; background: var(--fg); color: var(--bg); text-decoration: none; cursor: pointer; }
+.btn-primary:hover { background: var(--accent); color: var(--bg); }
+.btn-google { display: flex; align-items: center; justify-content: center; gap: 0.5em; padding: 0.65em 1.1em; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--fg); text-decoration: none; font-weight: 600; font-size: 0.95rem; }
+.btn-google:hover { border-color: var(--border-2); background: var(--surface-2); }
+.login-divider { text-align: center; color: var(--fg-muted); margin: 0.75em 0; font-size: 0.85rem; }
 .field-error { color: var(--danger); font-size: 0.9rem; margin-top: 0.25rem; }
 .flash { background: #173a3f; border: 1px solid #2c5e66; padding: 0.7em 1em; border-radius: 6px; color: var(--fg); }
 .error { background: #3a1d1d; border: 1px solid #683535; padding: 0.7em 1em; border-radius: 6px; color: var(--danger); }
@@ -848,6 +853,8 @@ pre.mermaid {
 }
 .action-btn.primary:hover { background: rgba(122, 169, 255, 0.28); }
 .action-btn.liked { color: var(--danger); border-color: var(--danger); }
+.action-btn.danger { color: var(--danger); }
+.action-btn.danger:hover { border-color: var(--danger); background: var(--surface-2); }
 .action-btn .count { font-variant-numeric: tabular-nums; }
 .action-menu { position: relative; }
 .action-menu summary { list-style: none; cursor: pointer; }

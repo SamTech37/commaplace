@@ -46,7 +46,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 				FROM notes_fts
 				JOIN notes n ON n.id = notes_fts.rowid
 				JOIN users u ON u.id = n.author_id
-				WHERE notes_fts MATCH ? AND n.hidden_at IS NULL`+where+`
+				WHERE notes_fts MATCH ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL`+where+`
 				ORDER BY bm25(notes_fts, 2.0, 1.0)
 				LIMIT 50`, args...)
 			if err == nil {

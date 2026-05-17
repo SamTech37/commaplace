@@ -138,7 +138,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, ol
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE n.hidden_at IS NULL`)
+		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL`)
 	if tagFilter != "" {
 		q.WriteString(` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = ?)`)
 		args = append(args, tagFilter)
@@ -167,7 +167,7 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID int64, tagFil
 		FROM notes n
 		JOIN users u   ON u.id = n.author_id
 		JOIN follows f ON f.followed_id = n.author_id
-		WHERE f.follower_id = ? AND n.hidden_at IS NULL`)
+		WHERE f.follower_id = ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL`)
 	if tagFilter != "" {
 		q.WriteString(` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = ?)`)
 		args = append(args, tagFilter)

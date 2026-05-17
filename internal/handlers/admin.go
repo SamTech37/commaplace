@@ -172,7 +172,7 @@ func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	scalar("Users", "total", `SELECT COUNT(*) FROM users`)
 	scalar("Users (7d)", "new this week", `SELECT COUNT(*) FROM users WHERE created_at >= ?`, week)
 	scalar("Users (24h)", "new today", `SELECT COUNT(*) FROM users WHERE created_at >= ?`, day)
-	scalar("Notes", "visible", `SELECT COUNT(*) FROM notes WHERE hidden_at IS NULL`)
+	scalar("Notes", "visible", `SELECT COUNT(*) FROM notes WHERE hidden_at IS NULL AND deleted_at IS NULL`)
 	scalar("Notes hidden", "moderated", `SELECT COUNT(*) FROM notes WHERE hidden_at IS NOT NULL`)
 	scalar("Notes (7d)", "new this week", `SELECT COUNT(*) FROM notes WHERE created_at >= ?`, week)
 	scalar("Notes (24h)", "new today", `SELECT COUNT(*) FROM notes WHERE created_at >= ?`, day)

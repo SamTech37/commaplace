@@ -9,10 +9,11 @@ import (
 func (s *Server) GetLogin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	s.render(w, r, "login", map[string]any{
-		"Sent":  q.Get("sent") == "1",
-		"Error": q.Get("err"),
-		"Email": q.Get("email"),
-		"Next":  q.Get("next"),
+		"Sent":         q.Get("sent") == "1",
+		"Error":        q.Get("err"),
+		"Email":        q.Get("email"),
+		"Next":         q.Get("next"),
+		"OAuthEnabled": s.OAuthCfg != nil,
 	})
 }
 
@@ -101,6 +102,33 @@ func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
 		next = "/me"
 	}
 	http.Redirect(w, r, next, http.StatusSeeOther)
+}
+
+func (s *Server) GetOAuthGoogleStart(w http.ResponseWriter, r *http.Request) {
+	if s.OAuthCfg == nil {
+		s.renderError(w, r, http.StatusNotFound, "Google OAuth is not configured")
+		return
+	}
+	s.Auth.StartGoogleOAuth(w, r, *s.OAuthCfg)
+}
+
+func (s *Server) GetOAuthGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	if s.OAuthCfg == nil {
+		s.renderError(w, r, http.StatusNotFound, "Google OAuth is not configured")
+		return
+	}
+	u, err := s.Auth.HandleGoogleCallback(w, r, *s.OAuthCfg)
+	if err != nil {
+		s.renderError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	s.Auth.SetSession(w, u.ID)
+
+	if onb, _ := userOnboarded(r.Context(), s.DB, u.ID); !onb {
+		http.Redirect(w, r, "/onboarding", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/me", http.StatusSeeOther)
+	}
 }
 
 func (s *Server) PostLogout(w http.ResponseWriter, r *http.Request) {

@@ -278,6 +278,7 @@ type noteView struct {
 	Slug       string
 	AuthorID   int64
 	HiddenAt   sql.NullInt64
+	DeletedAt  sql.NullInt64
 }
 
 func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
@@ -292,13 +293,13 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	var n noteView
 	err := s.DB.QueryRowContext(r.Context(), `
 		SELECT n.id, n.title, n.body_md, n.updated_at, n.folder_path, n.slug,
-		       n.author_id, n.hidden_at
+		       n.author_id, n.hidden_at, n.deleted_at
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
 		WHERE u.handle = ? AND n.folder_path = ? AND n.slug = ?`,
 		handle, folder, slug,
 	).Scan(&n.ID, &n.Title, &n.BodyMD, &n.UpdatedAt, &n.FolderPath, &n.Slug,
-		&n.AuthorID, &n.HiddenAt)
+		&n.AuthorID, &n.HiddenAt, &n.DeletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -316,6 +317,12 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 			s.renderError(w, r, http.StatusNotFound, "note not found")
 			return
 		}
+	}
+
+	// Soft-deleted notes always 404.
+	if n.DeletedAt.Valid {
+		s.renderError(w, r, http.StatusNotFound, "note not found")
+		return
 	}
 
 	links := markdown.Extract(n.BodyMD)
@@ -479,7 +486,7 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandl
 		JOIN notes n ON n.id = l.resolved_target_id
 		JOIN users u ON u.id = n.author_id
 		WHERE l.source_note_id = ? AND l.resolved_target_id IS NOT NULL
-		  AND n.hidden_at IS NULL
+		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		ORDER BY n.updated_at DESC`, noteID)
 	if err != nil {
 		return nil, nil, err
@@ -521,11 +528,11 @@ func loadAuthorStats(ctx context.Context, db *sql.DB, authorID int64) (authorSta
 		`SELECT COUNT(*) FROM follows WHERE followed_id = ?`, authorID,
 	).Scan(&s.Followers)
 	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM notes WHERE author_id = ? AND hidden_at IS NULL`, authorID,
+		`SELECT COUNT(*) FROM notes WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL`, authorID,
 	).Scan(&s.Notes)
 	_ = db.QueryRowContext(ctx, `
 		SELECT COUNT(DISTINCT folder_path) FROM notes
-		WHERE author_id = ? AND hidden_at IS NULL AND folder_path != ''`, authorID,
+		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL AND folder_path != ''`, authorID,
 	).Scan(&s.Folders)
 	return s, nil
 }
@@ -704,4 +711,30 @@ func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []
 		}
 	}
 	return func(l markdown.WikiLink) bool { return resolved[keyFor(l)] }
+}
+
+// ---------- delete ----------
+
+func (s *Server) PostDeleteNote(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		s.renderError(w, r, http.StatusBadRequest, "invalid note id")
+		return
+	}
+	res, err := s.DB.ExecContext(r.Context(),
+		`UPDATE notes SET deleted_at = unixepoch() WHERE id = ? AND author_id = ?`,
+		id, u.ID)
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		s.renderError(w, r, http.StatusForbidden, "not your note")
+		return
+	}
+	http.Redirect(w, r, "/"+u.Handle, http.StatusSeeOther)
 }

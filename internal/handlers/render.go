@@ -138,6 +138,7 @@ type Server struct {
 	Debug       bool
 	AdminHandle string          // empty disables admin entirely
 	Crawler     ExternalCrawler // optional; nil disables admin-triggered crawls
+	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
 
 	// extStore is initialised lazily on first call to externalStore().
 	extStore *external.Store

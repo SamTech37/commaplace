@@ -1,0 +1,17 @@
+{{define "title"}}Import note · commonplace{{end}}
+{{define "content"}}
+  <h1>Import a note</h1>
+  <p style="color:var(--fg-muted);font-size:0.9rem">Upload a <code>.md</code> file. Title is read from frontmatter <code>title:</code>, a leading <code>#</code> heading, or the filename. Folder and tags are read from frontmatter <code>folder:</code> and <code>tags:</code>.</p>
+
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+
+  <form method="post" action="/import" enctype="multipart/form-data">
+    <label>Markdown file
+      <input type="file" name="file" accept=".md,text/markdown" required>
+    </label>
+    <div style="display:flex;gap:1em;align-items:center;margin-top:0.5em">
+      <button type="submit">Import</button>
+      <a href="/write" style="color:var(--fg-muted);font-size:0.9rem">Write from scratch instead</a>
+    </div>
+  </form>
+{{end}}

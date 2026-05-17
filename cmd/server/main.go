@@ -74,6 +74,7 @@ func main() {
 		Debug:       cfg.Debug,
 		AdminHandle: cfg.AdminHandle,
 		Crawler:     worker,
+		OAuthCfg:    cfg.googleOAuthConfig(),
 	}
 
 	log.Printf("commonplace listening on %s (db=%s, mailer=%s)",
@@ -89,19 +90,32 @@ func main() {
 // ---------- config ----------
 
 type config struct {
-	Addr          string
-	DBPath        string
-	SessionSecret string
-	BaseURL       string
-	SMTPHost      string
-	SMTPPort      string
-	SMTPUser      string
-	SMTPPass      string
-	SMTPFrom      string
-	AdminHandle   string
-	Debug         bool
+	Addr               string
+	DBPath             string
+	SessionSecret      string
+	BaseURL            string
+	SMTPHost           string
+	SMTPPort           string
+	SMTPUser           string
+	SMTPPass           string
+	SMTPFrom           string
+	AdminHandle        string
+	Debug              bool
+	GoogleClientID     string
+	GoogleClientSecret string
 	// derived
 	Mailer string // "stdout" or "smtp"
+}
+
+func (c config) googleOAuthConfig() *auth.OAuthConfig {
+	if c.GoogleClientID == "" || c.GoogleClientSecret == "" {
+		return nil
+	}
+	return &auth.OAuthConfig{
+		ClientID:     c.GoogleClientID,
+		ClientSecret: c.GoogleClientSecret,
+		RedirectURL:  c.BaseURL + "/auth/google/callback",
+	}
 }
 
 func loadConfig() config {
@@ -115,8 +129,10 @@ func loadConfig() config {
 		SMTPUser:      os.Getenv("SMTP_USER"),
 		SMTPPass:      os.Getenv("SMTP_PASS"),
 		SMTPFrom:      envOr("SMTP_FROM", "commonplace <noreply@example.com>"),
-		AdminHandle:   strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
-		Debug:         os.Getenv("DEBUG") == "1",
+		AdminHandle:        strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
+		Debug:              os.Getenv("DEBUG") == "1",
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 	}
 	if c.BaseURL == "" {
 		// best-effort dev default; users override in prod

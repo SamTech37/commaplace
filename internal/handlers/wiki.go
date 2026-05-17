@@ -98,7 +98,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 		collect(`
 			SELECT n.id, n.title, n.folder_path, n.slug, ? AS handle
 			FROM notes n
-			WHERE n.author_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL
+			WHERE n.author_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`,
 			myHandle, myID, pattern)
 
@@ -107,7 +107,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 			FROM notes n
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
-			WHERE f.follower_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL
+			WHERE f.follower_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`,
 			myID, pattern)
 	}
@@ -116,7 +116,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 		SELECT n.id, n.title, n.folder_path, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE lower(n.title) LIKE ? AND n.hidden_at IS NULL
+		WHERE lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		ORDER BY n.updated_at DESC LIMIT 20`,
 		pattern)
 

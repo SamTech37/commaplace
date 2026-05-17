@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"commonplace/internal/auth"
@@ -22,6 +23,7 @@ type profileNote struct {
 	FolderPath string
 	Excerpt    string
 	UpdatedRel string
+	UpdatedAt  int64
 }
 
 func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
@@ -58,9 +60,24 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	tree := buildFolderTree(folders)
 
-	recent, err := loadRecentNotes(r, s.DB, profile.ID)
+	var olderThan int64
+	if s := r.URL.Query().Get("older"); s != "" {
+		olderThan, _ = strconv.ParseInt(s, 10, 64)
+	}
+
+	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, olderThan)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	data := map[string]any{
+		"Handle":     profile.Handle,
+		"Recent":     recent,
+		"NextCursor": nextCursor,
+	}
+	if r.URL.Query().Get("partial") == "1" {
+		s.Pages.RenderPartial(w, "profile", "profile-notes", data)
 		return
 	}
 
@@ -73,16 +90,14 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	followers, _ := followerCount(r.Context(), s.DB, profile.ID)
 	followingN, _ := followingCount(r.Context(), s.DB, profile.ID)
 
-	s.render(w, r, "profile", map[string]any{
-		"Profile":         profile,
-		"FolderTree":      tree,
-		"Recent":          recent,
-		"Following":       following,
-		"FollowerCount":   followers,
-		"FollowingCount":  followingN,
-		"IsSelf":          viewer != nil && viewer.ID == profile.ID,
-		"ViewerLoggedIn":  viewer != nil,
-	})
+	data["Profile"] = profile
+	data["FolderTree"] = tree
+	data["Following"] = following
+	data["FollowerCount"] = followers
+	data["FollowingCount"] = followingN
+	data["IsSelf"] = viewer != nil && viewer.ID == profile.ID
+	data["ViewerLoggedIn"] = viewer != nil
+	s.render(w, r, "profile", data)
 }
 
 func loadFolders(r *http.Request, db *sql.DB, authorID int64) ([]string, error) {
@@ -106,27 +121,38 @@ func loadFolders(r *http.Request, db *sql.DB, authorID int64) ([]string, error) 
 	return out, rows.Err()
 }
 
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID int64) ([]profileNote, error) {
-	rows, err := db.QueryContext(r.Context(), `
-		SELECT title, folder_path, slug, body_md, updated_at
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]profileNote, int64, error) {
+	var (
+		query string
+		args  []any
+	)
+	if olderThan > 0 {
+		query = `SELECT title, folder_path, slug, body_md, updated_at
 		FROM notes
-		WHERE author_id = ? AND hidden_at IS NULL
-		ORDER BY updated_at DESC
-		LIMIT 20`, authorID)
+		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL AND updated_at < ?
+		ORDER BY updated_at DESC LIMIT 20`
+		args = []any{authorID, olderThan}
+	} else {
+		query = `SELECT title, folder_path, slug, body_md, updated_at
+		FROM notes
+		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL
+		ORDER BY updated_at DESC LIMIT 20`
+		args = []any{authorID}
+	}
+	rows, err := db.QueryContext(r.Context(), query, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
 	var (
-		out []profileNote
-		// We need the handle for URL building; load it once outside the loop.
+		out    []profileNote
 		handle string
 	)
 	if err := db.QueryRowContext(r.Context(),
 		`SELECT handle FROM users WHERE id = ?`, authorID,
 	).Scan(&handle); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	for rows.Next() {
 		var (
@@ -134,7 +160,7 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID int64) ([]profileNote
 			updated                        int64
 		)
 		if err := rows.Scan(&title, &folderPath, &slug, &body, &updated); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, profileNote{
 			Title:      title,
@@ -142,9 +168,17 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID int64) ([]profileNote
 			FolderPath: folderPath,
 			Excerpt:    markdown.Excerpt(body, 150),
 			UpdatedRel: relativeTime(updated),
+			UpdatedAt:  updated,
 		})
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	var nextCursor int64
+	if len(out) == 20 {
+		nextCursor = out[len(out)-1].UpdatedAt
+	}
+	return out, nextCursor, nil
 }
 
 func buildFolderTree(paths []string) *folderNode {
