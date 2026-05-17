@@ -1,5 +1,6 @@
 {{define "title"}}@{{.Profile.Handle}} · {{.Site.Title}}{{end}} {{define
 "content"}}
+<div data-reveal>
 <h1 style="margin-bottom: 0.25em">@{{.Profile.Handle}}</h1>
 <p class="note-meta">
   {{.FollowerCount}} follower{{if ne .FollowerCount 1}}s{{end}}
@@ -24,10 +25,11 @@
   </button>
 </form>
 {{end}}
-<h2 style="margin-top: 1.5em">Recent notes</h2>
-<div id="notes-list">
+</div>
+<h2 style="margin-top: 1.5em; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-family: var(--font-sans); font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 0.75em;">最近的筆記</h2>
+<div id="notes-list" data-reveal-group>
   {{block "profile-notes" .}} {{if .Recent}} {{range .Recent}}
-  <a class="note-card" href="{{.URL}}">
+  <a class="note-card" href="{{.URL}}" data-reveal>
     <div class="note-title">{{.Title}}</div>
     {{if .Excerpt}}
     <div class="note-excerpt">{{.Excerpt}}</div>

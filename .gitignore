@@ -13,6 +13,7 @@ cookies.txt
 *.txt
 /import-vault
 /commaplace
+/commonplace
 server
 *.log
 

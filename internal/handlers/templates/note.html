@@ -12,7 +12,7 @@
   This note is hidden by an admin. Only you (the author) and admins can see it.
 </p>
 {{end}} {{/* ── Author bar ── */}}
-<div class="author-bar">
+<div class="author-bar" data-reveal data-reveal-delay="1">
   <a
     class="author-avatar"
     href="/{{.AuthorHandle}}"
@@ -46,7 +46,7 @@
 </div>
 
 {{/* ── Article ── */}}
-<article class="article">
+<article class="article" data-reveal data-reveal-delay="2">
   <div class="article-meta-row">
     <div class="article-info">
       更新於 {{.UpdatedRel}} · 約 {{.ReadingMinutes}} 分鐘 {{if .Tags}} {{range
@@ -142,7 +142,7 @@
 </article>
 
 {{/* ── 這篇連到的筆記 ── */}} {{if or .OutgoingSame .OutgoingCross}}
-<section class="connected-section">
+<section class="connected-section" data-reveal data-reveal-delay="3">
   <div class="section-header">
     → 這篇連到的筆記
     <span class="section-count"
@@ -192,7 +192,7 @@
 </section>
 {{end}} {{/* ── 引用了這篇筆記的人 ── */}} {{if or .BacklinksSame
 .BacklinksCross}}
-<section class="backlinks-section">
+<section class="backlinks-section" data-reveal data-reveal-delay="4">
   <div class="section-header">
     ← 引用了這篇筆記的人
     <span class="section-count"

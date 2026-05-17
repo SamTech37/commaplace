@@ -2,7 +2,7 @@ DB      ?= ./dev.db
 PORT    ?= 8080
 BINARY  := ./commonplace
 
-.PHONY: run dev dev-full dev-oauth watch build test clean
+.PHONY: run dev dev-windows dev-full dev-oauth watch build test clean
 
 ## build: compile the server binary
 build:
@@ -13,8 +13,11 @@ run: build
 	$(BINARY)
 
 ## dev: local dev mode — DEBUG=1, dev login at /_dev/login?as=<handle>
-dev:
+dev:	
 	DEBUG=1 DB_PATH=$(DB) ADDR=:$(PORT) go run ./cmd/server
+
+dev-windows:
+	powershell -Command "$$env:DEBUG='1'; $$env:DB_PATH='./dev.db'; $$env:ADDR=':8080'; $$env:SEED_DEV='1'; go run ./cmd/server"
 
 ## dev-full: dev mode + multi-user seed data (alice, bob, carol, dave)
 # go to /_dev/login?as=alice 
