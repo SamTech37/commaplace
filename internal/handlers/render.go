@@ -41,6 +41,7 @@ func StaticFS() fs.FS {
 var funcs = template.FuncMap{
 	"avatarColor":   avatarColor,
 	"avatarInitial": avatarInitial,
+	"avatarURL":     func(handle string) string { return "/u/" + handle + "/avatar.png" },
 	"sub":           func(a, b int) int { return a - b },
 	"add":           func(a, b int) int { return a + b },
 }
@@ -55,9 +56,10 @@ type Pages struct {
 
 func LoadPages() (*Pages, error) {
 	pageNames := []string{
-		"login", "me", "write", "note", "profile", "feed", "error",
+		"login", "write", "note", "profile", "feed", "error",
 		"tag", "saved", "search", "onboarding", "admin_dashboard", "admin_reports", "graph",
 		"admin_external", "external_vault", "external_note",
+		"avatar_builder",
 	}
 	// Partials are standalone fragments (no _base.html wrapper) used for
 	// HTMX swap responses — e.g. infinite-scroll feed batches.

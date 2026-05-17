@@ -254,6 +254,18 @@ html[data-theme="dark"] mark {
   transition: border-color var(--dur-fast) ease;
 }
 .nav .profile-dot:hover { border-color: var(--text); }
+.nav .profile-dot { position: relative; overflow: hidden; }
+.nav .profile-dot .avatar-img-sm {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  border: 0;
+  border-radius: 50%;
+}
+/* When the avatar img is present, hide the fallback initial behind it.
+   onerror="this.remove()" pulls the img out on 404, restoring the letter. */
+.nav .profile-dot:has(.avatar-img-sm) .profile-dot-initial { display: none; }
 
 .inline-form { display: inline; margin: 0; }
 .link-btn {
@@ -1325,3 +1337,115 @@ pre.mermaid { background: var(--bg-2); border-radius: var(--r-card); padding: 1.
 html[data-theme="dark"] .login-wrap {
   box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
+
+/* ── Avatar builder ─────────────────────────────────────────────────── */
+.avatar-builder { max-width: 980px; }
+.avatar-builder-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2.5em;
+  align-items: start;
+  margin-top: 1.5em;
+}
+@media (max-width: 720px) {
+  .avatar-builder-grid { grid-template-columns: 1fr; }
+}
+.avatar-preview-col { position: sticky; top: 1.5em; }
+.avatar-preview {
+  position: relative;
+  width: 256px;
+  height: 256px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.avatar-preview canvas,
+.avatar-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.avatar-save-btn {
+  margin-top: 1em;
+  width: 100%;
+  padding: 0.65em 1em;
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  border-radius: 10px;
+  border: 1px solid var(--border-2);
+  background: var(--text);
+  color: var(--bg);
+  cursor: pointer;
+}
+.picker-row { margin-bottom: 1.4em; }
+.picker-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  margin: 0 0 0.5em;
+}
+.picker-strip {
+  display: flex;
+  gap: 0.55em;
+  overflow-x: auto;
+  padding: 0.25em 0;
+}
+.picker-thumb {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-2);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.picker-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.picker-thumb:hover { transform: translateY(-1px); }
+.picker-thumb.is-selected { border-color: var(--text); }
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+  max-width: 480px;
+}
+.skin-swatch {
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.skin-swatch:hover { transform: scale(1.1); }
+.skin-swatch.is-selected { border-color: var(--text); transform: scale(1.15); }
+
+/* ── Avatar image display (profile, /me, topbar) ────────────────────── */
+.avatar-img-lg {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  vertical-align: middle;
+  object-fit: cover;
+}
+.avatar-img-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-2);
+  background: var(--bg-3);
+  object-fit: cover;
+  display: block;
+}
+.profile-header { display: flex; align-items: center; gap: 1em; margin-bottom: 0.5em; }
+.profile-header h1 { margin: 0; }

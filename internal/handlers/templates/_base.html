@@ -164,7 +164,8 @@
               title="@{{.User.Handle}}"
               aria-label="user menu"
             >
-              {{avatarInitial .User.Handle}}
+              <img class="avatar-img-sm" src="{{avatarURL .User.Handle}}" alt="" onerror="this.remove()" />
+              <span class="profile-dot-initial">{{avatarInitial .User.Handle}}</span>
             </summary>
             <div class="avatar-menu-panel" role="menu">
               <a class="menu-item" href="/{{.User.Handle}}">我的主頁</a>

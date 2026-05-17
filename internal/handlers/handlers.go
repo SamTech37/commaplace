@@ -74,6 +74,11 @@ func (s *Server) Routes() *http.ServeMux {
 	// Settings
 	mux.HandleFunc("POST /settings/theme", s.PostThemeSetting)
 
+	// Avatar builder
+	mux.HandleFunc("GET /me/avatar", s.GetAvatarBuilder)
+	mux.HandleFunc("POST /me/avatar", s.PostAvatarBuilder)
+	mux.HandleFunc("GET /u/{handle}/avatar.png", s.GetAvatarPNG)
+
 	// Onboarding (after first sign-in, no notes yet)
 	mux.HandleFunc("GET /onboarding", s.GetOnboarding)
 	mux.HandleFunc("POST /onboarding/fork", s.PostOnboardingFork)

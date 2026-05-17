@@ -136,12 +136,13 @@ func (s *Server) PostLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// GetMe redirects to the user's own public profile page, which doubles as
+// their personal "me" view (with owner-only controls when IsSelf).
 func (s *Server) GetMe(w http.ResponseWriter, r *http.Request) {
 	u := s.requireUser(w, r)
 	if u == nil {
 		return
 	}
-	pinned, _ := pinnedNoteForUser(r.Context(), s.DB, u.ID)
-	s.render(w, r, "me", map[string]any{"User": u, "Pinned": pinned})
+	http.Redirect(w, r, "/"+u.Handle, http.StatusSeeOther)
 }
 
