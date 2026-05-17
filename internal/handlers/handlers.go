@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
+
+	"commonplace/internal/auth"
 )
 
 // Routes wires every URL pattern the server handles. Order matters where
@@ -10,8 +13,9 @@ import (
 func (s *Server) Routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// Static assets
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(StaticFS())))
+	// Static assets are served from the catch-all handler to avoid mux
+	// conflicts with user routes.
+	static := http.StripPrefix("/assets/", http.FileServerFS(StaticFS()))
 
 	// Dev-only: skip-login cookie issuer. The handler is a no-op (404)
 	// when Debug is false, so registering unconditionally is safe.
@@ -93,12 +97,53 @@ func (s *Server) Routes() *http.ServeMux {
 	// Markdown export
 	mux.HandleFunc("GET /api/notes/{id}/raw", s.GetNoteRaw)
 
-	// Profile + note view (last; the /{user} pattern would otherwise shadow
-	// non-reserved top-level paths if registered first).
-	mux.HandleFunc("GET /{user}", s.GetProfile)
-	mux.HandleFunc("GET /{user}/{path...}", s.GetNote)
+	// Profile + note view + assets (last; catch-all for user routes).
+	mux.HandleFunc("GET /{path...}", s.GetCatchAll(static))
 
 	return mux
+}
+
+// GetCatchAll routes assets and user pages without conflicting mux patterns.
+func (s *Server) GetCatchAll(static http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/assets" {
+			http.Redirect(w, r, "/assets/", http.StatusMovedPermanently)
+			return
+		}
+		if strings.HasPrefix(path, "/assets/") {
+			static.ServeHTTP(w, r)
+			return
+		}
+
+		trimmed := strings.Trim(path, "/")
+		if trimmed == "" {
+			s.renderError(w, r, http.StatusNotFound, "not found")
+			return
+		}
+		parts := strings.Split(trimmed, "/")
+		switch len(parts) {
+		case 1:
+			user := parts[0]
+			if auth.IsReservedHandle(strings.ToLower(user)) {
+				s.renderError(w, r, http.StatusNotFound, "not found")
+				return
+			}
+			r.SetPathValue("user", user)
+			s.GetProfile(w, r)
+		case 2:
+			user := parts[0]
+			if auth.IsReservedHandle(strings.ToLower(user)) {
+				s.renderError(w, r, http.StatusNotFound, "not found")
+				return
+			}
+			r.SetPathValue("user", user)
+			r.SetPathValue("slug", parts[1])
+			s.GetNote(w, r)
+		default:
+			s.renderError(w, r, http.StatusNotFound, "not found")
+		}
+	}
 }
 
 // GetHome sends visitors straight to the feed — the landing page IS the feed,

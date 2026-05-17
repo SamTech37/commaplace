@@ -47,7 +47,7 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 
 	// ---- internal notes ----
 	intRows, err := s.DB.QueryContext(ctx, `
-		SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
 		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL
@@ -61,14 +61,9 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 	// for cross-vault edge resolution: (handle/slug) -> internal node ID
 	userKeyToNode := map[string]string{}
 	for intRows.Next() {
-		var (
-			id     int64
-			title  string
-			folder string
-			slug   string
-			handle string
-		)
-		if err := intRows.Scan(&id, &title, &folder, &slug, &handle); err != nil {
+		var id int64
+		var title, slug, handle string
+		if err := intRows.Scan(&id, &title, &slug, &handle); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -76,7 +71,7 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 		payload.Nodes = append(payload.Nodes, graphNode{
 			ID:     nodeID,
 			Title:  title,
-			URL:    noteURL(handle, folder, slug),
+			URL:    noteURL(handle, slug),
 			Author: handle,
 		})
 		internalKeep[id] = true
@@ -227,7 +222,7 @@ func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 	if len(internalIDs) > 0 {
 		ids := keysInt64(internalIDs)
 		rows, err := s.DB.QueryContext(ctx, `
-			SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n JOIN users u ON u.id = n.author_id
 			WHERE n.id IN (`+inPlaceholders(len(ids))+`) AND n.hidden_at IS NULL AND n.deleted_at IS NULL`,
 			toAnySlice(ids)...)
@@ -236,14 +231,9 @@ func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for rows.Next() {
-			var (
-				nid    int64
-				title  string
-				folder string
-				slug   string
-				handle string
-			)
-			if err := rows.Scan(&nid, &title, &folder, &slug, &handle); err != nil {
+			var nid int64
+			var title, slug, handle string
+			if err := rows.Scan(&nid, &title, &slug, &handle); err != nil {
 				rows.Close()
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -252,7 +242,7 @@ func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 			payload.Nodes = append(payload.Nodes, graphNode{
 				ID:     nodeID,
 				Title:  title,
-				URL:    noteURL(handle, folder, slug),
+				URL:    noteURL(handle, slug),
 				Author: handle,
 			})
 			userKeyToNode[userNodeKey(handle, slug)] = nodeID

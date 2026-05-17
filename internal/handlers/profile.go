@@ -11,16 +11,9 @@ import (
 	"commonplace/internal/markdown"
 )
 
-type folderNode struct {
-	Name     string
-	Path     string
-	Children []*folderNode
-}
-
 type profileNote struct {
 	Title      string
 	URL        string
-	FolderPath string
 	Excerpt    string
 	UpdatedRel string
 	UpdatedAt  int64
@@ -29,9 +22,6 @@ type profileNote struct {
 func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	handle := r.PathValue("user")
 
-	// If the requested handle is reserved (a feature route), 404 — those
-	// routes are registered separately and should never reach here, but
-	// we double-check so e.g. /Login (different case) doesn't 500.
 	if auth.IsReservedHandle(strings.ToLower(handle)) {
 		s.renderError(w, r, http.StatusNotFound, "not found")
 		return
@@ -52,13 +42,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	folders, err := loadFolders(r, s.DB, profile.ID)
-	if err != nil {
-		s.renderError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	tree := buildFolderTree(folders)
 
 	var olderThan int64
 	if s := r.URL.Query().Get("older"); s != "" {
@@ -91,7 +74,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	followingN, _ := followingCount(r.Context(), s.DB, profile.ID)
 
 	data["Profile"] = profile
-	data["FolderTree"] = tree
 	data["Following"] = following
 	data["FollowerCount"] = followers
 	data["FollowingCount"] = followingN
@@ -100,40 +82,19 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "profile", data)
 }
 
-func loadFolders(r *http.Request, db *sql.DB, authorID int64) ([]string, error) {
-	rows, err := db.QueryContext(r.Context(),
-		`SELECT DISTINCT folder_path FROM notes WHERE author_id = ? ORDER BY folder_path`,
-		authorID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []string
-	for rows.Next() {
-		var p string
-		if err := rows.Scan(&p); err != nil {
-			return nil, err
-		}
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out, rows.Err()
-}
-
 func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]profileNote, int64, error) {
 	var (
 		query string
 		args  []any
 	)
 	if olderThan > 0 {
-		query = `SELECT title, folder_path, slug, body_md, updated_at
+		query = `SELECT title, slug, body_md, updated_at
 		FROM notes
 		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL AND updated_at < ?
 		ORDER BY updated_at DESC LIMIT 20`
 		args = []any{authorID, olderThan}
 	} else {
-		query = `SELECT title, folder_path, slug, body_md, updated_at
+		query = `SELECT title, slug, body_md, updated_at
 		FROM notes
 		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL
 		ORDER BY updated_at DESC LIMIT 20`
@@ -145,27 +106,23 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]
 	}
 	defer rows.Close()
 
-	var (
-		out    []profileNote
-		handle string
-	)
+	var handle string
 	if err := db.QueryRowContext(r.Context(),
 		`SELECT handle FROM users WHERE id = ?`, authorID,
 	).Scan(&handle); err != nil {
 		return nil, 0, err
 	}
+
+	var out []profileNote
 	for rows.Next() {
-		var (
-			title, folderPath, slug, body string
-			updated                        int64
-		)
-		if err := rows.Scan(&title, &folderPath, &slug, &body, &updated); err != nil {
+		var title, slug, body string
+		var updated int64
+		if err := rows.Scan(&title, &slug, &body, &updated); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, profileNote{
 			Title:      title,
-			URL:        noteURL(handle, folderPath, slug),
-			FolderPath: folderPath,
+			URL:        noteURL(handle, slug),
 			Excerpt:    markdown.Excerpt(body, 150),
 			UpdatedRel: relativeTime(updated),
 			UpdatedAt:  updated,
@@ -179,36 +136,4 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]
 		nextCursor = out[len(out)-1].UpdatedAt
 	}
 	return out, nextCursor, nil
-}
-
-func buildFolderTree(paths []string) *folderNode {
-	root := &folderNode{}
-	for _, p := range paths {
-		if p == "" {
-			continue
-		}
-		parts := strings.Split(p, "/")
-		node := root
-		cur := ""
-		for _, part := range parts {
-			if cur == "" {
-				cur = part
-			} else {
-				cur = cur + "/" + part
-			}
-			var child *folderNode
-			for _, c := range node.Children {
-				if c.Name == part {
-					child = c
-					break
-				}
-			}
-			if child == nil {
-				child = &folderNode{Name: part, Path: cur}
-				node.Children = append(node.Children, child)
-			}
-			node = child
-		}
-	}
-	return root
 }

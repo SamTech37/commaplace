@@ -27,7 +27,7 @@ var (
 //go:embed all:templates all:static
 var assetsFS embed.FS
 
-// StaticFS exposes the embedded static/ subtree, mounted at /static/ by Routes.
+// StaticFS exposes the embedded static/ subtree, mounted at /assets/ by Routes.
 func StaticFS() fs.FS {
 	sub, err := fs.Sub(assetsFS, "static")
 	if err != nil {
@@ -260,21 +260,3 @@ func avatarInitial(handle string) string {
 	return "?"
 }
 
-// normalizeFolder cleans user-supplied folder paths.
-func normalizeFolder(p string) string {
-	p = strings.TrimSpace(p)
-	p = strings.Trim(p, "/")
-	if p == "" {
-		return ""
-	}
-	parts := strings.Split(p, "/")
-	out := parts[:0]
-	for _, seg := range parts {
-		seg = strings.TrimSpace(seg)
-		if seg == "" {
-			continue
-		}
-		out = append(out, kebabSlug(seg))
-	}
-	return strings.Join(out, "/")
-}

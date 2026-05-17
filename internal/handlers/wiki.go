@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	htmlpkg "html"
 	"net/http"
@@ -12,12 +11,12 @@ import (
 // GetWikiSuggest returns an HTML <li> fragment for autocomplete in the editor.
 //
 // Query routing:
-//   - ""           → nothing
-//   - "foo"        → note title search (own vault first, followed, then global)
-//   - "@"          → user handle prefix search
-//   - "@bob"       → user handle prefix search for "bob"
-//   - "@bob/"      → all of bob's notes
-//   - "@bob/wiki"  → bob's notes whose title contains "wiki"
+//   - ""          → nothing
+//   - "foo"       → note title search (own vault first, followed, then global)
+//   - "@"         → user handle prefix search
+//   - "@bob"      → user handle prefix search for "bob"
+//   - "@bob/"     → all of bob's notes
+//   - "@bob/wiki" → bob's notes whose title contains "wiki"
 func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
@@ -25,9 +24,8 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(q, "@") {
-		rest := q[1:] // everything after @
+		rest := q[1:]
 		if idx := strings.Index(rest, "/"); idx >= 0 {
-			// @user/query — search notes within that specific vault
 			viewer, _ := s.Auth.CurrentUser(r)
 			viewerHandle := ""
 			if viewer != nil {
@@ -35,7 +33,6 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 			}
 			s.suggestNotesForUser(r.Context(), w, rest[:idx], rest[idx+1:], viewerHandle)
 		} else {
-			// @prefix — suggest matching user handles
 			s.suggestUsers(r.Context(), w, rest)
 		}
 		return
@@ -70,43 +67,40 @@ func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix
 	}
 }
 
-// suggestNotesForUser searches notes in a specific user's vault.
-// Called when the editor query is "@handle/..." — user is resolved, now narrow by title.
 func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter, handle, q, viewerHandle string) {
 	var (
-		rows *sql.Rows
-		err  error
+		query string
+		args  []any
 	)
 	if q == "" {
-		rows, err = s.DB.QueryContext(ctx, `
-			SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+		query = `
+			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
 			WHERE u.handle = ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
-			ORDER BY n.updated_at DESC LIMIT 10`, handle)
+			ORDER BY n.updated_at DESC LIMIT 10`
+		args = []any{handle}
 	} else {
-		rows, err = s.DB.QueryContext(ctx, `
-			SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+		query = `
+			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
 			WHERE u.handle = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
-			ORDER BY n.updated_at DESC LIMIT 10`,
-			handle, "%"+strings.ToLower(q)+"%")
+			ORDER BY n.updated_at DESC LIMIT 10`
+		args = []any{handle, "%" + strings.ToLower(q) + "%"}
 	}
+	rows, err := s.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var sg wikiSuggestion
-		if err := rows.Scan(&sg.NoteID, &sg.Title, &sg.Folder, &sg.Slug, &sg.Handle); err != nil {
+		if err := rows.Scan(&sg.NoteID, &sg.Title, &sg.Slug, &sg.Handle); err != nil {
 			return
 		}
 		insert := buildWikiInsert(sg, viewerHandle)
 		secondary := "@" + sg.Handle
-		if sg.Folder != "" {
-			secondary += "/" + sg.Folder
-		}
 		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
 			insert, htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
 	}
@@ -115,7 +109,6 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 type wikiSuggestion struct {
 	NoteID int64
 	Title  string
-	Folder string
 	Slug   string
 	Handle string
 }
@@ -139,7 +132,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 				return
 			}
 			var sg wikiSuggestion
-			if err := rows.Scan(&sg.NoteID, &sg.Title, &sg.Folder, &sg.Slug, &sg.Handle); err != nil {
+			if err := rows.Scan(&sg.NoteID, &sg.Title, &sg.Slug, &sg.Handle); err != nil {
 				return
 			}
 			if seen[sg.NoteID] {
@@ -152,14 +145,14 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 
 	if myID != 0 {
 		collect(`
-			SELECT n.id, n.title, n.folder_path, n.slug, ? AS handle
+			SELECT n.id, n.title, n.slug, ? AS handle
 			FROM notes n
 			WHERE n.author_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`,
 			myHandle, myID, pattern)
 
 		collect(`
-			SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
@@ -169,7 +162,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 	}
 
 	collect(`
-		SELECT n.id, n.title, n.folder_path, n.slug, u.handle
+		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
 		WHERE lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
@@ -179,25 +172,14 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 	for _, sg := range results {
 		insert := buildWikiInsert(sg, myHandle)
 		secondary := "@" + sg.Handle
-		if sg.Folder != "" {
-			secondary += "/" + sg.Folder
-		}
 		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
 			insert, htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
 	}
 }
 
-// buildWikiInsert produces the payload between [[ and ]] when this suggestion
-// is picked: own notes are same-vault, others get the @user prefix.
 func buildWikiInsert(s wikiSuggestion, myHandle string) string {
 	if s.Handle == myHandle {
-		if s.Folder != "" {
-			return s.Folder + "/" + s.Slug
-		}
 		return s.Slug
-	}
-	if s.Folder != "" {
-		return "@" + s.Handle + "/" + s.Folder + "/" + s.Slug
 	}
 	return "@" + s.Handle + "/" + s.Slug
 }

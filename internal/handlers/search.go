@@ -11,7 +11,6 @@ type searchHit struct {
 	Title        string
 	URL          string
 	AuthorHandle string
-	FolderPath   string
 	UpdatedRel   string
 	Snippet      template.HTML // contains <mark>…</mark>
 }
@@ -41,7 +40,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 			}
 
 			rows, err := s.DB.QueryContext(r.Context(), `
-				SELECT n.title, n.folder_path, n.slug, u.handle, n.updated_at,
+				SELECT n.title, n.slug, u.handle, n.updated_at,
 				       snippet(notes_fts, 1, '<mark>', '</mark>', '…', 16) AS snip
 				FROM notes_fts
 				JOIN notes n ON n.id = notes_fts.rowid
@@ -52,18 +51,15 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				defer rows.Close()
 				for rows.Next() {
-					var (
-						title, folder, slug, handle, snip string
-						updated                            int64
-					)
-					if err := rows.Scan(&title, &folder, &slug, &handle, &updated, &snip); err != nil {
+					var title, slug, handle, snip string
+					var updated int64
+					if err := rows.Scan(&title, &slug, &handle, &updated, &snip); err != nil {
 						break
 					}
 					hits = append(hits, searchHit{
 						Title:        title,
-						URL:          noteURL(handle, folder, slug),
+						URL:          noteURL(handle, slug),
 						AuthorHandle: handle,
-						FolderPath:   folder,
 						UpdatedRel:   relativeTime(updated),
 						Snippet:      template.HTML(snip),
 					})

@@ -63,7 +63,7 @@ func TestSaveResolvesAndBacklinks(t *testing.T) {
 	// alice writes "intro" linking to bob's not-yet-existent foo, a missing
 	// user, and a same-vault note that doesn't exist yet.
 	body := "See [[@bob/foo]] and [[@nobody/x]] and [[localnote]]."
-	if _, err := s.saveNote(ctx, aliceID, "alice", "", "intro", "Intro", body, nil); err != nil {
+	if _, err := s.saveNote(ctx, aliceID, "alice", "intro", "Intro", body, nil); err != nil {
 		t.Fatalf("save alice/intro: %v", err)
 	}
 	if r, u := countResolved(t, s); r != 0 || u != 3 {
@@ -71,7 +71,7 @@ func TestSaveResolvesAndBacklinks(t *testing.T) {
 	}
 
 	// bob creates foo — alice's @bob/foo link should now resolve.
-	if _, err := s.saveNote(ctx, bobID, "bob", "", "foo", "Foo", "", nil); err != nil {
+	if _, err := s.saveNote(ctx, bobID, "bob", "foo", "Foo", "", nil); err != nil {
 		t.Fatalf("save bob/foo: %v", err)
 	}
 	if r, u := countResolved(t, s); r != 1 || u != 2 {
@@ -79,7 +79,7 @@ func TestSaveResolvesAndBacklinks(t *testing.T) {
 	}
 
 	// alice creates localnote — same-vault link should now resolve.
-	if _, err := s.saveNote(ctx, aliceID, "alice", "", "localnote", "Local", "", nil); err != nil {
+	if _, err := s.saveNote(ctx, aliceID, "alice", "localnote", "Local", "", nil); err != nil {
 		t.Fatalf("save alice/localnote: %v", err)
 	}
 	if r, u := countResolved(t, s); r != 2 || u != 1 {
@@ -139,17 +139,4 @@ func TestSlugAndFolderNormalization(t *testing.T) {
 		}
 	}
 
-	folderCases := []struct {
-		in, want string
-	}{
-		{"music/mixing", "music/mixing"},
-		{"  /a/b/  ", "a/b"},
-		{"Music / Mixing", "music/mixing"},
-		{"", ""},
-	}
-	for _, c := range folderCases {
-		if got := normalizeFolder(c.in); got != c.want {
-			t.Errorf("normalizeFolder(%q) = %q, want %q", c.in, got, c.want)
-		}
-	}
 }

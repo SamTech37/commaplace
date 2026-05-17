@@ -55,8 +55,8 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 		t := tick(hoursAgo)
 		r, err := tx.ExecContext(ctx, `
 			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, ?, ?, ?, ?, ?, ?)`,
-			authorID, folder, slug, title, body, t, t,
+			VALUES(?, '', ?, ?, ?, ?, ?)`,
+			authorID, slug, title, body, t, t,
 		)
 		if err != nil {
 			return 0, err
@@ -76,8 +76,8 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE links SET resolved_target_id = ?
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_folder_path = ? AND target_slug = ?`,
-			nid, handle, folder, slug,
+			  AND target_user_handle = ? AND target_slug = ?`,
+			nid, handle, slug,
 		); err != nil {
 			return 0, err
 		}
@@ -159,7 +159,7 @@ See: [[atomic-notes]], [[@alice/how-i-take-notes]]`, []string{"knowledge", "zett
 
 Not one topic. Not one article. One **claim** that can stand on its own.
 
-Bad: "Notes on WWII" (a folder, not a thought)
+Bad: "Notes on WWII" (a topic, not a thought)
 Good: "The Molotov-Ribbentrop pact delayed Germany's eastern front by 2 years" (a claim)
 
 Atomic notes are easier to link because they have a clear identity. You know when two notes belong together.
@@ -200,7 +200,7 @@ When someone says "that chord is a ii-V-I," they're not saying "that's correct."
 
 Theory lets you **name what you're hearing**. Naming is the first step to understanding.
 
-The trap is mistaking the map for the territory. [[@alice/philosophy/on-linking-ideas]] says something similar about note systems.`, []string{"music", "theory", "creativity"}, 144)
+The trap is mistaking the map for the territory. [[@alice/on-linking-ideas]] says something similar about note systems.`, []string{"music", "theory", "creativity"}, 144)
 
 	c2, _ := insertNote(carolID, "carol", "", "transcription-practice", `The fastest way to improve: transcribe music you love.
 

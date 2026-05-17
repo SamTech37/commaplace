@@ -13,13 +13,13 @@ func TestParseLink(t *testing.T) {
 	}{
 		// 4 canonical syntax variants
 		{"foo", true, WikiLink{Slug: "foo", Raw: "foo"}},
-		{"bar/baz", true, WikiLink{Folder: "bar", Slug: "baz", Raw: "bar/baz"}},
+		{"bar/baz", true, WikiLink{Slug: "baz", Raw: "bar/baz"}},
 		{"@alice/foo", true, WikiLink{User: "alice", Slug: "foo", Raw: "@alice/foo"}},
-		{"@alice/music/why", true, WikiLink{User: "alice", Folder: "music", Slug: "why", Raw: "@alice/music/why"}},
+		{"@alice/music/why", true, WikiLink{User: "alice", Slug: "why", Raw: "@alice/music/why"}},
 
 		// nested folders
-		{"a/b/c/slug", true, WikiLink{Folder: "a/b/c", Slug: "slug", Raw: "a/b/c/slug"}},
-		{"@bob/a/b/c/slug", true, WikiLink{User: "bob", Folder: "a/b/c", Slug: "slug", Raw: "@bob/a/b/c/slug"}},
+		{"a/b/c/slug", true, WikiLink{Slug: "slug", Raw: "a/b/c/slug"}},
+		{"@bob/a/b/c/slug", true, WikiLink{User: "bob", Slug: "slug", Raw: "@bob/a/b/c/slug"}},
 
 		// whitespace tolerance
 		{"  foo  ", true, WikiLink{Slug: "foo", Raw: "  foo  "}},
@@ -29,12 +29,12 @@ func TestParseLink(t *testing.T) {
 
 		// aliases
 		{"foo|Custom Label", true, WikiLink{Slug: "foo", Alias: "Custom Label", Raw: "foo|Custom Label"}},
-		{"bar/baz|My Note", true, WikiLink{Folder: "bar", Slug: "baz", Alias: "My Note", Raw: "bar/baz|My Note"}},
+		{"bar/baz|My Note", true, WikiLink{Slug: "baz", Alias: "My Note", Raw: "bar/baz|My Note"}},
 		{"@alice/foo|Her Note", true, WikiLink{User: "alice", Slug: "foo", Alias: "Her Note", Raw: "@alice/foo|Her Note"}},
 
 		// heading anchors
 		{"foo#Introduction", true, WikiLink{Slug: "foo", Anchor: "Introduction", Raw: "foo#Introduction"}},
-		{"bar/baz#Section 2", true, WikiLink{Folder: "bar", Slug: "baz", Anchor: "Section 2", Raw: "bar/baz#Section 2"}},
+		{"bar/baz#Section 2", true, WikiLink{Slug: "baz", Anchor: "Section 2", Raw: "bar/baz#Section 2"}},
 		{"@alice/foo#Header", true, WikiLink{User: "alice", Slug: "foo", Anchor: "Header", Raw: "@alice/foo#Header"}},
 
 		// same-note heading links
@@ -77,10 +77,10 @@ func TestURL(t *testing.T) {
 		want string
 	}{
 		{WikiLink{Slug: "foo"}, "shawn", "/shawn/foo"},
-		{WikiLink{Folder: "music", Slug: "why"}, "shawn", "/shawn/music/why"},
+		{WikiLink{Slug: "why"}, "shawn", "/shawn/why"},
 		{WikiLink{User: "alice", Slug: "foo"}, "shawn", "/alice/foo"},
-		{WikiLink{User: "alice", Folder: "music", Slug: "why"}, "shawn", "/alice/music/why"},
-		{WikiLink{User: "alice", Folder: "a/b", Slug: "c"}, "shawn", "/alice/a/b/c"},
+		{WikiLink{User: "alice", Slug: "why"}, "shawn", "/alice/why"},
+		{WikiLink{User: "alice", Slug: "c"}, "shawn", "/alice/c"},
 		// with anchor
 		{WikiLink{Slug: "foo", Anchor: "Introduction"}, "shawn", "/shawn/foo#introduction"},
 		{WikiLink{Slug: "foo", Anchor: "Section 2"}, "shawn", "/shawn/foo#section-2"},
@@ -103,9 +103,9 @@ some text [[@bob/folder/x]] and a duplicate [[foo]] and broken [[]] and unclosed
 	got := Extract(body)
 	want := []WikiLink{
 		{Slug: "foo", Raw: "foo"},
-		{Folder: "bar", Slug: "baz", Raw: "bar/baz"},
+		{Slug: "baz", Raw: "bar/baz"},
 		{User: "alice", Slug: "note", Raw: "@alice/note"},
-		{User: "bob", Folder: "folder", Slug: "x", Raw: "@bob/folder/x"},
+		{User: "bob", Slug: "x", Raw: "@bob/folder/x"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Extract\n got: %+v\nwant: %+v", got, want)

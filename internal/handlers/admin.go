@@ -52,7 +52,7 @@ func (s *Server) GetAdminReports(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.DB.QueryContext(r.Context(), `
 		SELECT r.id, r.reason, r.created_at, r.status,
-		       n.id, n.title, n.folder_path, n.slug, (n.hidden_at IS NOT NULL),
+		       n.id, n.title, n.slug, (n.hidden_at IS NOT NULL),
 		       au.handle,
 		       r.reporter_id, ru.handle
 		FROM reports r
@@ -72,17 +72,16 @@ func (s *Server) GetAdminReports(w http.ResponseWriter, r *http.Request) {
 		var (
 			rep     adminReportRow
 			created int64
-			folder  string
 			slug    string
 		)
 		if err := rows.Scan(&rep.ID, &rep.Reason, &created, &rep.Status,
-			&rep.NoteID, &rep.NoteTitle, &folder, &slug, &rep.NoteHidden,
+			&rep.NoteID, &rep.NoteTitle, &slug, &rep.NoteHidden,
 			&rep.AuthorHandle, &rep.ReporterID, &rep.ReporterHandle); err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 		rep.CreatedRel = relativeTime(created)
-		rep.NoteURL = noteURL(rep.AuthorHandle, folder, slug)
+		rep.NoteURL = noteURL(rep.AuthorHandle, slug)
 		items = append(items, rep)
 	}
 
@@ -206,7 +205,7 @@ func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	// Recent notes
 	var recentNotes []adminRecentNote
 	nRows, err := s.DB.QueryContext(ctx, `
-		SELECT n.title, n.folder_path, n.slug, u.handle, n.updated_at, (n.hidden_at IS NOT NULL)
+		SELECT n.title, n.slug, u.handle, n.updated_at, (n.hidden_at IS NOT NULL)
 		FROM notes n JOIN users u ON u.id = n.author_id
 		ORDER BY n.updated_at DESC
 		LIMIT 10`)
@@ -215,13 +214,12 @@ func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		for nRows.Next() {
 			var (
 				rn      adminRecentNote
-				folder  string
 				slug    string
 				updated int64
 			)
-			if err := nRows.Scan(&rn.Title, &folder, &slug, &rn.AuthorHandle, &updated, &rn.Hidden); err == nil {
+			if err := nRows.Scan(&rn.Title, &slug, &rn.AuthorHandle, &updated, &rn.Hidden); err == nil {
 				rn.UpdatedRel = relativeTime(updated)
-				rn.URL = noteURL(rn.AuthorHandle, folder, slug)
+				rn.URL = noteURL(rn.AuthorHandle, slug)
 				recentNotes = append(recentNotes, rn)
 			}
 		}

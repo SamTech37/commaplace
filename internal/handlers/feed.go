@@ -22,7 +22,6 @@ type feedItem struct {
 	URL          string
 	Excerpt      string
 	AuthorHandle string
-	FolderPath   string
 	UpdatedRel   string
 }
 
@@ -32,7 +31,6 @@ type feedCard struct {
 	Title        string
 	URL          string
 	AuthorHandle string
-	FolderPath   string
 	UpdatedAt    int64
 	UpdatedRel   string
 	LikeCount    int
@@ -132,7 +130,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, ol
 	args := []any{}
 	q := strings.Builder{}
 	q.WriteString(`
-		SELECT n.id, n.title, n.folder_path, n.slug, n.body_md, n.updated_at, u.handle,
+		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
 		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
@@ -160,7 +158,7 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID int64, tagFil
 	args := []any{viewerID}
 	q := strings.Builder{}
 	q.WriteString(`
-		SELECT n.id, n.title, n.folder_path, n.slug, n.body_md, n.updated_at, u.handle,
+		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
 		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
@@ -226,19 +224,17 @@ func scanCards(rows *sql.Rows) ([]feedCard, error) {
 	var out []feedCard
 	for rows.Next() {
 		var (
-			c          feedCard
-			folderPath string
-			slug       string
-			body       string
-			handle     string
+			c      feedCard
+			slug   string
+			body   string
+			handle string
 		)
-		if err := rows.Scan(&c.NoteID, &c.Title, &folderPath, &slug, &body, &c.UpdatedAt, &handle,
+		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle,
 			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
 			return nil, err
 		}
-		c.FolderPath = folderPath
 		c.AuthorHandle = handle
-		c.URL = noteURL(handle, folderPath, slug)
+		c.URL = noteURL(handle, slug)
 		c.UpdatedRel = relativeTime(c.UpdatedAt)
 		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
 		out = append(out, c)

@@ -56,7 +56,7 @@ type ExternalResolver func(raw string) ExternalLink
 
 // RenderExternal converts md to HTML using a caller-supplied resolver for
 // every [[wiki link]]. Used for external (Obsidian Publish) notes where
-// commonplace's own user/folder/slug URL scheme doesn't apply.
+// commonplace's own /@user/slug URL scheme doesn't apply.
 func RenderExternal(md string, resolve ExternalResolver) (template.HTML, error) {
 	md = stripComments(md)
 	g := goldmark.New(

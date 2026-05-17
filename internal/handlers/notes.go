@@ -20,7 +20,7 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, "write", map[string]any{
-		"Form": map[string]string{"Title": "", "FolderPath": "", "BodyMD": "", "Tags": ""},
+		"Form": map[string]string{"Title": "", "BodyMD": "", "Tags": ""},
 	})
 }
 
@@ -34,11 +34,10 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	title := strings.TrimSpace(r.PostFormValue("title"))
-	folder := normalizeFolder(r.PostFormValue("folder_path"))
 	body := r.PostFormValue("body_md")
 
 	form := map[string]string{
-		"Title": title, "FolderPath": folder, "BodyMD": body,
+		"Title": title, "BodyMD": body,
 		"Tags": r.PostFormValue("tags"),
 	}
 	if title == "" {
@@ -62,10 +61,10 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 		tagsInput += "," + strings.Join(inline, ",")
 	}
 	tags := parseTags(tagsInput)
-	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, folder, slug, title, body, tags); err != nil {
+	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags); err != nil {
 		msg := err.Error()
 		if isUniqueViolation(err) {
-			msg = "A note with this title already exists in that folder. Pick a different title."
+			msg = "A note with this title already exists. Pick a different title."
 		}
 		s.render(w, r, "write", map[string]any{
 			"Form":  form,
@@ -73,7 +72,7 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	http.Redirect(w, r, noteURL(u.Handle, folder, slug), http.StatusSeeOther)
+	http.Redirect(w, r, noteURL(u.Handle, slug), http.StatusSeeOther)
 }
 
 // PostPreview is the HTMX target for live markdown preview while writing.
@@ -112,14 +111,12 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var (
-		authorID                  int64
-		folder, slug, title, body string
-	)
+	var authorID int64
+	var slug, title, body string
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, folder_path, slug, title, body_md
+		SELECT author_id, slug, title, body_md
 		FROM notes WHERE id = ?`, noteID,
-	).Scan(&authorID, &folder, &slug, &title, &body)
+	).Scan(&authorID, &slug, &title, &body)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -138,15 +135,14 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 
 	s.render(w, r, "write", map[string]any{
 		"Form": map[string]string{
-			"Title": title, "FolderPath": folder, "BodyMD": body, "Tags": tagsStr,
+			"Title": title, "BodyMD": body, "Tags": tagsStr,
 		},
 		"Action":      "/edit/" + strconv.FormatInt(noteID, 10),
 		"Heading":     "編輯筆記",
 		"SubmitLabel": "儲存",
 		"EditNote": map[string]any{
-			"ID":         noteID,
-			"FolderPath": folder,
-			"Slug":       slug,
+			"ID":   noteID,
+			"Slug": slug,
 		},
 	})
 }
@@ -166,13 +162,11 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var (
-		authorID     int64
-		folder, slug string
-	)
+	var authorID int64
+	var slug string
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, folder_path, slug FROM notes WHERE id = ?`, noteID,
-	).Scan(&authorID, &folder, &slug)
+		SELECT author_id, slug FROM notes WHERE id = ?`, noteID,
+	).Scan(&authorID, &slug)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -191,7 +185,7 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 	tagsInput := r.PostFormValue("tags")
 
 	form := map[string]string{
-		"Title": title, "FolderPath": folder, "BodyMD": body, "Tags": tagsInput,
+		"Title": title, "BodyMD": body, "Tags": tagsInput,
 	}
 	rerender := func(msg string) {
 		s.render(w, r, "write", map[string]any{
@@ -200,7 +194,7 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 			"Heading":     "編輯筆記",
 			"SubmitLabel": "儲存",
 			"EditNote": map[string]any{
-				"ID": noteID, "FolderPath": folder, "Slug": slug,
+				"ID": noteID, "Slug": slug,
 			},
 			"Error": msg,
 		})
@@ -219,12 +213,11 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 		rerender(err.Error())
 		return
 	}
-	http.Redirect(w, r, noteURL(u.Handle, folder, slug), http.StatusSeeOther)
+	http.Redirect(w, r, noteURL(u.Handle, slug), http.StatusSeeOther)
 }
 
 // updateNote updates an existing note's title/body/tags and recomputes its
-// outgoing links. Folder and slug are intentionally not editable here so
-// that inbound wiki-links remain valid.
+// outgoing links. Slug is intentionally not editable so inbound wikilinks remain valid.
 func (s *Server) updateNote(ctx context.Context, noteID int64, authorHandle, title, body string, tags []string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -263,28 +256,25 @@ func (s *Server) updateNote(ctx context.Context, noteID int64, authorHandle, tit
 type backlink struct {
 	Title        string
 	AuthorHandle string
-	FolderPath   string
 	URL          string
 	UpdatedRel   string
 	SameVault    bool
 }
 
 type noteView struct {
-	ID         int64
-	Title      string
-	BodyMD     string
-	UpdatedAt  int64
-	FolderPath string
-	Slug       string
-	AuthorID   int64
-	HiddenAt   sql.NullInt64
-	DeletedAt  sql.NullInt64
+	ID        int64
+	Title     string
+	BodyMD    string
+	UpdatedAt int64
+	Slug      string
+	AuthorID  int64
+	HiddenAt  sql.NullInt64
+	DeletedAt sql.NullInt64
 }
 
 func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	handle := r.PathValue("user")
-	path := r.PathValue("path")
-	folder, slug := splitNotePath(path)
+	slug := r.PathValue("slug")
 	if slug == "" {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -292,13 +282,13 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 
 	var n noteView
 	err := s.DB.QueryRowContext(r.Context(), `
-		SELECT n.id, n.title, n.body_md, n.updated_at, n.folder_path, n.slug,
+		SELECT n.id, n.title, n.body_md, n.updated_at, n.slug,
 		       n.author_id, n.hidden_at, n.deleted_at
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE u.handle = ? AND n.folder_path = ? AND n.slug = ?`,
-		handle, folder, slug,
-	).Scan(&n.ID, &n.Title, &n.BodyMD, &n.UpdatedAt, &n.FolderPath, &n.Slug,
+		WHERE u.handle = ? AND n.slug = ?`,
+		handle, slug,
+	).Scan(&n.ID, &n.Title, &n.BodyMD, &n.UpdatedAt, &n.Slug,
 		&n.AuthorID, &n.HiddenAt, &n.DeletedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
@@ -309,7 +299,6 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hidden notes 404 unless the viewer is the author or the admin.
 	if n.HiddenAt.Valid {
 		viewer, _ := s.Auth.CurrentUser(r)
 		isAuthor := viewer != nil && viewer.ID == n.AuthorID
@@ -319,7 +308,6 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Soft-deleted notes always 404.
 	if n.DeletedAt.Valid {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -338,7 +326,6 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	outgoingSame, outgoingCross, _ := s.loadOutgoingSplit(r.Context(), n.ID, handle)
 	authorStats, _ := loadAuthorStats(r.Context(), s.DB, n.AuthorID)
 
-	// "From" banner: ?from=N points back to the note that brought us here.
 	var fromNote *fromBanner
 	if fromIDStr := r.URL.Query().Get("from"); fromIDStr != "" {
 		if fromID, err := strconv.ParseInt(fromIDStr, 10, 64); err == nil && fromID > 0 && fromID != n.ID {
@@ -355,32 +342,26 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	liked, _ := userHasLiked(r.Context(), s.DB, viewerID, n.ID)
 	viewerFollows, _ := userFollows(r.Context(), s.DB, viewerID, n.AuthorID)
 
-	var crumbs []string
-	if folder != "" {
-		crumbs = strings.Split(folder, "/")
-	}
-
 	s.render(w, r, "note", map[string]any{
-		"Note":            n,
-		"AuthorHandle":    handle,
-		"AuthorID":        n.AuthorID,
-		"AuthorStats":     authorStats,
-		"ViewerFollows":   viewerFollows,
-		"Crumbs":          crumbs,
-		"BodyHTML":        bodyHTML,
-		"Tags":            tags,
-		"BacklinksSame":   sameVaultBL,
-		"BacklinksCross":  crossVaultBL,
-		"OutgoingSame":    outgoingSame,
-		"OutgoingCross":   outgoingCross,
-		"From":            fromNote,
-		"UpdatedRel":      relativeTime(n.UpdatedAt),
-		"ReadingMinutes":  readingMinutes(n.BodyMD),
-		"LikeCount":       likeN,
-		"Liked":           liked,
-		"ViewerLoggedIn":  viewer != nil,
-		"IsAuthor":        viewer != nil && viewer.ID == n.AuthorID,
-		"IsHidden":        n.HiddenAt.Valid,
+		"Note":           n,
+		"AuthorHandle":   handle,
+		"AuthorID":       n.AuthorID,
+		"AuthorStats":    authorStats,
+		"ViewerFollows":  viewerFollows,
+		"BodyHTML":       bodyHTML,
+		"Tags":           tags,
+		"BacklinksSame":  sameVaultBL,
+		"BacklinksCross": crossVaultBL,
+		"OutgoingSame":   outgoingSame,
+		"OutgoingCross":  outgoingCross,
+		"From":           fromNote,
+		"UpdatedRel":     relativeTime(n.UpdatedAt),
+		"ReadingMinutes": readingMinutes(n.BodyMD),
+		"LikeCount":      likeN,
+		"Liked":          liked,
+		"ViewerLoggedIn": viewer != nil,
+		"IsAuthor":       viewer != nil && viewer.ID == n.AuthorID,
+		"IsHidden":       n.HiddenAt.Valid,
 	})
 }
 
@@ -391,21 +372,19 @@ type fromBanner struct {
 }
 
 func loadFromBanner(ctx context.Context, db *sql.DB, fromID int64) (*fromBanner, error) {
-	var (
-		title, folder, slug, handle string
-	)
+	var title, slug, handle string
 	err := db.QueryRowContext(ctx, `
-		SELECT n.title, n.folder_path, n.slug, u.handle
+		SELECT n.title, n.slug, u.handle
 		FROM notes n JOIN users u ON u.id = n.author_id
 		WHERE n.id = ?`, fromID,
-	).Scan(&title, &folder, &slug, &handle)
+	).Scan(&title, &slug, &handle)
 	if err != nil {
 		return nil, err
 	}
 	return &fromBanner{
 		ID:    fromID,
 		Title: title,
-		URL:   noteURL(handle, folder, slug),
+		URL:   noteURL(handle, slug),
 	}, nil
 }
 
@@ -427,13 +406,9 @@ func loadTagsForNote(ctx context.Context, db *sql.DB, noteID int64) ([]string, e
 	return out, rows.Err()
 }
 
-// loadBacklinksSplit loads backlinks for a note and partitions them into
-// same-vault (source author == this note's author) and cross-vault.
-// Each backlink's URL carries ?from=<this note's id> so the destination
-// can render a "back to" banner.
 func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHandle string) (sameVault, crossVault []backlink, err error) {
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT n.title, n.folder_path, n.slug, u.handle, n.updated_at
+		SELECT n.title, n.slug, u.handle, n.updated_at
 		FROM links l
 		JOIN notes n ON n.id = l.source_note_id
 		JOIN users u ON u.id = n.author_id
@@ -445,18 +420,15 @@ func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHand
 	defer rows.Close()
 	from := "?from=" + strconv.FormatInt(noteID, 10)
 	for rows.Next() {
-		var (
-			title, folderPath, slug, handle string
-			updated                          int64
-		)
-		if err := rows.Scan(&title, &folderPath, &slug, &handle, &updated); err != nil {
+		var title, slug, handle string
+		var updated int64
+		if err := rows.Scan(&title, &slug, &handle, &updated); err != nil {
 			return nil, nil, err
 		}
 		bl := backlink{
 			Title:        title,
 			AuthorHandle: handle,
-			FolderPath:   folderPath,
-			URL:          noteURL(handle, folderPath, slug) + from,
+			URL:          noteURL(handle, slug) + from,
 			UpdatedRel:   relativeTime(updated),
 			SameVault:    handle == vaultHandle,
 		}
@@ -469,19 +441,16 @@ func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHand
 	return sameVault, crossVault, rows.Err()
 }
 
-// loadOutgoingSplit returns notes this note links to, split into same-vault
-// and cross-vault. Only resolved links are returned. URLs carry ?from=<id>.
 type outlink struct {
 	Title        string
 	AuthorHandle string
-	FolderPath   string
 	URL          string
 	SameVault    bool
 }
 
 func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandle string) (same, cross []outlink, err error) {
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT DISTINCT n.id, n.title, n.folder_path, n.slug, u.handle
+		SELECT DISTINCT n.id, n.title, n.slug, u.handle
 		FROM links l
 		JOIN notes n ON n.id = l.resolved_target_id
 		JOIN users u ON u.id = n.author_id
@@ -495,15 +464,14 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandl
 	from := "?from=" + strconv.FormatInt(noteID, 10)
 	for rows.Next() {
 		var id int64
-		var title, folderPath, slug, handle string
-		if err := rows.Scan(&id, &title, &folderPath, &slug, &handle); err != nil {
+		var title, slug, handle string
+		if err := rows.Scan(&id, &title, &slug, &handle); err != nil {
 			return nil, nil, err
 		}
 		ol := outlink{
 			Title:        title,
 			AuthorHandle: handle,
-			FolderPath:   folderPath,
-			URL:          noteURL(handle, folderPath, slug) + from,
+			URL:          noteURL(handle, slug) + from,
 			SameVault:    handle == vaultHandle,
 		}
 		if ol.SameVault {
@@ -515,11 +483,9 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandl
 	return same, cross, rows.Err()
 }
 
-// authorStats powers the author bar at the top of a note view.
 type authorStats struct {
 	Followers int
 	Notes     int
-	Folders   int
 }
 
 func loadAuthorStats(ctx context.Context, db *sql.DB, authorID int64) (authorStats, error) {
@@ -530,15 +496,9 @@ func loadAuthorStats(ctx context.Context, db *sql.DB, authorID int64) (authorSta
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM notes WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL`, authorID,
 	).Scan(&s.Notes)
-	_ = db.QueryRowContext(ctx, `
-		SELECT COUNT(DISTINCT folder_path) FROM notes
-		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL AND folder_path != ''`, authorID,
-	).Scan(&s.Folders)
 	return s, nil
 }
 
-// readingMinutes estimates reading time. ~400 CJK chars/min, ~250 words/min
-// for ASCII — we approximate by counting runes and dividing by 350.
 func readingMinutes(body string) int {
 	n := utf8.RuneCountInString(body)
 	m := n / 350
@@ -550,10 +510,7 @@ func readingMinutes(body string) int {
 
 // ---------- save + link recomputation ----------
 
-// saveNote inserts a new note row and (re)computes its outgoing links plus
-// any previously-dangling links that now resolve to this note. Tags are
-// inserted in the same transaction.
-func (s *Server) saveNote(ctx context.Context, authorID int64, authorHandle, folder, slug, title, body string, tags []string) (int64, error) {
+func (s *Server) saveNote(ctx context.Context, authorID int64, authorHandle, slug, title, body string, tags []string) (int64, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -563,8 +520,8 @@ func (s *Server) saveNote(ctx context.Context, authorID int64, authorHandle, fol
 	now := nowUnix()
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?)`,
-		authorID, folder, slug, title, body, now, now,
+		VALUES(?, '', ?, ?, ?, ?, ?)`,
+		authorID, slug, title, body, now, now,
 	)
 	if err != nil {
 		return 0, err
@@ -587,14 +544,12 @@ func (s *Server) saveNote(ctx context.Context, authorID int64, authorHandle, fol
 		return 0, err
 	}
 
-	// Re-resolve any previously-unresolved links pointing at *this* new note.
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE links SET resolved_target_id = ?
 		WHERE resolved_target_id IS NULL
 		  AND target_user_handle = ?
-		  AND target_folder_path = ?
 		  AND target_slug = ?`,
-		noteID, authorHandle, folder, slug,
+		noteID, authorHandle, slug,
 	); err != nil {
 		return 0, err
 	}
@@ -605,10 +560,7 @@ func (s *Server) saveNote(ctx context.Context, authorID int64, authorHandle, fol
 	return noteID, nil
 }
 
-// RecomputeLinks deletes existing links rows for sourceID and inserts one
-// row per unique wiki link in body, with resolved_target_id set when the
-// target exists. Exported so the seed package can call it; internal
-// callers use the unexported alias `recomputeLinks`.
+// RecomputeLinks is exported so the seed package can call it.
 func RecomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAuthorHandle, body string) error {
 	return recomputeLinks(ctx, tx, sourceID, sourceAuthorHandle, body)
 }
@@ -627,8 +579,8 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAutho
 		err := tx.QueryRowContext(ctx, `
 			SELECT n.id FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = ? AND n.folder_path = ? AND n.slug = ?`,
-			targetHandle, l.Folder, l.Slug,
+			WHERE u.handle = ? AND n.slug = ?`,
+			targetHandle, l.Slug,
 		).Scan(&found)
 		if err == nil {
 			resolved = sql.NullInt64{Int64: found, Valid: true}
@@ -637,8 +589,8 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAutho
 		}
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO links(source_note_id, target_user_handle, target_folder_path, target_slug, resolved_target_id)
-			VALUES(?, ?, ?, ?, ?)`,
-			sourceID, targetHandle, l.Folder, l.Slug, resolved,
+			VALUES(?, ?, '', ?, ?)`,
+			sourceID, targetHandle, l.Slug, resolved,
 		); err != nil {
 			return err
 		}
@@ -648,26 +600,12 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAutho
 
 // ---------- helpers ----------
 
-func splitNotePath(path string) (folder, slug string) {
-	if path == "" {
-		return "", ""
-	}
-	if i := strings.LastIndexByte(path, '/'); i >= 0 {
-		return path[:i], path[i+1:]
-	}
-	return "", path
-}
-
-func noteURL(handle, folder, slug string) string {
-	if folder == "" {
-		return "/" + handle + "/" + slug
-	}
-	return "/" + handle + "/" + folder + "/" + slug
+func noteURL(handle, slug string) string {
+	return "/" + handle + "/" + slug
 }
 
 func nowUnix() int64 { return timeNow().Unix() }
 
-// timeNow is a var so tests can stub. Production code calls real time.Now.
 var timeNow = func() time.Time { return time.Now() }
 
 func isUniqueViolation(err error) bool {
@@ -679,9 +617,6 @@ func isUniqueViolation(err error) bool {
 		strings.Contains(msg, "constraint failed: UNIQUE")
 }
 
-// buildResolver returns a markdown.Resolver that knows which of `links` map
-// to existing notes. vaultHandle is the same-vault default for [[slug]]
-// links (no @user prefix). One DB lookup per unique link; fine for v0.
 func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []markdown.WikiLink) markdown.Resolver {
 	if len(links) == 0 {
 		return func(markdown.WikiLink) bool { return false }
@@ -691,7 +626,7 @@ func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []
 		if h == "" {
 			h = vaultHandle
 		}
-		return h + "\x00" + l.Folder + "\x00" + l.Slug
+		return h + "\x00" + l.Slug
 	}
 	resolved := map[string]bool{}
 	for _, l := range links {
@@ -703,8 +638,8 @@ func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []
 		err := s.DB.QueryRowContext(ctx, `
 			SELECT n.id FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = ? AND n.folder_path = ? AND n.slug = ?`,
-			h, l.Folder, l.Slug,
+			WHERE u.handle = ? AND n.slug = ?`,
+			h, l.Slug,
 		).Scan(&id)
 		if err == nil {
 			resolved[keyFor(l)] = true

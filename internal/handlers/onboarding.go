@@ -77,8 +77,8 @@ func (s *Server) forkTour(ctx context.Context, newUserID int64, newUserHandle st
 		}
 		res, err := tx.ExecContext(ctx, `
 			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, ?, ?, ?, ?, ?, ?)`,
-			newUserID, n.Folder, n.Slug, n.Title, n.Body, now, now,
+			VALUES(?, '', ?, ?, ?, ?, ?)`,
+			newUserID, n.Slug, n.Title, n.Body, now, now,
 		)
 		if err != nil {
 			return 0, err
@@ -102,8 +102,8 @@ func (s *Server) forkTour(ctx context.Context, newUserID int64, newUserHandle st
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE links SET resolved_target_id = ?
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_folder_path = ? AND target_slug = ?`,
-			nid, newUserHandle, n.Folder, n.Slug,
+			  AND target_user_handle = ? AND target_slug = ?`,
+			nid, newUserHandle, n.Slug,
 		); err != nil {
 			return 0, err
 		}
@@ -131,20 +131,20 @@ func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID int64) (*pinnedNo
 		return nil, err
 	}
 	var (
-		title, folder, slug string
+		title, slug string
 	)
 	err := db.QueryRowContext(ctx, `
-		SELECT n.title, n.folder_path, n.slug
+		SELECT n.title, n.slug
 		FROM notes n
 		WHERE n.id = ? AND n.author_id = ?`,
 		pinnedID.Int64, userID,
-	).Scan(&title, &folder, &slug)
+	).Scan(&title, &slug)
 	if err != nil {
 		return nil, nil
 	}
 	return &pinnedNote{
 		Title: title,
-		URL:   noteURL(authorHandleByID(ctx, db, userID), folder, slug),
+		URL:   noteURL(authorHandleByID(ctx, db, userID), slug),
 	}, nil
 }
 

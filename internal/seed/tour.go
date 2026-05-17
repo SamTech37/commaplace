@@ -19,7 +19,7 @@ const DemoHandle = "shawn"
 
 type TourNote struct {
 	Author    string // TourHandle or MakerHandle
-	Folder    string // "" for root
+	Folder    string // legacy; ignored
 	Slug      string
 	Title     string
 	Body      string
@@ -30,7 +30,7 @@ type TourNote struct {
 // DemoNote is the curated content that ships with the repo so a fresh
 // `go run ./cmd/server` lands on a feed full of real notes instead of empty.
 type DemoNote struct {
-	Folder string
+	Folder string // legacy; ignored
 	Slug   string
 	Title  string
 	Body   string
@@ -67,8 +67,8 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 	for _, n := range DemoNotes {
 		res, err := tx.ExecContext(ctx, `
 			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, ?, ?, ?, ?, ?, ?)`,
-			authorID, n.Folder, n.Slug, n.Title, n.Body, now, now,
+			VALUES(?, '', ?, ?, ?, ?, ?)`,
+			authorID, n.Slug, n.Title, n.Body, now, now,
 		)
 		if err != nil {
 			return err
@@ -88,8 +88,8 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE links SET resolved_target_id = ?
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_folder_path = ? AND target_slug = ?`,
-			nid, DemoHandle, n.Folder, n.Slug,
+			  AND target_user_handle = ? AND target_slug = ?`,
+			nid, DemoHandle, n.Slug,
 		); err != nil {
 			return err
 		}
@@ -109,54 +109,41 @@ var TourNotes = []TourNote{
 
 Take the tour:
 
-- [[getting-started/write-your-first-note]]
-- [[getting-started/use-folders]]
-- [[getting-started/wiki-links]]
-- [[getting-started/tags-and-search]]
+- [[write-your-first-note]]
+- [[wiki-links]]
+- [[tags-and-search]]
 
 Or jump to features and examples:
 
-- [[features/markdown-support]]
-- [[features/cross-vault]]
-- [[features/backlinks]]
-- [[features/likes-and-follows]]
-- [[examples/connection-map]]
+- [[markdown-support]]
+- [[cross-vault]]
+- [[backlinks]]
+- [[likes-and-follows]]
+- [[connection-map]]
 
 Have fun.`,
 	},
 	{
 		Author: TourHandle, Folder: "getting-started", Slug: "write-your-first-note",
 		Title: "Write your first note", Tags: []string{"tour", "getting-started"},
-		Body: `Click **write** in the top nav. Give it a title, optionally a folder path, and write the body in markdown.
+		Body: `Click **write** in the top nav. Give it a title and write the body in markdown.
 
 A few rules:
 
 - The slug is auto-generated from the title (kebab-case).
-- The folder path is just "music/mixing" — slashes nest the folder tree on your profile.
 - Tags are comma-separated. They show up on the note view as chips.
 
 That's it. Hit publish and you have a note.`,
-	},
-	{
-		Author: TourHandle, Folder: "getting-started", Slug: "use-folders",
-		Title: "Use folders", Tags: []string{"tour", "getting-started"},
-		Body: `Folders are just paths. You don't create them ahead of time — write a note with folder ` + "`music/mixing`" + ` and the folder appears on your profile.
-
-The folder tree on your profile is built automatically from every distinct folder path you've used.
-
-There's no "rename folder" command. To move a note, edit its folder. (Editing is on the roadmap; for v1 you delete and re-create.)`,
 	},
 	{
 		Author: TourHandle, Folder: "getting-started", Slug: "wiki-links",
 		Title: "Wiki links", Tags: []string{"tour", "getting-started"},
 		Body: `Type ` + "`[[`" + ` in the editor and an autocomplete pops up. Pick a note, hit Enter.
 
-Four syntax variants:
+Two syntax variants:
 
-- ` + "`[[slug]]`" + ` — same vault, root folder
-- ` + "`[[folder/slug]]`" + ` — same vault, in a folder
+- ` + "`[[slug]]`" + ` — same vault
 - ` + "`[[@user/slug]]`" + ` — another person's vault
-- ` + "`[[@user/folder/slug]]`" + ` — another person's vault, in their folder
 
 Cross-vault links render in a different color so you can see the network.`,
 	},
@@ -187,7 +174,7 @@ The top-nav search box does full-text search across every note on the site. Filt
 		Title: "Cross-vault links", Tags: []string{"tour", "features"},
 		Body: `Same-vault links connect notes inside one person's vault. Cross-vault links connect across vaults.
 
-Try this: I'm linking to another seeded user — [[@maker/art/process]]. The link is teal because it crosses into someone else's vault.
+Try this: I'm linking to another seeded user — [[@maker/process]]. The link is teal because it crosses into someone else's vault.
 
 When the target user writes a note that links back to one of yours, it shows up under the **跨 vault** section of the backlinks panel.`,
 	},
@@ -218,11 +205,11 @@ Both are public.`,
 		Body: `A note that's mostly links. The feed shows it as a **connection-preview** card with the targets as chips:
 
 - [[welcome]]
-- [[features/cross-vault]]
-- [[features/backlinks]]
-- [[@maker/art/tools-i-use]]
-- [[examples/quote-callout]]
-- [[examples/list-shape]]`,
+- [[cross-vault]]
+- [[backlinks]]
+- [[@maker/tools-i-use]]
+- [[quote-callout]]
+- [[list-shape]]`,
 	},
 	{
 		Author: TourHandle, Folder: "examples", Slug: "quote-callout",

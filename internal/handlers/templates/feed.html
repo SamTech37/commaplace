@@ -17,7 +17,7 @@
   {{end}}
 
   {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
-    <p class="folder-tree empty"><a href="/login">Log in</a> to see notes from people you follow.</p>
+    <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
   {{else if .Cards}}
     <div class="masonry">
       {{range .Cards}}
@@ -35,7 +35,7 @@
       <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
     {{end}}
   {{else}}
-    <p class="folder-tree empty">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
+    <p class="note-meta">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
   {{end}}
 {{end}}
 
@@ -73,7 +73,7 @@
     {{else}}
       <span class="avatar-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
       <span class="meta-handle">@{{.AuthorHandle}}</span>
-      {{if .FolderPath}}<span class="meta-folder">in {{.FolderPath}}</span>{{end}}
+      
     {{end}}
     <span class="meta-spacer"></span>
     {{if gt .LikeCount 0}}<span class="meta-like">♡ {{.LikeCount}}</span>{{end}}

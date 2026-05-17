@@ -57,7 +57,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := s.DB.QueryContext(r.Context(), `
-		SELECT n.title, n.folder_path, n.slug, n.body_md, n.updated_at, u.handle
+		SELECT n.title, n.slug, n.body_md, n.updated_at, u.handle
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		JOIN users u ON u.id = n.author_id
@@ -72,20 +72,17 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 
 	var items []feedItem
 	for rows.Next() {
-		var (
-			title, folderPath, slug, body, handle string
-			updated                                int64
-		)
-		if err := rows.Scan(&title, &folderPath, &slug, &body, &updated, &handle); err != nil {
+		var title, slug, body, handle string
+		var updated int64
+		if err := rows.Scan(&title, &slug, &body, &updated, &handle); err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 		items = append(items, feedItem{
 			Title:        title,
-			URL:          noteURL(handle, folderPath, slug),
+			URL:          noteURL(handle, slug),
 			Excerpt:      markdown.Excerpt(body, 150),
 			AuthorHandle: handle,
-			FolderPath:   folderPath,
 			UpdatedRel:   relativeTime(updated),
 		})
 	}

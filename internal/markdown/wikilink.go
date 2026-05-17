@@ -7,16 +7,16 @@ import "strings"
 
 // WikiLink is the parsed payload of [[...]].
 //
-//	[[slug]]                -> {Slug: "slug"}
-//	[[folder/slug]]         -> {Folder: "folder", Slug: "slug"}
-//	[[@user/slug]]          -> {User: "user", Slug: "slug"}
-//	[[@user/folder/slug]]   -> {User: "user", Folder: "folder", Slug: "slug"}
-//	[[slug#Heading]]        -> {Slug: "slug", Anchor: "Heading"}
-//	[[slug|Alias]]          -> {Slug: "slug", Alias: "Alias"}
-//	[[#Heading]]            -> {Anchor: "Heading"} (same-note link)
+//	[[slug]]           -> {Slug: "slug"}
+//	[[@user/slug]]     -> {User: "user", Slug: "slug"}
+//	[[slug#Heading]]   -> {Slug: "slug", Anchor: "Heading"}
+//	[[slug|Alias]]     -> {Slug: "slug", Alias: "Alias"}
+//	[[#Heading]]       -> {Anchor: "Heading"} (same-note link)
+//
+// Paths with slashes (legacy folder syntax like [[folder/slug]] or
+// [[@user/folder/slug]]) use only the last segment as the slug.
 type WikiLink struct {
 	User   string // empty -> same vault as the surrounding note
-	Folder string // empty -> root of the vault
 	Slug   string // empty only for same-note heading links ([[#Heading]])
 	Anchor string // heading text after #; empty if no anchor
 	Alias  string // display label after |; empty -> use Label() default
@@ -34,12 +34,7 @@ func (l WikiLink) URL(currentUser string) string {
 	if handle == "" {
 		handle = currentUser
 	}
-	parts := []string{handle}
-	if l.Folder != "" {
-		parts = append(parts, l.Folder)
-	}
-	parts = append(parts, l.Slug)
-	u := "/" + strings.Join(parts, "/")
+	u := "/" + handle + "/" + l.Slug
 	if l.Anchor != "" {
 		u += "#" + headingAnchor(l.Anchor)
 	}
@@ -129,7 +124,7 @@ func ParseLink(body string) (WikiLink, bool) {
 		return WikiLink{}, false
 	}
 
-	var slug, folder string
+	var slug string
 	if s != "" {
 		if strings.HasPrefix(s, "/") {
 			return WikiLink{}, false
@@ -140,13 +135,12 @@ func ParseLink(body string) (WikiLink, bool) {
 				return WikiLink{}, false
 			}
 		}
+		// Use only the last segment; legacy folder prefix is silently ignored.
 		slug = parts[len(parts)-1]
-		folder = strings.Join(parts[:len(parts)-1], "/")
 	}
 
 	return WikiLink{
 		User:   user,
-		Folder: folder,
 		Slug:   slug,
 		Anchor: anchor,
 		Alias:  alias,
@@ -155,7 +149,7 @@ func ParseLink(body string) (WikiLink, bool) {
 }
 
 // Extract scans body for every [[...]] occurrence and returns each parsable
-// wiki link that references another note, deduplicated by (user, folder, slug).
+// wiki link that references another note, deduplicated by (user, slug).
 // Same-note heading links ([[#Heading]]) are skipped.
 func Extract(body string) []WikiLink {
 	var out []WikiLink
@@ -174,7 +168,7 @@ func Extract(body string) []WikiLink {
 		inner := rest[:j]
 		if !strings.ContainsAny(inner, "\n") && !strings.Contains(inner, "[[") {
 			if l, ok := ParseLink(inner); ok && l.Slug != "" {
-				key := l.User + "\x00" + l.Folder + "\x00" + l.Slug
+				key := l.User + "\x00" + l.Slug
 				if !seen[key] {
 					seen[key] = true
 					out = append(out, l)

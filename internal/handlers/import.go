@@ -63,8 +63,6 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	folder := normalizeFolder(fm["folder"])
-
 	var tagsInput string
 	if t := fm["tags"]; t != "" {
 		tagsInput = t
@@ -77,16 +75,16 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 	}
 	tags := parseTags(tagsInput)
 
-	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, folder, slug, title, body, tags); err != nil {
+	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags); err != nil {
 		msg := err.Error()
 		if isUniqueViolation(err) {
-			msg = "A note with this title already exists in that folder."
+			msg = "A note with this title already exists."
 		}
 		s.render(w, r, "import", map[string]any{"Error": msg})
 		return
 	}
 
-	http.Redirect(w, r, noteURL(u.Handle, folder, slug), http.StatusSeeOther)
+	http.Redirect(w, r, noteURL(u.Handle, slug), http.StatusSeeOther)
 }
 
 // parseFrontmatter splits YAML frontmatter (--- block) from the body.

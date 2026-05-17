@@ -1,16 +1,14 @@
-{{define "title"}}#{{.Tag}} · {{.Site.Title}}{{end}}
-{{define "content"}}
-  <h1 style="margin-bottom:0.25em">#{{.Tag}}</h1>
-  <p class="note-meta">{{len .Items}} note{{if ne (len .Items) 1}}s{{end}}</p>
-  {{if .Items}}
-    {{range .Items}}
-      <a class="note-card" href="{{.URL}}">
-        <div class="note-title">{{.Title}}</div>
-        {{if .Excerpt}}<div class="note-excerpt">{{.Excerpt}}</div>{{end}}
-        <div class="note-foot">@{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}} · {{.UpdatedRel}}</div>
-      </a>
-    {{end}}
-  {{else}}
-    <p class="folder-tree empty">No notes carry this tag yet.</p>
+{{define "title"}}#{{.Tag}} · {{.Site.Title}}{{end}} {{define "content"}}
+<h1 style="margin-bottom: 0.25em">#{{.Tag}}</h1>
+<p class="note-meta">{{len .Items}} note{{if ne (len .Items) 1}}s{{end}}</p>
+{{if .Items}} {{range .Items}}
+<a class="note-card" href="{{.URL}}">
+  <div class="note-title">{{.Title}}</div>
+  {{if .Excerpt}}
+  <div class="note-excerpt">{{.Excerpt}}</div>
   {{end}}
-{{end}}
+  <div class="note-foot">@{{.AuthorHandle}} · {{.UpdatedRel}}</div>
+</a>
+{{end}} {{else}}
+<p class="note-meta">No notes carry this tag yet.</p>
+{{end}} {{end}}

@@ -24,11 +24,11 @@
         <a class="note-card" href="{{.URL}}">
           <div class="note-title">{{.Title}}</div>
           <div class="note-excerpt">{{.Snippet}}</div>
-          <div class="note-foot">@{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}} · {{.UpdatedRel}}</div>
+          <div class="note-foot">@{{.AuthorHandle}} · {{.UpdatedRel}}</div>
         </a>
       {{end}}
     {{else}}
-      <p class="folder-tree empty">No matches.</p>
+      <p class="note-meta">No matches.</p>
     {{end}}
   {{end}}
 {{end}}

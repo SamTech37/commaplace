@@ -136,12 +136,13 @@
   ta.addEventListener('blur', () => setTimeout(close, 150));
 
   // Preview fade: dim while HTMX request is in flight, restore after settle.
+  // Listen on body with e.detail.elt check — the reliable HTMX pattern.
   if (preview) {
-    ta.addEventListener('htmx:beforeRequest', () => {
-      preview.classList.add('preview-loading');
+    document.body.addEventListener('htmx:beforeRequest', (e) => {
+      if (e.detail.elt === ta) preview.classList.add('preview-loading');
     });
-    ta.addEventListener('htmx:afterSettle', () => {
-      preview.classList.remove('preview-loading');
+    document.body.addEventListener('htmx:afterSettle', (e) => {
+      if (e.detail.elt === ta) preview.classList.remove('preview-loading');
     });
   }
 })();

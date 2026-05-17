@@ -1,132 +1,210 @@
 {{define "base"}}<!doctype html>
-<html lang="en"{{if .Theme}} data-theme-server="{{.Theme}}" data-theme="{{.Theme}}"{{end}}>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>
-    (function(){
-      var html = document.documentElement;
-      if (html.getAttribute('data-theme-server')) return;
-      var pref = null;
-      try { pref = localStorage.getItem('theme'); } catch(e) {}
-      var resolved = pref || 'auto';
-      if (resolved === 'auto') {
-        resolved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      }
-      html.setAttribute('data-theme', resolved);
-    })();
-  </script>
-  <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
-  {{block "meta" .}}
-    <meta property="og:site_name" content="{{.Site.Title}}">
-    <meta property="og:title" content="{{.Site.Title}}">
-    <meta property="og:description" content="{{.Site.Description}}">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary">
+<html
+  lang="en"
+  {{if
+  .Theme}}
+  data-theme-server="{{.Theme}}"
+  data-theme="{{.Theme}}"
   {{end}}
-  <link rel="icon" type="image/svg+xml" href="/static/comma_mascot_logo.svg">
-  <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
-  <script src="/static/htmx.min.js" defer></script>
-  <script src="/static/copy.js" defer></script>
-  <script src="/static/graph.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.katex) {
-        document.querySelectorAll('.math-inline').forEach(function(el) {
-          var src = el.textContent.replace(/^\$|\$$/g, '');
-          try { el.innerHTML = katex.renderToString(src, {displayMode: false, throwOnError: false}); }
-          catch(e) {}
-        });
-        document.querySelectorAll('.math-block').forEach(function(el) {
-          var src = el.textContent;
-          try { el.innerHTML = katex.renderToString(src, {displayMode: true, throwOnError: false}); }
-          catch(e) {}
-        });
-      }
-      if (window.mermaid) {
-        var mt = document.documentElement.getAttribute('data-theme') === 'light' ? 'default' : 'dark';
-        mermaid.initialize({startOnLoad: true, theme: mt});
-      }
-      // Theme switcher
-      var sw = document.querySelector('.theme-switch');
-      if (sw) {
-        var applyHighlight = function() {
-          var cur = sw.getAttribute('data-current') || 'auto';
-          sw.querySelectorAll('.theme-opt').forEach(function(b) {
-            b.classList.toggle('is-active', b.getAttribute('data-theme-value') === cur);
-          });
-        };
-        applyHighlight();
-        sw.querySelectorAll('.theme-opt').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            var v = btn.getAttribute('data-theme-value');
-            sw.setAttribute('data-current', v);
-            applyHighlight();
-            try { localStorage.setItem('theme', v); } catch(e) {}
-            var resolved = v;
-            if (resolved === 'auto') {
-              resolved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-            }
-            document.documentElement.setAttribute('data-theme', resolved);
-            // Best-effort server save; ignored for visitors (server returns 204)
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      (function () {
+        var html = document.documentElement;
+        if (html.getAttribute("data-theme-server")) return;
+        var pref = null;
+        try {
+          pref = localStorage.getItem("theme");
+        } catch (e) {}
+        var resolved = pref || "auto";
+        if (resolved === "auto") {
+          resolved = matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        }
+        html.setAttribute("data-theme", resolved);
+      })();
+    </script>
+    <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
+    {{block "meta" .}}
+    <meta property="og:site_name" content="{{.Site.Title}}" />
+    <meta property="og:title" content="{{.Site.Title}}" />
+    <meta property="og:description" content="{{.Site.Description}}" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    {{end}}
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/assets/comma_mascot_logo.svg"
+    />
+    <link rel="stylesheet" href="/assets/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+      crossorigin="anonymous"
+    />
+    <script src="/assets/htmx.min.js" defer></script>
+    <script src="/assets/copy.js" defer></script>
+    <script src="/assets/graph.js" defer></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+      crossorigin="anonymous"
+      defer
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"
+      defer
+    ></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (window.katex) {
+          document.querySelectorAll(".math-inline").forEach(function (el) {
+            var src = el.textContent.replace(/^\$|\$$/g, "");
             try {
-              fetch('/settings/theme', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'theme=' + encodeURIComponent(v),
-                credentials: 'same-origin',
+              el.innerHTML = katex.renderToString(src, {
+                displayMode: false,
+                throwOnError: false,
               });
-            } catch(e) {}
+            } catch (e) {}
           });
-        });
-      }
-    });
-  </script>
-</head>
-<body>
-  <div class="page">
-    <header class="topbar">
-      <a class="brand" href="/"><img src="/static/comma_mascot_logo.svg" class="brand-logo" alt="comma mascot">{{.Site.Title}}</a>
-      <nav class="nav">
-        <form method="GET" action="/search" class="search-form" role="search">
-          <input type="search" name="q" placeholder="搜尋…" value="{{.SearchQuery}}" aria-label="search">
-        </form>
-        {{if .User}}
+          document.querySelectorAll(".math-block").forEach(function (el) {
+            var src = el.textContent;
+            try {
+              el.innerHTML = katex.renderToString(src, {
+                displayMode: true,
+                throwOnError: false,
+              });
+            } catch (e) {}
+          });
+        }
+        if (window.mermaid) {
+          var mt =
+            document.documentElement.getAttribute("data-theme") === "light"
+              ? "default"
+              : "dark";
+          mermaid.initialize({ startOnLoad: true, theme: mt });
+        }
+        // Theme switcher
+        var sw = document.querySelector(".theme-switch");
+        if (sw) {
+          var applyHighlight = function () {
+            var cur = sw.getAttribute("data-current") || "auto";
+            sw.querySelectorAll(".theme-opt").forEach(function (b) {
+              b.classList.toggle(
+                "is-active",
+                b.getAttribute("data-theme-value") === cur,
+              );
+            });
+          };
+          applyHighlight();
+          sw.querySelectorAll(".theme-opt").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var v = btn.getAttribute("data-theme-value");
+              sw.setAttribute("data-current", v);
+              applyHighlight();
+              try {
+                localStorage.setItem("theme", v);
+              } catch (e) {}
+              var resolved = v;
+              if (resolved === "auto") {
+                resolved = matchMedia("(prefers-color-scheme: light)").matches
+                  ? "light"
+                  : "dark";
+              }
+              document.documentElement.setAttribute("data-theme", resolved);
+              // Best-effort server save; ignored for visitors (server returns 204)
+              try {
+                fetch("/settings/theme", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                  },
+                  body: "theme=" + encodeURIComponent(v),
+                  credentials: "same-origin",
+                });
+              } catch (e) {}
+            });
+          });
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <a class="brand" href="/"
+          ><img
+            src="/assets/comma_mascot_logo.svg"
+            class="brand-logo"
+            alt="comma mascot"
+          />{{.Site.Title}}</a
+        >
+        <nav class="nav">
+          <form method="GET" action="/search" class="search-form" role="search">
+            <input
+              type="search"
+              name="q"
+              placeholder="搜尋…"
+              value="{{.SearchQuery}}"
+              aria-label="search"
+            />
+          </form>
+          {{if .User}}
           <a href="/write">write</a>
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
           <details class="avatar-menu">
-            <summary class="profile-dot" style="background-color:{{avatarColor .User.Handle}}" title="@{{.User.Handle}}" aria-label="user menu">{{avatarInitial .User.Handle}}</summary>
+            <summary
+              class="profile-dot"
+              style="background-color:{{avatarColor .User.Handle}}"
+              title="@{{.User.Handle}}"
+              aria-label="user menu"
+            >
+              {{avatarInitial .User.Handle}}
+            </summary>
             <div class="avatar-menu-panel" role="menu">
               <a class="menu-item" href="/{{.User.Handle}}">我的主頁</a>
               <a class="menu-item" href="/me/saved">已收藏</a>
               <div class="menu-sep"></div>
               <div class="menu-section">主題</div>
-              <div class="theme-switch" data-current="{{if .User.Theme}}{{.User.Theme}}{{else}}auto{{end}}">
-                <button type="button" class="theme-opt" data-theme-value="auto">跟隨系統</button>
-                <button type="button" class="theme-opt" data-theme-value="light">日間</button>
-                <button type="button" class="theme-opt" data-theme-value="dark">夜間</button>
+              <div
+                class="theme-switch"
+                data-current="{{if .User.Theme}}{{.User.Theme}}{{else}}auto{{end}}"
+              >
+                <button type="button" class="theme-opt" data-theme-value="auto">
+                  跟隨系統
+                </button>
+                <button
+                  type="button"
+                  class="theme-opt"
+                  data-theme-value="light"
+                >
+                  日間
+                </button>
+                <button type="button" class="theme-opt" data-theme-value="dark">
+                  夜間
+                </button>
               </div>
               <div class="menu-sep"></div>
               <form method="POST" action="/logout" class="inline-form">
-                <button type="submit" class="menu-item menu-item-btn">登出</button>
+                <button type="submit" class="menu-item menu-item-btn">
+                  登出
+                </button>
               </form>
             </div>
           </details>
-        {{else}}
+          {{else}}
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
           <a href="/login">login</a>
-        {{end}}
-      </nav>
-    </header>
-    <main class="content">
-      {{block "content" .}}{{end}}
-    </main>
-  </div>
-</body>
+          {{end}}
+        </nav>
+      </header>
+      <main class="content">{{block "content" .}}{{end}}</main>
+    </div>
+  </body>
 </html>
 {{end}}
