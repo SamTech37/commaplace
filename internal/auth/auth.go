@@ -26,8 +26,8 @@ const sessionMaxAge = 60 * 60 * 24 * 30 // 30 days
 
 var (
 	cfg        = config.DefaultAuth()
-	emailCfg   = config.DefaultEmail()
 	siteCfg    = config.DefaultSite()
+	emailCfg   = config.DefaultEmail(siteCfg.Title)
 	SessionCookie = siteCfg.SessionName
 )
 

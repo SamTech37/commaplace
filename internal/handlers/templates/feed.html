@@ -1,4 +1,4 @@
-{{define "title"}}Feed · commonplace{{end}}
+{{define "title"}}Feed · {{.Site.Title}}{{end}}
 {{define "content"}}
   <h1>Feed</h1>
   <nav class="feed-tabs">
@@ -78,7 +78,7 @@
     <span class="meta-spacer"></span>
     {{if gt .LikeCount 0}}<span class="meta-like">♡ {{.LikeCount}}</span>{{end}}
     {{if gt .LinkCount 0}}<span class="meta-links">→ {{.LinkCount}}</span>{{end}}
-    {{if gt .CrossCount 0}}<span class="meta-cross">→ {{.CrossCount}} 跨</span>{{end}}
+    {{if gt .CrossCount 0}}<span class="meta-cross">↝ {{.CrossCount}}</span>{{end}}
   </div>
 </a>
 {{end}}

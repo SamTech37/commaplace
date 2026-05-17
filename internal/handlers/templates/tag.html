@@ -1,4 +1,4 @@
-{{define "title"}}#{{.Tag}} · commonplace{{end}}
+{{define "title"}}#{{.Tag}} · {{.Site.Title}}{{end}}
 {{define "content"}}
   <h1 style="margin-bottom:0.25em">#{{.Tag}}</h1>
   <p class="note-meta">{{len .Items}} note{{if ne (len .Items) 1}}s{{end}}</p>

@@ -60,7 +60,11 @@ body {
   color: var(--fg);
   text-decoration: none;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
+.brand-logo { height: 2rem; width: auto; }
 .nav { display: flex; gap: 0.85rem; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
 .search-form { margin: 0; display: inline; flex: 1; max-width: 22rem; }
 /* Round profile button in the top nav (logged-in users). */
@@ -282,6 +286,8 @@ button.secondary { background: var(--card); color: var(--fg); border: 1px solid 
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+#preview { transition: opacity 0.12s ease; }
+#preview.htmx-settling { opacity: 0.5; }
 .preview > h2 {
   position: absolute;
   top: -0.6rem;

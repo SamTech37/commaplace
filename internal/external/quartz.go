@@ -41,7 +41,7 @@ type quartzCacheEntry struct {
 func NewQuartzFetcher() *QuartzFetcher {
 	return &QuartzFetcher{
 		HTTP:      &http.Client{Timeout: 30 * time.Second},
-		UserAgent: "commonplace-bot/0.1 (+https://commonplace.example/about)",
+		UserAgent: "comma-bot/0.1 (+https://comma.example/about)",
 	}
 }
 

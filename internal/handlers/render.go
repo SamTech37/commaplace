@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	siteCfg = config.DefaultSite()
-	emailCfg = config.DefaultEmail()
+	siteCfg  = config.DefaultSite()
+	emailCfg = config.DefaultEmail(siteCfg.Title)
 )
 
 //go:embed all:templates all:static

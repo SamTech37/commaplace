@@ -1,4 +1,4 @@
-{{define "title"}}Import note · commonplace{{end}}
+{{define "title"}}Import note · {{.Site.Title}}{{end}}
 {{define "content"}}
   <h1>Import a note</h1>
   <p style="color:var(--fg-muted);font-size:0.9rem">Upload a <code>.md</code> file. Title is read from frontmatter <code>title:</code>, a leading <code>#</code> heading, or the filename. Folder and tags are read from frontmatter <code>folder:</code> and <code>tags:</code>.</p>

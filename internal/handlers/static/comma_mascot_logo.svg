@@ -1,0 +1,26 @@
+<svg width="100%" viewBox="125 55 380 445" role="img" xmlns="http://www.w3.org/2000/svg" style="">
+<title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">反向逗點哭臉吉祥物 Logo</title>
+<desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">黃色逗點形狀的吉祥物，尾巴朝左下，保留黑色大眼睛與藍色眼淚</desc>
+
+<g transform="translate(340 270) scale(-1 1)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+  <!-- 逗點身體：圓頭 + 拖尾 -->
+  <path d="M -150 -40&#10;           C -150 -160, -10 -200, 90 -150&#10;           C 200 -95, 200 70, 80 100&#10;           C 30 113, -10 100, -30 75&#10;           C 0 130, 30 175, 35 220&#10;           C 20 215, -10 195, -40 150&#10;           C -90 100, -150 60, -150 -40 Z" fill="#FFD83D" stroke="#1a1a1a" stroke-width="6" stroke-linejoin="round" style="fill:rgb(255, 216, 61);stroke:rgb(26, 26, 26);color:rgb(255, 255, 255);stroke-width:6px;stroke-linecap:butt;stroke-linejoin:round;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+</g>
+
+<!-- 眼睛和眼淚單獨畫，不翻轉，避免高光跑到外側 -->
+<g transform="translate(340 270)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+  <!-- 左眼（畫面上的左邊，較大） -->
+  <ellipse cx="-35" cy="-20" rx="32" ry="42" fill="#1a1a1a" style="fill:rgb(26, 26, 26);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <ellipse cx="-46" cy="-32" rx="9" ry="11" fill="#FFFFFF" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- 右眼（畫面上的右邊，更大，因為是逗點圓頭那側） -->
+  <ellipse cx="65" cy="-25" rx="40" ry="50" fill="#1a1a1a" style="fill:rgb(26, 26, 26);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <ellipse cx="52" cy="-40" rx="11" ry="14" fill="#FFFFFF" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- 左眼淚 -->
+  <path d="M -40 18&#10;           C -45 45, -50 65, -42 78&#10;           C -32 65, -30 45, -33 18 Z" fill="#3FB8E0" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round" style="fill:rgb(63, 184, 224);stroke:rgb(26, 26, 26);color:rgb(255, 255, 255);stroke-width:3px;stroke-linecap:butt;stroke-linejoin:round;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- 右眼淚 -->
+  <path d="M 55 22&#10;           C 48 55, 40 80, 50 95&#10;           C 60 80, 62 55, 60 22 Z" fill="#3FB8E0" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round" style="fill:rgb(63, 184, 224);stroke:rgb(26, 26, 26);color:rgb(255, 255, 255);stroke-width:3px;stroke-linecap:butt;stroke-linejoin:round;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+</g>
+</svg>

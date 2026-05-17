@@ -1,6 +1,6 @@
-{{define "title"}}{{.Title}} · {{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}} · commonplace{{end}}
+{{define "title"}}{{.Title}} · {{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}} · {{.Site.Title}}{{end}}
 {{define "meta"}}
-  <meta property="og:site_name" content="commonplace">
+  <meta property="og:site_name" content="{{.Site.Title}}">
   <meta property="og:title" content="{{.Title}} · {{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}}">
   <meta property="og:type" content="article">
   <meta name="twitter:card" content="summary">

@@ -1,6 +1,6 @@
-{{define "title"}}{{.Note.Title}} · @{{.AuthorHandle}} · commonplace{{end}}
+{{define "title"}}{{.Note.Title}} · @{{.AuthorHandle}} · {{.Site.Title}}{{end}}
 {{define "meta"}}
-  <meta property="og:site_name" content="commonplace">
+  <meta property="og:site_name" content="{{.Site.Title}}">
   <meta property="og:title" content="{{.Note.Title}} · @{{.AuthorHandle}}">
   <meta property="og:type" content="article">
   <meta property="og:article:author" content="@{{.AuthorHandle}}">
@@ -103,11 +103,11 @@
       </div>
     {{end}}
     {{if .OutgoingCross}}
-      <div class="subsection-label cross"><span class="dot"></span>跨 vault · 連到其他人的筆記 · {{len .OutgoingCross}} 篇</div>
+      <div class="subsection-label cross">↝ 連到其他人的筆記 · {{len .OutgoingCross}} 篇</div>
       <div class="connected-grid">
         {{range .OutgoingCross}}
           <a class="mini-card" href="{{.URL}}">
-            <div class="mini-card-title">{{.Title}} <span class="cross-badge">跨 vault</span></div>
+            <div class="mini-card-title">{{.Title}}</div>
             <div class="mini-card-meta">
               <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
               @{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}}
@@ -123,13 +123,13 @@
   {{if or .BacklinksSame .BacklinksCross}}
   <section class="backlinks-section">
     <div class="section-header">
-      ↺ 引用了這篇筆記的人
+      ← 引用了這篇筆記的人
       <span class="section-count">{{add (len .BacklinksSame) (len .BacklinksCross)}} 篇</span>
     </div>
     <div class="backlinks-list">
       {{range .BacklinksSame}}
         <a class="backlink-row" href="{{.URL}}">
-          <span class="backlink-icon">↩</span>
+          <span class="backlink-icon">←</span>
           <span class="backlink-title">{{.Title}}</span>
           <span class="backlink-author">
             <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
@@ -139,8 +139,8 @@
       {{end}}
       {{range .BacklinksCross}}
         <a class="backlink-row" href="{{.URL}}">
-          <span class="backlink-icon">↩</span>
-          <span class="backlink-title">{{.Title}} <span class="cross-badge">跨 vault</span></span>
+          <span class="backlink-icon">↜</span>
+          <span class="backlink-title">{{.Title}}</span>
           <span class="backlink-author">
             <span class="mini-card-author-dot" style="background-color:{{avatarColor .AuthorHandle}}">{{avatarInitial .AuthorHandle}}</span>
             @{{.AuthorHandle}}{{if .FolderPath}} · {{.FolderPath}}{{end}}

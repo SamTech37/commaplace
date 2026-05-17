@@ -1,4 +1,4 @@
-{{define "title"}}{{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}} · external · commonplace{{end}}
+{{define "title"}}{{if .Vault.DisplayName}}{{.Vault.DisplayName}}{{else}}{{.Vault.Slug}}{{end}} · external · {{.Site.Title}}{{end}}
 {{define "content"}}
   <p class="from-banner">
     <span class="external-badge">外部索引</span>

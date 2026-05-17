@@ -79,12 +79,12 @@ func DefaultDatabase() Database {
 	}
 }
 
-// DefaultEmail returns default email configuration.
-func DefaultEmail() Email {
+// DefaultEmail returns default email configuration derived from the site title.
+func DefaultEmail(title string) Email {
 	return Email{
-		SignInIntro: "Sign in to commonplace:",
-		SignInSubj:  "Your commonplace sign-in link",
-		ReportSubj:  "[commonplace] new report",
+		SignInIntro: "Sign in to " + title,
+		SignInSubj:  "Your " + title + " sign-in link",
+		ReportSubj:  "[" + title + "] new report",
 		TourHandle:  "commonplace-tour",
 	}
 }

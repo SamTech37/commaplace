@@ -1,4 +1,4 @@
-{{define "title"}}{{if .EditNote}}編輯筆記{{else}}Write{{end}} · commonplace{{end}}
+{{define "title"}}{{if .EditNote}}編輯筆記{{else}}Write{{end}} · {{.Site.Title}}{{end}}
 {{define "content"}}
   <script src="/static/editor.js" defer></script>
   <h1>{{if .Heading}}{{.Heading}}{{else}}Write a note{{end}}</h1>
