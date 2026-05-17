@@ -106,6 +106,9 @@ func (p *Pages) Render(w http.ResponseWriter, name string, data map[string]any) 
 	if _, has := data["SearchQuery"]; !has {
 		data["SearchQuery"] = ""
 	}
+	if _, has := data["Theme"]; !has {
+		data["Theme"] = ""
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("render %s: %v", name, err)
@@ -148,6 +151,14 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 	u, _ := s.Auth.CurrentUser(r)
 	data["User"] = u
 	data["Site"] = siteCfg
+	// Theme: when a logged-in user explicitly chose light/dark, render it
+	// server-side to avoid FOUC. "auto" (or visitor) defers to inline JS
+	// reading localStorage / prefers-color-scheme.
+	if u != nil && (u.Theme == "light" || u.Theme == "dark") {
+		data["Theme"] = u.Theme
+	} else {
+		data["Theme"] = ""
+	}
 	s.Pages.Render(w, name, data)
 }
 

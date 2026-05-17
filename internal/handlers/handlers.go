@@ -52,6 +52,9 @@ func (s *Server) Routes() *http.ServeMux {
 	// Search
 	mux.HandleFunc("GET /search", s.GetSearch)
 
+	// Settings
+	mux.HandleFunc("POST /settings/theme", s.PostThemeSetting)
+
 	// Onboarding (after first sign-in, no notes yet)
 	mux.HandleFunc("GET /onboarding", s.GetOnboarding)
 	mux.HandleFunc("POST /onboarding/fork", s.PostOnboardingFork)

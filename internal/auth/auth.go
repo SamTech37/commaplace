@@ -36,6 +36,7 @@ type User struct {
 	Handle    string
 	Email     string
 	CreatedAt int64
+	Theme     string // "auto" | "light" | "dark"
 }
 
 // Mailer sends a plain-text email. nil Mailer means dev mode (log to stdout).
@@ -112,8 +113,8 @@ func (a *Auth) CurrentUser(r *http.Request) (*User, error) {
 	}
 	var u User
 	err = a.DB.QueryRowContext(r.Context(),
-		`SELECT id, handle, email, created_at FROM users WHERE id = ?`, uid,
-	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt)
+		`SELECT id, handle, email, created_at, theme FROM users WHERE id = ?`, uid,
+	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt, &u.Theme)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -243,8 +244,8 @@ func IsReservedHandle(h string) bool { return reservedHandles[h] }
 func findOrCreateUser(ctx context.Context, tx *sql.Tx, email string) (*User, error) {
 	var u User
 	err := tx.QueryRowContext(ctx,
-		`SELECT id, handle, email, created_at FROM users WHERE email = ?`, email,
-	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt)
+		`SELECT id, handle, email, created_at, theme FROM users WHERE email = ?`, email,
+	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt, &u.Theme)
 	if err == nil {
 		return &u, nil
 	}
@@ -267,7 +268,7 @@ func findOrCreateUser(ctx context.Context, tx *sql.Tx, email string) (*User, err
 	if err != nil {
 		return nil, err
 	}
-	return &User{ID: id, Handle: handle, Email: email, CreatedAt: now}, nil
+	return &User{ID: id, Handle: handle, Email: email, CreatedAt: now, Theme: "auto"}, nil
 }
 
 func uniqueHandle(ctx context.Context, tx *sql.Tx, base string) (string, error) {

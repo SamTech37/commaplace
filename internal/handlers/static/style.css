@@ -1030,3 +1030,96 @@ pre.mermaid {
   gap: 0.35em;
 }
 .backlink-author .mini-card-author-dot { width: 14px; height: 14px; font-size: 0.6rem; }
+
+/* ---------- Light theme ---------- */
+html[data-theme="light"] {
+  --fg:           #1f1d1a;
+  --muted:        #5a5853;
+  --muted-2:      #8a8884;
+  --bg:           #fafaf7;
+  --card:         #ffffff;
+  --surface-2:    #f1efe9;
+  --border:       #e3e0d8;
+  --border-2:     #c9c5bb;
+  --accent:       #2f5fd8;
+  --info:         #3a6db0;
+  --danger:       #c0392b;
+  --warning:      #b07a2a;
+  --code-bg:      #f3f1ec;
+  --teal:         #1f8a78;
+  --teal-soft:    #d8efe9;
+}
+
+/* ---------- Avatar dropdown ---------- */
+.avatar-menu { position: relative; display: inline-block; }
+.avatar-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.avatar-menu > summary::-webkit-details-marker { display: none; }
+.avatar-menu > summary::marker { content: ""; }
+.avatar-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  padding: 6px;
+  z-index: 50;
+}
+html[data-theme="light"] .avatar-menu-panel {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+}
+.avatar-menu .menu-item {
+  display: block;
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 0.85rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.avatar-menu .menu-item:hover { background: var(--surface-2); }
+.avatar-menu .menu-item-btn { color: var(--fg); }
+.avatar-menu .menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 5px 4px;
+}
+.avatar-menu .menu-section {
+  font-size: 0.7rem;
+  color: var(--muted-2);
+  padding: 4px 10px 2px;
+  letter-spacing: 0.04em;
+}
+.theme-switch {
+  display: flex;
+  gap: 4px;
+  padding: 2px 6px 4px;
+}
+.theme-switch .theme-opt {
+  flex: 1;
+  padding: 5px 6px;
+  font-size: 0.74rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.theme-switch .theme-opt:hover { background: var(--surface-2); color: var(--fg); }
+.theme-switch .theme-opt.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.avatar-menu .inline-form { margin: 0; }
