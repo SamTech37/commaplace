@@ -88,46 +88,46 @@
               : "dark";
           mermaid.initialize({ startOnLoad: true, theme: mt });
         }
-        // Theme switcher
-        var sw = document.querySelector(".theme-switch");
-        if (sw) {
-          var applyHighlight = function () {
-            var cur = sw.getAttribute("data-current") || "auto";
-            sw.querySelectorAll(".theme-opt").forEach(function (b) {
-              b.classList.toggle(
-                "is-active",
-                b.getAttribute("data-theme-value") === cur,
-              );
-            });
+        // Theme toggle (icon button: flips light <-> dark)
+        var tg = document.getElementById("theme-toggle");
+        if (tg) {
+          var syncIcon = function () {
+            var t =
+              document.documentElement.getAttribute("data-theme") === "light"
+                ? "light"
+                : "dark";
+            tg.setAttribute("data-theme-current", t);
+            tg.setAttribute(
+              "aria-label",
+              t === "light" ? "切換到夜間" : "切換到日間",
+            );
+            tg.setAttribute(
+              "title",
+              t === "light" ? "切換到夜間" : "切換到日間",
+            );
           };
-          applyHighlight();
-          sw.querySelectorAll(".theme-opt").forEach(function (btn) {
-            btn.addEventListener("click", function () {
-              var v = btn.getAttribute("data-theme-value");
-              sw.setAttribute("data-current", v);
-              applyHighlight();
-              try {
-                localStorage.setItem("theme", v);
-              } catch (e) {}
-              var resolved = v;
-              if (resolved === "auto") {
-                resolved = matchMedia("(prefers-color-scheme: light)").matches
-                  ? "light"
-                  : "dark";
-              }
-              document.documentElement.setAttribute("data-theme", resolved);
-              // Best-effort server save; ignored for visitors (server returns 204)
-              try {
-                fetch("/settings/theme", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                  },
-                  body: "theme=" + encodeURIComponent(v),
-                  credentials: "same-origin",
-                });
-              } catch (e) {}
-            });
+          syncIcon();
+          tg.addEventListener("click", function () {
+            var cur =
+              document.documentElement.getAttribute("data-theme") === "light"
+                ? "light"
+                : "dark";
+            var next = cur === "light" ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", next);
+            syncIcon();
+            try {
+              localStorage.setItem("theme", next);
+            } catch (e) {}
+            try {
+              fetch("/settings/theme", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: "theme=" + encodeURIComponent(next),
+                credentials: "same-origin",
+              });
+            } catch (e) {}
           });
         }
       });
@@ -153,51 +153,62 @@
               aria-label="search"
             />
           </form>
+          <button
+            type="button"
+            id="theme-toggle"
+            class="theme-toggle"
+            aria-label="切換主題"
+          >
+            <svg
+              class="theme-icon theme-icon-sun"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4"></circle>
+              <path
+                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+              ></path>
+            </svg>
+            <svg
+              class="theme-icon theme-icon-moon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+              ></path>
+            </svg>
+          </button>
           {{if .User}}
           <a href="/write">write</a>
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
-          <details class="avatar-menu">
-            <summary
-              class="profile-dot"
-              style="background-color:{{avatarColor .User.Handle}}"
-              title="@{{.User.Handle}}"
-              aria-label="user menu"
-            >
-              <img class="avatar-img-sm" src="{{avatarURL .User.Handle}}" alt="" onerror="this.remove()" />
-              <span class="profile-dot-initial">{{avatarInitial .User.Handle}}</span>
-            </summary>
-            <div class="avatar-menu-panel" role="menu">
-              <a class="menu-item" href="/{{.User.Handle}}">我的主頁</a>
-              <a class="menu-item" href="/me/saved">已收藏</a>
-              <div class="menu-sep"></div>
-              <div class="menu-section">主題</div>
-              <div
-                class="theme-switch"
-                data-current="{{if .User.Theme}}{{.User.Theme}}{{else}}auto{{end}}"
-              >
-                <button type="button" class="theme-opt" data-theme-value="auto">
-                  跟隨系統
-                </button>
-                <button
-                  type="button"
-                  class="theme-opt"
-                  data-theme-value="light"
-                >
-                  日間
-                </button>
-                <button type="button" class="theme-opt" data-theme-value="dark">
-                  夜間
-                </button>
-              </div>
-              <div class="menu-sep"></div>
-              <form method="POST" action="/logout" class="inline-form">
-                <button type="submit" class="menu-item menu-item-btn">
-                  登出
-                </button>
-              </form>
-            </div>
-          </details>
+          <form method="POST" action="/logout" class="inline-form">
+            <button type="submit" class="link-btn">logout</button>
+          </form>
+          <a
+            class="profile-dot"
+            href="/{{.User.Handle}}"
+            style="background-color:{{avatarColor .User.Handle}}"
+            title="@{{.User.Handle}}"
+          >
+            <img class="avatar-img-sm" src="{{avatarURL .User.Handle}}" alt="" onerror="this.remove()" />
+            <span class="profile-dot-initial">{{avatarInitial .User.Handle}}</span>
+          </a>
           {{else}}
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
