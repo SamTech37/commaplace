@@ -73,6 +73,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] https://github.com/ButTaiwan/genyo-font
 - [x] 明暗主題（已完成）。
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
+- [ ] tag merging issue? 應該多用大家在用的 tag 吧 (based on number of usages of that tag, show that when picking tag, easy)
 
 ## Good to Have
 

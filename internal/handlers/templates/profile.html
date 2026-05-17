@@ -1,12 +1,29 @@
 {{define "title"}}@{{.Profile.Handle}} · {{.Site.Title}}{{end}} {{define
 "content"}}
 <div data-reveal>
-<h1 style="margin-bottom: 0.25em">@{{.Profile.Handle}}</h1>
+<div class="profile-header">
+  <img class="avatar-img-lg" src="{{avatarURL .Profile.Handle}}" alt="@{{.Profile.Handle}}" onerror="this.style.display='none'" />
+  <h1 style="margin-bottom: 0.25em">@{{.Profile.Handle}}</h1>
+</div>
 <p class="note-meta">
   {{.FollowerCount}} follower{{if ne .FollowerCount 1}}s{{end}}
   <span class="crumb-sep">·</span>
   {{.FollowingCount}} following
+  {{if .IsSelf}}
+    <span class="crumb-sep">·</span>
+    <span>{{.Email}}</span>
+    <span class="crumb-sep">·</span>
+    <a href="/me/avatar">編輯大頭貼</a>
+    <span class="crumb-sep">·</span>
+    <a href="/write">寫筆記</a>
+  {{end}}
 </p>
+{{if and .IsSelf .Pinned}}
+  <div class="pinned-card">
+    <div class="pinned-label">📌 Pinned</div>
+    <a href="{{.Pinned.URL}}" class="pinned-link">{{.Pinned.Title}}</a>
+  </div>
+{{end}}
 {{if and .ViewerLoggedIn (not .IsSelf)}}
 <form
   class="inline-form follow-form"

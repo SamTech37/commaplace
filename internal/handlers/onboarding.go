@@ -20,6 +20,13 @@ func (s *Server) GetOnboarding(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/me", http.StatusSeeOther)
 		return
 	}
+	// Photo upload is not offered — every new account must build an avatar
+	// from parts first. Once the avatar exists, fall through to the existing
+	// tour-fork prompt.
+	if !userHasAvatar(r, s.DB, u.ID) {
+		http.Redirect(w, r, "/me/avatar", http.StatusSeeOther)
+		return
+	}
 	s.render(w, r, "onboarding", map[string]any{"User": u})
 }
 

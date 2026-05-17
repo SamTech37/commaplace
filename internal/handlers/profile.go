@@ -77,8 +77,13 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	data["Following"] = following
 	data["FollowerCount"] = followers
 	data["FollowingCount"] = followingN
-	data["IsSelf"] = viewer != nil && viewer.ID == profile.ID
+	isSelf := viewer != nil && viewer.ID == profile.ID
+	data["IsSelf"] = isSelf
 	data["ViewerLoggedIn"] = viewer != nil
+	if isSelf {
+		data["Email"] = viewer.Email
+		data["Pinned"], _ = pinnedNoteForUser(r.Context(), s.DB, profile.ID)
+	}
 	s.render(w, r, "profile", data)
 }
 
