@@ -1,8 +1,21 @@
 {{define "base"}}<!doctype html>
-<html lang="en">
+<html lang="en"{{if .Theme}} data-theme-server="{{.Theme}}" data-theme="{{.Theme}}"{{end}}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    (function(){
+      var html = document.documentElement;
+      if (html.getAttribute('data-theme-server')) return;
+      var pref = null;
+      try { pref = localStorage.getItem('theme'); } catch(e) {}
+      var resolved = pref || 'auto';
+      if (resolved === 'auto') {
+        resolved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      html.setAttribute('data-theme', resolved);
+    })();
+  </script>
   <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
   {{block "meta" .}}
     <meta property="og:site_name" content="{{.Site.Title}}">
@@ -32,7 +45,43 @@
           catch(e) {}
         });
       }
-      if (window.mermaid) { mermaid.initialize({startOnLoad: true, theme: 'dark'}); }
+      if (window.mermaid) {
+        var mt = document.documentElement.getAttribute('data-theme') === 'light' ? 'default' : 'dark';
+        mermaid.initialize({startOnLoad: true, theme: mt});
+      }
+      // Theme switcher
+      var sw = document.querySelector('.theme-switch');
+      if (sw) {
+        var applyHighlight = function() {
+          var cur = sw.getAttribute('data-current') || 'auto';
+          sw.querySelectorAll('.theme-opt').forEach(function(b) {
+            b.classList.toggle('is-active', b.getAttribute('data-theme-value') === cur);
+          });
+        };
+        applyHighlight();
+        sw.querySelectorAll('.theme-opt').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var v = btn.getAttribute('data-theme-value');
+            sw.setAttribute('data-current', v);
+            applyHighlight();
+            try { localStorage.setItem('theme', v); } catch(e) {}
+            var resolved = v;
+            if (resolved === 'auto') {
+              resolved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', resolved);
+            // Best-effort server save; ignored for visitors (server returns 204)
+            try {
+              fetch('/settings/theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'theme=' + encodeURIComponent(v),
+                credentials: 'same-origin',
+              });
+            } catch(e) {}
+          });
+        });
+      }
     });
   </script>
 </head>
@@ -48,10 +97,24 @@
           <a href="/write">write</a>
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
-          <form method="POST" action="/logout" class="inline-form">
-            <button type="submit" class="link-btn">logout</button>
-          </form>
-          <a class="profile-dot" href="/{{.User.Handle}}" style="background-color:{{avatarColor .User.Handle}}" title="@{{.User.Handle}}">{{avatarInitial .User.Handle}}</a>
+          <details class="avatar-menu">
+            <summary class="profile-dot" style="background-color:{{avatarColor .User.Handle}}" title="@{{.User.Handle}}" aria-label="user menu">{{avatarInitial .User.Handle}}</summary>
+            <div class="avatar-menu-panel" role="menu">
+              <a class="menu-item" href="/{{.User.Handle}}">我的主頁</a>
+              <a class="menu-item" href="/me/saved">已收藏</a>
+              <div class="menu-sep"></div>
+              <div class="menu-section">主題</div>
+              <div class="theme-switch" data-current="{{if .User.Theme}}{{.User.Theme}}{{else}}auto{{end}}">
+                <button type="button" class="theme-opt" data-theme-value="auto">跟隨系統</button>
+                <button type="button" class="theme-opt" data-theme-value="light">日間</button>
+                <button type="button" class="theme-opt" data-theme-value="dark">夜間</button>
+              </div>
+              <div class="menu-sep"></div>
+              <form method="POST" action="/logout" class="inline-form">
+                <button type="submit" class="menu-item menu-item-btn">登出</button>
+              </form>
+            </div>
+          </details>
         {{else}}
           <a href="/feed">feed</a>
           <a href="/graph">graph</a>
