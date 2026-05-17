@@ -5,6 +5,34 @@
 {{if .Error}}
 <p class="error">{{.Error}}</p>
 {{end}}
+{{if not .EditNote}}
+<div class="md-upload">
+  <label for="md-file-input">⬆ 從 .md 檔案匯入</label>
+  <input type="file" id="md-file-input" accept=".md,.markdown">
+</div>
+<script>
+(function(){
+  var inp = document.getElementById('md-file-input');
+  if (!inp) return;
+  inp.addEventListener('change', function(){
+    var file = this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var text = e.target.result;
+      var m = text.match(/^#\s+(.+)/m);
+      var title = m ? m[1].trim() : file.name.replace(/\.(md|markdown)$/i, '');
+      var body = m ? text.replace(/^#[^\n]*\n?/, '').trimStart() : text;
+      document.querySelector('input[name="title"]').value = title;
+      var ta = document.querySelector('textarea[name="body_md"]');
+      ta.value = body;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    reader.readAsText(file);
+  });
+})();
+</script>
+{{end}}
 <form method="POST" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
   <label
     >Title

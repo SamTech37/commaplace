@@ -16,11 +16,26 @@ import (
 // ---------- write ----------
 
 func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
-	if u := s.requireUser(w, r); u == nil {
+	u := s.requireUser(w, r)
+	if u == nil {
 		return
 	}
+	bodyMD := ""
+	if id := r.URL.Query().Get("reply-to"); id != "" {
+		var slug, handle string
+		err := s.DB.QueryRowContext(r.Context(),
+			`SELECT n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id WHERE n.id = ?`,
+			id).Scan(&slug, &handle)
+		if err == nil {
+			if handle == u.Handle {
+				bodyMD = "[[" + slug + "]]\n\n"
+			} else {
+				bodyMD = "[[@" + handle + "/" + slug + "]]\n\n"
+			}
+		}
+	}
 	s.render(w, r, "write", map[string]any{
-		"Form": map[string]string{"Title": "", "BodyMD": "", "Tags": ""},
+		"Form": map[string]string{"Title": "", "BodyMD": bodyMD, "Tags": ""},
 	})
 }
 

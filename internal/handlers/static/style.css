@@ -753,6 +753,10 @@ html[data-theme="dark"] .masonry-card:hover {
 .backlinks h2 { font-size: 0.875rem; color: var(--text-3); margin: 0 0 0.6em; font-weight: 500; font-family: var(--font-sans); }
 
 /* ── Editor ─────────────────────────────────────────────────────────────── */
+.md-upload { margin-bottom: 0.75rem; }
+.md-upload label { cursor: pointer; color: var(--text-3); font-size: 0.85rem; font-family: var(--font-sans); transition: color var(--dur-fast) ease; }
+.md-upload label:hover { color: var(--text); }
+.md-upload input[type="file"] { display: none; }
 .editor-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
 .editor-actions .download-link { color: var(--text-3); font-size: 0.875rem; }
 .editor-actions .copy-md { font-size: 0.875rem; }

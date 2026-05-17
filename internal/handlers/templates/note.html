@@ -74,6 +74,8 @@
       <span class="action-btn" aria-disabled="true"
         >♡ <span class="count">{{.LikeCount}}</span></span
       >
+      {{end}} {{if .ViewerLoggedIn}}
+      <a class="action-btn" href="/write?reply-to={{.Note.ID}}">↩ 回覆</a>
       {{end}} {{if .IsAuthor}}
       <a class="action-btn" href="/edit/{{.Note.ID}}">✎ 編輯</a>
       <form
