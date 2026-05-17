@@ -20,8 +20,9 @@ dev-windows:
 	powershell -Command "$$env:DEBUG='1'; $$env:DB_PATH='./dev.db'; $$env:ADDR=':8080'; $$env:SEED_DEV='1'; go run ./cmd/server"
 
 ## dev-full: dev mode + multi-user seed data (alice, bob, carol, dave)
-# go to /_dev/login?as=alice 
+# auto-opens browser at /_dev/login?as=alice
 dev-full:
+	@( sleep 2 && open "http://localhost:$(PORT)/_dev/login?as=alice" ) &
 	DEBUG=1 DB_PATH=$(DB) ADDR=:$(PORT) SEED_DEV=1 go run ./cmd/server
 
 ## dev-oauth: dev mode with Google OAuth (set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET first)

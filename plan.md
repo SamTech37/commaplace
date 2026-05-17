@@ -7,15 +7,24 @@
 
 範疇用 MoSCoW 分級。
 
+
+> Navigation, Exploration, Interaction.
+
 ## Must Have
 
 - [x] CRUD — 筆記的基本增刪改查。
   - [x] progressive load (not pagination) of data
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
-  - [x] graph
-  - [ ] timeline
-  - [ ] tree
+  - [x] graph (sorta)
+  - [ ] local graph
+  - [x] timeline (linear)
+  - [x] masonry (wall)
+  - [ ] canvas (like sticky notes on a bulletin board or whiteboard)
+  - [ ] **dora mode.** wiki exploring but better (star-graph, spotlight, switch focus)
+  - [ ] kanban?
+  - [ ] calendar (date view)
+  - [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [ ] 好的資料模型 — 現用 SQLite、未來改 Postgres；GraphDB vs SQL、是否走 GraphQL 待評估。
   - [ ] postgres > 100 users 再考慮
 - [ ] 逆向 Obsidian 的殺手功能 — 
