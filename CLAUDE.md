@@ -4,6 +4,9 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+
+> Behavioral guidelines 
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
@@ -60,11 +63,29 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+Goals and Roadmaps are here @plan.md
+
 ## 5. Run dev commands
 see Makefile.
 
 prefer `make dev-full`
 
 ---
+
+
+
+>  project-specific instructions
+
+
+## codebase structures and tech stack, etc.
+
+1. what the project does
+2. where things live
+3. how the work gets done
+
+see @README.md
+
+
+
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
