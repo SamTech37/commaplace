@@ -21,6 +21,7 @@ someone's note, follow internal `[[wiki links]]` into the same vault or
 - **Graph view** (`/graph`) — Obsidian-style force-directed map of every note and its links
 - **Tags, likes, follows, search, reports** — the small social loop
 - **Markdown export** — download or copy any note as raw `.md`
+- **Avatar builder** (`/me/avatar`) — pick face/eyes/mouth/accessory + skin color; served as PNG at `/u/{handle}/avatar.png`
 
 ## Stack
 
@@ -34,7 +35,13 @@ someone's note, follow internal `[[wiki links]]` into the same vault or
 ## Running
 
 ```sh
-# dev server (creates ./commonplace.db, prints magic links to stdout)
+# dev server — DEBUG=1, demo seed, dev login at /_dev/login?as=alice
+make dev
+
+# dev + multi-user fake data (alice, bob, carol, dave); auto-opens browser
+make dev-full
+
+# raw (no flags, uses ./commonplace.db, magic links printed to stdout)
 go run ./cmd/server
 
 # tests + checks
@@ -56,8 +63,10 @@ Visit <http://localhost:8080>.
 | `BASE_URL` | `http://localhost:<port>` | Used in magic-link emails |
 | `SESSION_SECRET` | auto-generated (`.session_secret`) | Hex-encoded HMAC key for session cookies |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | unset | If unset, magic links are printed to stdout (dev mode) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | Enables the "Continue with Google" button on `/login`; redirect URI is `${BASE_URL}/auth/google/callback` |
 | `ADMIN_HANDLE` | unset | Handle granted access to `/admin/*` |
 | `DEBUG` | `0` | Verbose error pages |
+| `SEED_DEV` | `0` | Install multi-user fake data (alice/bob/carol/dave) on startup |
 | `SEED_TOUR` | `0` | Also install the legacy English onboarding-fork seed |
 
 ## Layout
