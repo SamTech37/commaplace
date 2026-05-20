@@ -113,6 +113,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 
 - [ x ] 現況 — SQLite 單檔當 DB，需要一台 24/7 不掉資料的專屬機（用 [Fly.io](https://fly.io/)）。
 - [ ] 計畫 — DB 換 hosted Postgres（[Neon](https://neon.com/)），Go server 改用 Vercel 等 serverless 平台處理 request、query、HTML render。
+  - [ ] or perhaps cloudflare 全家桶
 - [ ] DDoS issues
 - [ ] concurrent users issue
   - [ ] writing queue?

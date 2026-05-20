@@ -19,7 +19,10 @@ server
 *-build-plan.md
 
 # Local Claude Code config (private, not shared with teammates)
-.claude/
+.claude/*
+!.claude/agents
+!.claude/skills
+
 
 # local-only tooling that references personal paths
 cmd/import-vault/
