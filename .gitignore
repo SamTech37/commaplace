@@ -22,6 +22,7 @@ server
 .claude/*
 !.claude/agents
 !.claude/skills
+!.claude/commands
 
 
 # local-only tooling that references personal paths
