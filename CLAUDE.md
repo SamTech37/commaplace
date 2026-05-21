@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Bias toward caution over speed; use judgment on trivial tasks.
-
 ## 1. Think Before Coding
 
 State assumptions explicitly. If multiple interpretations exist, surface them — don't pick silently. If a simpler approach exists, say so. If something is unclear, stop and ask.
@@ -30,7 +28,6 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-Goals and Roadmaps are here @plan.md
 
 ## 5. Dev Commands
 

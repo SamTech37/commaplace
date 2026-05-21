@@ -7,8 +7,6 @@
 - [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
 
-
-
 > Navigation, Exploration, Interaction.
 
 ## Must Have
@@ -18,6 +16,7 @@
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
   - [x] graph (sorta)
+  - [ ] graph 不要「點兩下」
   - [ ] local graph
   - [x] timeline (linear)
   - [x] masonry (wall)
@@ -44,19 +43,19 @@
 - [ ] 付費牆管理。
   - [ ] stripe or something?
 - [ ] Dev workflow & engineering best-practices
-  - [ ] KEEP CLAUDE.MD LEAN
+  - [x] KEEP CLAUDE.MD LEAN
   - [ ] explore -> plan -> run 
   - [ ] `/goal` also cool
+  - [x] start using skills/commands
   - [ ] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
+- [ ] address the [[# some concerns]]
 
 ## Dev & Testing
-
 
 ### Claude code + browser debugger tool
 
 https://code.claude.com/docs/zh-TW/chrome
-
 
 ### Running locally
 
@@ -104,8 +103,6 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] 又分 normal blog vs. hypertext densely linked blog
 - [ ] 維持個人vault內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
 
-
-
 ## Could Have
 
 - [ ] 圖片支援（待定）。
@@ -125,9 +122,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] DDoS issues
 - [ ] concurrent users issue
   - [ ] writing queue?
-  - [ ] reading? 
-
-
+  - [ ] reading?
 
 # some concerns (iterative)
 
@@ -146,55 +141,5 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
 - [ ] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
-# Old（2026-05-16）單篇筆記頁改版（/{user}/{path}）, check if all done
-
-這頁差距比 feed 大得多。現在比較像「Markdown 文件 + 下方清單」，參考檔則把它做成「**有作者識別 + 行動按鈕 + 內文 + 結構化的關聯區塊**」的內容頁。
-
-## B1. 頂部 navbar
-- 跟 feed 統一：左邊一個「←」回上頁、中間搜尋欄、右邊頭像。
-- 取代現在的「← 回 XX」一行 banner。
-
-## B2. 作者橫條（新增）
-- **現在**：沒有。作者資訊只夾在標題下方的小字裡（`@handle / 資料夾 · 3 天前`）。
-- **參考**：標題上方一條獨立的作者橫條，含：
-  - 較大的圓形頭像（40px、配色用作者主題色）
-  - 作者名 + 「/ 資料夾」
-  - 一行統計：「1,247 訂閱者 · 142 篇筆記 · 24 個資料夾」
-  - 右側 **「+ 追蹤」按鈕**（資料庫已有 follows 表，但目前 UI 上看不到追蹤入口；要做）
-- **要做**：新增這條 author-bar；訂閱數先用真實資料（追蹤者數、筆記數、資料夾數）。
-
-## B3. 文章 meta 列（改版）
-- **現在**：標題下一行小字 + 一列 tag chips。
-- **參考**：
-  - 左：「更新於 3 天前 · 約 6 分鐘 · #tag #tag #tag」（**閱讀時間是新東西**，用字數估算）
-  - 右：三顆動作按鈕——`♡ 89`、**`⬇ 匯入到我的 vault`**（藍底強調）、`⋯`
-- **要做**：
-  - 補閱讀時間（依字數 / 250 字一分鐘）
-  - **「匯入到我的 vault」是新功能**——你要決定：它是「下載 .md」（現在已有），還是「直接複製到我自己的 vault 裡」（這要做後端，等於借用別人的筆記，需要先想清楚怎麼標記來源、是否要徵得作者同意）
-  - 「⋯」內含：copy markdown、report、原本的 download .md
-
-## B4. 標題
-- **現在**：跟內文同字體大小、無特別處理。
-- **參考**：大標 24px、字距微縮、行高 1.3。
-- **要做**：放大標題層級。
-
-## B5. 內文 wikilink 樣式
-- **現在**：靠 markdown 渲染器產生連結（樣式平淡）。
-- **參考**：藍色字 + 藍色虛線底線；hover 時底線變實線、加淺藍底。
-- **要做**：在 CSS 對 `.wikilink` class 加上這套樣式。
-
-## B6. 「這篇連到的筆記」區塊（to complement local graph）
-- **現在**：用 canvas 畫一張小型 local graph。
-- **參考**：用**迷你卡片網格**列出這篇連出的筆記，分成兩個子區塊：
-  - 同個 vault · 8 篇
-  - 跨 vault · 連到其他人的筆記 · 4 篇（每張卡右上角貼「跨 vault」綠色小標籤）
-- **要做**：資料來源 `links` 表已有，新增這個區塊。**Local graph 要保留還是換掉？** 兩個都顯示會太擠，建議：
-  - 預設顯示**迷你卡片區塊**（資訊密度高、可點開）
-  - graph 視覺化收在最上面 navbar 旁邊或 footer 一個按鈕，按了才展開
-  - **等你決定**
-
-## B7. 「引用了這篇筆記的人」區塊（backlinks 改版）
-- **現在**：兩個小區塊（本 vault / 跨 vault）+ 簡單清單。
-- **參考**：合併成一個區塊，每筆是一橫列：「↺ 圖示 + 標題 + 右邊作者小頭像 · 資料夾」。資訊清楚很多。
-- **要做**：合併並改版面，保留「本 / 跨 vault」標示但用 badge 或小字。
+> Note: the single-note page redesign (formerly B1–B7) is now tracked in `SPEC.md`.
 

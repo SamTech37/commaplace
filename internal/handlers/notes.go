@@ -341,13 +341,6 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	outgoingSame, outgoingCross, _ := s.loadOutgoingSplit(r.Context(), n.ID, handle)
 	authorStats, _ := loadAuthorStats(r.Context(), s.DB, n.AuthorID)
 
-	var fromNote *fromBanner
-	if fromIDStr := r.URL.Query().Get("from"); fromIDStr != "" {
-		if fromID, err := strconv.ParseInt(fromIDStr, 10, 64); err == nil && fromID > 0 && fromID != n.ID {
-			fromNote, _ = loadFromBanner(r.Context(), s.DB, fromID)
-		}
-	}
-
 	viewer, _ := s.Auth.CurrentUser(r)
 	var viewerID int64
 	if viewer != nil {
@@ -369,7 +362,6 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		"BacklinksCross": crossVaultBL,
 		"OutgoingSame":   outgoingSame,
 		"OutgoingCross":  outgoingCross,
-		"From":           fromNote,
 		"UpdatedRel":     relativeTime(n.UpdatedAt),
 		"ReadingMinutes": readingMinutes(n.BodyMD),
 		"LikeCount":      likeN,
@@ -378,29 +370,6 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		"IsAuthor":       viewer != nil && viewer.ID == n.AuthorID,
 		"IsHidden":       n.HiddenAt.Valid,
 	})
-}
-
-type fromBanner struct {
-	ID    int64
-	Title string
-	URL   string
-}
-
-func loadFromBanner(ctx context.Context, db *sql.DB, fromID int64) (*fromBanner, error) {
-	var title, slug, handle string
-	err := db.QueryRowContext(ctx, `
-		SELECT n.title, n.slug, u.handle
-		FROM notes n JOIN users u ON u.id = n.author_id
-		WHERE n.id = ?`, fromID,
-	).Scan(&title, &slug, &handle)
-	if err != nil {
-		return nil, err
-	}
-	return &fromBanner{
-		ID:    fromID,
-		Title: title,
-		URL:   noteURL(handle, slug),
-	}, nil
 }
 
 func loadTagsForNote(ctx context.Context, db *sql.DB, noteID int64) ([]string, error) {
@@ -433,7 +402,6 @@ func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHand
 		return nil, nil, err
 	}
 	defer rows.Close()
-	from := "?from=" + strconv.FormatInt(noteID, 10)
 	for rows.Next() {
 		var title, slug, handle string
 		var updated int64
@@ -443,7 +411,7 @@ func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHand
 		bl := backlink{
 			Title:        title,
 			AuthorHandle: handle,
-			URL:          noteURL(handle, slug) + from,
+			URL:          noteURL(handle, slug),
 			UpdatedRel:   relativeTime(updated),
 			SameVault:    handle == vaultHandle,
 		}
@@ -476,7 +444,6 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandl
 		return nil, nil, err
 	}
 	defer rows.Close()
-	from := "?from=" + strconv.FormatInt(noteID, 10)
 	for rows.Next() {
 		var id int64
 		var title, slug, handle string
@@ -486,7 +453,7 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandl
 		ol := outlink{
 			Title:        title,
 			AuthorHandle: handle,
-			URL:          noteURL(handle, slug) + from,
+			URL:          noteURL(handle, slug),
 			SameVault:    handle == vaultHandle,
 		}
 		if ol.SameVault {

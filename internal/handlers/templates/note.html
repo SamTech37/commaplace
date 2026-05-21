@@ -5,9 +5,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:article:author" content="@{{.AuthorHandle}}" />
 <meta name="twitter:card" content="summary" />
-{{end}} {{define "content"}} {{if .From}}
-<p class="from-banner"><a href="{{.From.URL}}">← 回 {{.From.Title}}</a></p>
-{{end}} {{if .IsHidden}}
+{{end}} {{define "content"}} {{if .IsHidden}}
 <p class="error">
   This note is hidden by an admin. Only you (the author) and admins can see it.
 </p>
@@ -191,6 +189,16 @@
     {{end}}
   </div>
   {{end}}
+  <details class="local-graph-toggle">
+    <summary>顯示關聯圖</summary>
+    <div
+      class="local-graph"
+      data-lazy-graph="/api/graph/local?note=n:{{.Note.ID}}"
+      data-graph-height="280"
+    >
+      <canvas></canvas>
+    </div>
+  </details>
 </section>
 {{end}} {{/* ── 引用了這篇筆記的人 ── */}} {{if or .BacklinksSame
 .BacklinksCross}}

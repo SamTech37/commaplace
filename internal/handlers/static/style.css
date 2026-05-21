@@ -373,17 +373,20 @@ img { max-width: 100%; height: auto; border-radius: var(--r-sm); }
   text-underline-offset: 3px;
 }
 
-/* From-X banner */
-.from-banner {
-  background: var(--bg-2);
-  border-left: 3px solid var(--border-2);
-  padding: 0.55em 0.85em;
-  margin: 0 0 1.5em;
-  font-size: 0.9rem;
-  border-radius: var(--r-sm);
+/* Collapsed local ego-graph under connected-notes mini-cards. */
+.local-graph-toggle { margin-top: 0.75em; }
+.local-graph-toggle summary {
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 0.85rem;
+  padding: 0.4em 0;
+  list-style: none;
+  user-select: none;
 }
-.from-banner a { color: var(--text); text-decoration: none; }
-.from-banner a:hover { text-decoration: underline; }
+.local-graph-toggle summary::-webkit-details-marker { display: none; }
+.local-graph-toggle summary::before { content: "▸ "; }
+.local-graph-toggle[open] summary::before { content: "▾ "; }
+.local-graph { margin-top: 0.5em; height: 280px; max-width: 100%; }
 
 /* Note metadata */
 .note-meta { color: var(--text-3); font-size: 0.875rem; margin: -0.4em 0 1.25em; }

@@ -248,4 +248,17 @@
 
   // Init every container on the page.
   document.querySelectorAll('[data-graph-source]').forEach(initGraph);
+
+  // Lazy-init containers inside collapsed <details> — upgrade on first open.
+  document.querySelectorAll('details.local-graph-toggle').forEach(function (d) {
+    d.addEventListener('toggle', function onToggle() {
+      if (!d.open) return;
+      const c = d.querySelector('[data-lazy-graph]');
+      if (!c) return;
+      c.setAttribute('data-graph-source', c.dataset.lazyGraph);
+      c.removeAttribute('data-lazy-graph');
+      initGraph(c);
+      d.removeEventListener('toggle', onToggle);
+    });
+  });
 })();
