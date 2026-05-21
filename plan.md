@@ -5,6 +5,7 @@
   - [ ] OAuth2.0 要可以提醒使用者他用什麼管道/平台註冊的(e.g. identify by same email)
   - [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
 - [ ] review and merge changes from `branch/killer`
+- [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
 
 
 
@@ -87,16 +88,23 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 
 ## Should Have
 
+- [x] 明暗主題
 - [ ] 繁簡轉換。
   - [ ] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
 - [ ] 思源宋體（or 源漾明體、源流明體）
   - [x] https://github.com/adobe-fonts/source-han-serif
   - [ ] https://github.com/ButTaiwan/genyo-font
-- [x] 明暗主題（已完成）。
+  - [ ] that's serif, for sans serif go with 思源or源流黑體
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
 - [ ] tag merging issue? 應該多用大家在用的 tag 吧 (based on number of usages of that tag, show that when picking tag, easy)
   - A3. 標籤 chips
   - 有小計數（e.g. 「#音樂 12」）
+- [ ] mirroring with easy
+  - [ ] 已有經營 blog 的人如何一鍵同步過來？
+  - [ ] 又分 normal blog vs. hypertext densely linked blog
+- [ ] 維持個人vault內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
+
+
 
 ## Could Have
 
