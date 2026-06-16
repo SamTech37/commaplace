@@ -1,9 +1,9 @@
 # Plan
 
 ## Next Step
-- [ ] 測試 Google OAuth 登入功能
-  - [ ] OAuth2.0 要可以提醒使用者他用什麼管道/平台註冊的(e.g. identify by same email)
-  - [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
+- [ ] 測試 Google OAuth 登入功能 
+	- [ ] OAuth2.0 要可以提醒使用者他用什麼管道/平台註冊的 (e.g. identify by same email)
+	- [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
 - [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
 
@@ -12,21 +12,24 @@
 ## Must Have
 
 - [x] CRUD — 筆記的基本增刪改查。
-  - [x] progressive load (not pagination) of data
+	- [x] progressive load (not pagination) of data
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
-  - [x] graph (sorta)
-  - [ ] graph 不要「點兩下」
-  - [ ] local graph
-  - [x] timeline (linear)
-  - [x] masonry (wall)
-  - [ ] canvas (like sticky notes on a bulletin board or whiteboard)
-  - [ ] **dora mode.** wiki exploring but better (star-graph, spotlight, switch focus)
-  - [ ] kanban?
-  - [ ] calendar (date view)
-  - [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
+	- [x] masonry (wall)
+	- [/] graph (sorta)
+		- [ ] graph 不要「點兩下」
+    - [ ] global graph
+		- [ ] local graph
+	- [ ] timeline (linear)
+	- [ ] canvas (like sticky notes on a bulletin board or whiteboard)
+	- [ ] [[RSVP reader]]
+	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight, switch focus)
+	- [ ] kanban?
+	- [ ] calendar (date view)
+	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [ ] 好的資料模型 — 現用 SQLite、未來改 Postgres；GraphDB vs SQL、是否走 GraphQL 待評估。
-  - [ ] postgres > 100 users 再考慮
+	- [ ] ~~postgres > 100 users 再考慮~~
+- [ ] new backend architecture: postgres DB service + serverless worker service to deploy. `flyio` sucks 🛫 2026-06-16 📅 2026-06-20
 - [ ] 逆向 Obsidian 的殺手功能 — 
   - [x] 例如 [obsidian-flavored markdown](https://obsidian.md/help/syntax)
   - [ ] others… check [Home - Developer Documentation](https://docs.obsidian.md/Home)
@@ -50,14 +53,15 @@
   - [ ] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
 - [ ] address the [[# some concerns]]
+- [ ] `/random` take people to a random node
 
 ## Dev & Testing
 
-### Claude code + browser debugger tool
+### Claude Code + Browser Debugger Tool
 
 https://code.claude.com/docs/zh-TW/chrome
 
-### Running locally
+### Running Locally
 
 ```bash
 make dev          # DEBUG=1, demo seed, dev login enabled
@@ -66,7 +70,7 @@ make dev-full     # above + SEED_DEV=1 (multi-user fake data)
 
 Log in without email at `/_dev/login?as=alice` (creates user if needed).
 
-### Google OAuth local testing
+### Google OAuth Local Testing
 
 Google OAuth requires real credentials — there is no mock mode. Steps:
 
@@ -93,15 +97,16 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] 思源宋體（or 源漾明體、源流明體）
   - [x] https://github.com/adobe-fonts/source-han-serif
   - [ ] https://github.com/ButTaiwan/genyo-font
-  - [ ] that's serif, for sans serif go with 思源or源流黑體
+  - [ ] that's serif, for sans serif go with 思源 or 源流黑體
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
 - [ ] tag merging issue? 應該多用大家在用的 tag 吧 (based on number of usages of that tag, show that when picking tag, easy)
   - A3. 標籤 chips
   - 有小計數（e.g. 「#音樂 12」）
+  - [ ] tag picker UX (deferred from postgres schema design session): autocomplete sorted by usage count desc; picking an existing tag should be the path of least resistance; creating a brand-new tag must be a deliberate, visually separate last step (not just hitting enter on free text) — goal is to stop X/FB-style tag spam (emphasis/color-coding instead of categorization) without banning new tags outright
 - [ ] mirroring with easy
   - [ ] 已有經營 blog 的人如何一鍵同步過來？
   - [ ] 又分 normal blog vs. hypertext densely linked blog
-- [ ] 維持個人vault內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
+- [ ] 維持個人 vault 內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
 
 ## Could Have
 
@@ -124,7 +129,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] writing queue?
   - [ ] reading?
 
-# some concerns (iterative)
+# Some Concerns (iterative)
 
 - [ ] liked and saved should be separated
   - [ ] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
@@ -133,7 +138,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] linked by self or by others
 - [ ] need random / suprise-me / I'm feeling lucky button or page
 - [ ] can users change their @handle (ID)? 
-- [ ] maybe no "folders"?  how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders?
+- [ ] maybe no "folders"? how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders?
 - [ ]   what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already?
 - [ ] migrations: in early dev it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 

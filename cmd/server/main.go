@@ -5,10 +5,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"commonplace/internal/auth"
 	"commonplace/internal/db"
@@ -88,8 +92,30 @@ func main() {
 	if cfg.Mailer == "stdout" {
 		log.Printf("[dev mode] magic-link emails will be printed to stdout")
 	}
-	if err := http.ListenAndServe(cfg.Addr, srv.Routes()); err != nil {
-		log.Fatal(err)
+
+	httpSrv := &http.Server{Addr: cfg.Addr, Handler: srv.Routes()}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- httpSrv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	case <-ctx.Done():
+		stop()
+		log.Printf("shutting down (signal received), draining requests")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+		}
 	}
 }
 
