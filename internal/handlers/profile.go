@@ -50,7 +50,13 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		olderThan, _ = strconv.ParseInt(s, 10, 64)
 	}
 
-	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, olderThan)
+	viewer, _ := s.Auth.CurrentUser(r)
+	var viewerID uuid.UUID
+	if viewer != nil {
+		viewerID = viewer.ID
+	}
+
+	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, viewerID, olderThan)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -66,11 +72,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	viewer, _ := s.Auth.CurrentUser(r)
-	var viewerID uuid.UUID
-	if viewer != nil {
-		viewerID = viewer.ID
-	}
 	following, _ := userFollows(r.Context(), s.DB, viewerID, profile.ID)
 	followers, _ := followerCount(r.Context(), s.DB, profile.ID)
 	followingN, _ := followingCount(r.Context(), s.DB, profile.ID)
@@ -89,24 +90,21 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "profile", data)
 }
 
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, olderThan int64) ([]profileNote, int64, error) {
-	var (
-		query string
-		args  []any
-	)
-	if olderThan > 0 {
-		query = `SELECT title, slug, body_md, updated_at
+// loadRecentNotes lists a user's notes. Unpublished drafts are included only
+// when the viewer is the author themselves.
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, olderThan int64) ([]profileNote, int64, error) {
+	query := `SELECT title, slug, body_md, updated_at
 		FROM notes
-		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL AND updated_at < $2
-		ORDER BY updated_at DESC LIMIT 20`
-		args = []any{authorID, olderThan}
-	} else {
-		query = `SELECT title, slug, body_md, updated_at
-		FROM notes
-		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL
-		ORDER BY updated_at DESC LIMIT 20`
-		args = []any{authorID}
+		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`
+	args := []any{authorID}
+	if viewerID != authorID {
+		query += ` AND published_at IS NOT NULL`
 	}
+	if olderThan > 0 {
+		args = append(args, olderThan)
+		query += ` AND updated_at < $2`
+	}
+	query += ` ORDER BY updated_at DESC LIMIT 20`
 	rows, err := db.QueryContext(r.Context(), query, args...)
 	if err != nil {
 		return nil, 0, err

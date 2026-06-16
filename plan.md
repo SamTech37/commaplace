@@ -47,6 +47,7 @@
 - [x] 簡單的上傳與編輯。
   - [x] empty slate
   - [x] or start from a markdown
+  - [ ] better writing UX
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
 - [ ] 權限與授權管控。
 - [x] 管理後台（SQLite 不附，要自己做）。
@@ -54,13 +55,19 @@
   - [ ] stripe or something?
 - [ ] Dev workflow & engineering best-practices
   - [x] KEEP CLAUDE.MD LEAN
-  - [ ] explore -> plan -> run 
+  - [x] explore -> plan -> run 
   - [ ] `/goal` also cool
   - [x] start using skills/commands
   - [ ] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
-- [ ] address the [[# some concerns]]
+- [ ] address [[# some concerns]]
+- [ ] wikilink caveats
+  - [ ] embed
+  - [ ] empty links?
+  - [ ] duplicated note names?
 - [ ] `/random` take people to a random node
+- [ ] share button, webshare api...
+
 
 ## Dev & Testing
 
@@ -110,9 +117,9 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - A3. 標籤 chips
   - 有小計數（e.g. 「#音樂 12」）
   - [ ] tag picker UX (deferred from postgres schema design session): autocomplete sorted by usage count desc; picking an existing tag should be the path of least resistance; creating a brand-new tag must be a deliberate, visually separate last step (not just hitting enter on free text) — goal is to stop X/FB-style tag spam (emphasis/color-coding instead of categorization) without banning new tags outright
-- [ ] mirroring with easy
+- [ ] mirroring should be easy
   - [ ] 已有經營 blog 的人如何一鍵同步過來？
-  - [ ] 又分 normal blog vs. hypertext densely linked blog
+  - [ ] 又分 normal blog vs. densely linked hypertext  blog
 - [ ] 維持個人 vault 內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
 
 ## Could Have
@@ -151,7 +158,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
 - [x] need quick reply to others note
 - [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
-- [ ] user avatar image: use dicebear or Hank's NFT-like Weedie.
+- [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
 > Note: the single-note page redesign (formerly B1–B7) is now tracked in `.claude/postgres-railway-rebuild-spec.md`.
 

@@ -126,7 +126,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, ol
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL`)
+		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
@@ -155,7 +155,7 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, ta
 		FROM notes n
 		JOIN users u   ON u.id = n.author_id
 		JOIN follows f ON f.followed_id = n.author_id
-		WHERE f.follower_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL`)
+		WHERE f.follower_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
@@ -336,7 +336,7 @@ func loadTopTagChips(ctx context.Context, db *sql.DB, limit int, active string) 
 		SELECT nt.tag, COUNT(*) c
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
-		WHERE n.updated_at > $1
+		WHERE n.updated_at > $1 AND n.published_at IS NOT NULL
 		GROUP BY nt.tag
 		ORDER BY c DESC, nt.tag
 		LIMIT $2`, cutoff, limit)

@@ -70,6 +70,11 @@ func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix
 }
 
 func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter, handle, q, viewerHandle string) {
+	// Drafts surface only in the author's own vault.
+	pub := " AND n.published_at IS NOT NULL"
+	if handle == viewerHandle {
+		pub = ""
+	}
 	var (
 		query string
 		args  []any
@@ -79,7 +84,7 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE u.handle = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
 			ORDER BY n.updated_at DESC LIMIT 10`
 		args = []any{handle}
 	} else {
@@ -87,7 +92,7 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE u.handle = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
 			ORDER BY n.updated_at DESC LIMIT 10`
 		args = []any{handle, "%" + strings.ToLower(q) + "%"}
 	}
@@ -158,7 +163,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 			FROM notes n
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
-			WHERE f.follower_id = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE f.follower_id = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
 			ORDER BY n.updated_at DESC LIMIT 10`,
 			myID, pattern)
 	}
@@ -167,7 +172,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE lower(n.title) LIKE $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+		WHERE lower(n.title) LIKE $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
 		ORDER BY n.updated_at DESC LIMIT 20`,
 		pattern)
 

@@ -42,7 +42,7 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL
+		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
 		ORDER BY n.id`)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,7 +118,7 @@ func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n JOIN users u ON u.id = n.author_id
-		WHERE n.id IN (`+inPlaceholders(len(idList))+`) AND n.hidden_at IS NULL AND n.deleted_at IS NULL`,
+		WHERE n.id IN (`+inPlaceholders(len(idList))+`) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`,
 		toAnySlice(idList)...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

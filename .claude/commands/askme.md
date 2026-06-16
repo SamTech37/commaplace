@@ -1,5 +1,5 @@
 ---
-description: Interview the user about a project idea, then write SPEC.md
+description: Interview the user about a project idea, then write a spec into .claude/
 ---
 
 The user wants to build: $ARGUMENTS
@@ -17,7 +17,7 @@ Skip obvious questions. If you can guess the answer with high confidence, don't 
 
 Ask in rounds: a few focused questions per turn, then incorporate the answers before the next round. Stop when you have enough to write a real spec — not before, not long after.
 
-When done, write a complete `SPEC.md` in the current working directory covering:
+When done, write a complete spec into `.claude/` with a descriptive kebab-case filename ending in `-spec.md` (e.g. `.claude/editor-medium-style-spec.md`) — never `SPEC.md`, never repo root. Cover:
 - **Goal** — one paragraph, what this is and who it's for
 - **Scope** — what's in, what's out (explicit non-goals)
 - **Design decisions** — the choices that were made and why

@@ -1,5 +1,7 @@
 DATABASE_URL ?= postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable
-TEST_DATABASE_URL ?= $(DATABASE_URL)
+# Separate DB: the test harness TRUNCATEs on every run, so it must NEVER point at
+# the dev (or any real) database. Keep this distinct from DATABASE_URL.
+TEST_DATABASE_URL ?= postgres://commaplace:commaplace@localhost:5432/commaplace_test?sslmode=disable
 PORT    ?= 8080
 BINARY  := ./commonplace
 
@@ -46,8 +48,9 @@ dev-oauth: db-up
 watch:
 	air
 
-## test: run all tests
+## test: run all tests (against the dedicated test DB, never dev data)
 test: db-up
+	@docker compose exec -T postgres psql -U commaplace -d commaplace -c 'CREATE DATABASE commaplace_test' >/dev/null 2>&1 || true
 	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test ./...
 
 ## clean: remove binary

@@ -188,15 +188,13 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path
-                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-              ></path>
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
           {{if .User}}
-          <a href="/write">write</a>
-          <a href="/feed">feed</a>
-          <a href="/graph">graph</a>
+          <a href="/write">書寫</a>
+          <a href="/feed">閱覽</a>
+          <a href="/graph">圖譜</a>
           <form method="POST" action="/logout" class="inline-form">
             <button type="submit" class="link-btn">logout</button>
           </form>
@@ -206,13 +204,20 @@
             style="background-color:{{avatarColor .User.Handle}}"
             title="@{{.User.Handle}}"
           >
-            <img class="avatar-img-sm" src="{{avatarURL .User.Handle}}" alt="" onerror="this.remove()" />
-            <span class="profile-dot-initial">{{avatarInitial .User.Handle}}</span>
+            <img
+              class="avatar-img-sm"
+              src="{{avatarURL .User.Handle}}"
+              alt=""
+              onerror="this.remove()"
+            />
+            <span class="profile-dot-initial"
+              >{{avatarInitial .User.Handle}}</span
+            >
           </a>
           {{else}}
-          <a href="/feed">feed</a>
-          <a href="/graph">graph</a>
-          <a href="/login">login</a>
+          <a href="/feed">閱覽</a>
+          <a href="/graph">圖譜</a>
+          <a href="/login">登入</a>
           {{end}}
         </nav>
       </header>

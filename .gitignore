@@ -3,6 +3,7 @@ bin/
 *.db.*
 *.db-[shm|wal|journal]*
 .env
+.env.*
 .session_secret
 .DS_Store
 

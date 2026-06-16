@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -60,6 +61,46 @@ func (s *Server) GetNoteImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Write(blob)
+}
+
+// PostNoteImage is the editor's async image upload: store/replace the note's
+// single image and return its URL as JSON. Author-only.
+func (s *Server) PostNoteImage(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	noteID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusNotFound)
+		return
+	}
+	var authorID uuid.UUID
+	err = s.DB.QueryRowContext(r.Context(), `SELECT author_id FROM notes WHERE id = $1`, noteID).Scan(&authorID)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if authorID != u.ID {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err := s.saveNoteImage(r, noteID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// saveNoteImage silently skips unrecognised types; treat "nothing stored" as
+	// a client error so the editor can surface it.
+	if !noteHasImage(r, s.DB, noteID) {
+		http.Error(w, "unsupported or missing image", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	fmt.Fprintf(w, `{"url":%q}`, "/api/notes/"+noteID.String()+"/image")
 }
 
 // saveNoteImage reads the optional "image" multipart field and, if present
