@@ -1,0 +1,40 @@
+# Render Blueprint — one-click infra for a quick playtest deploy.
+# Dashboard: New + → Blueprint → pick this repo → Render reads this file.
+# Leave "plan" unset on both services so Render's UI prompts you to choose
+# Free tier (or Starter, charged against existing credit) at apply-time.
+services:
+  - name: comma
+    type: web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: comma-db
+          property: connectionString
+      # Render assigns a dynamic PORT by default; pin both sides instead of
+      # relying on dynamic interpolation (Blueprint spec has no clean way to
+      # feed Render's own injected PORT back into ADDR).
+      - key: PORT
+        value: "10000"
+      - key: ADDR
+        value: ":10000"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SEED_DEV
+        value: "1"
+      # Fill in after the first deploy, once Render shows you the
+      # https://<service>.onrender.com hostname.
+      - key: BASE_URL
+        sync: false
+      # Optional — your handle, lower-case, to unlock /admin/reports.
+      - key: ADMIN_HANDLE
+        sync: false
+      # Shared secret for /_dev/login?as=<handle>&key=<this> — the no-SMTP
+      # stopgap login for playtesters. DEBUG stays unset/off on purpose.
+      - key: PLAYTEST_LOGIN_KEY
+        sync: false
+
+databases:
+  - name: comma-db
+    postgresMajorVersion: "17"

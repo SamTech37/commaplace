@@ -72,10 +72,13 @@ func (s *Server) GetAuthCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
-// GetDevLogin is a debug-only shortcut that signs you in as ?as=<handle>,
-// creating the user on the fly if needed. Only mounted when s.Debug is true.
+// GetDevLogin signs you in as ?as=<handle>, creating the user on the fly if
+// needed. Allowed when s.Debug is true (local dev), or when s.PlaytestKey is
+// set and the request's ?key= matches it (locked-down playtest deploys —
+// DEBUG stays off so error pages don't leak, but testers can still log in
+// as any handle using the shared key as a stand-in password).
 func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
-	if !s.Debug {
+	if !s.Debug && (s.PlaytestKey == "" || r.URL.Query().Get("key") != s.PlaytestKey) {
 		s.renderError(w, r, http.StatusNotFound, "not found")
 		return
 	}

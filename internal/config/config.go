@@ -85,6 +85,6 @@ func DefaultEmail(title string) Email {
 		SignInIntro: "Sign in to " + title,
 		SignInSubj:  "Your " + title + " sign-in link",
 		ReportSubj:  "[" + title + "] new report",
-		TourHandle:  "commonplace-tour",
+		TourHandle:  "comma-tour",
 	}
 }

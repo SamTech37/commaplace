@@ -70,6 +70,7 @@ func main() {
 		Auth:        a,
 		Pages:       pages,
 		Debug:       cfg.Debug,
+		PlaytestKey: cfg.PlaytestKey,
 		AdminHandle: cfg.AdminHandle,
 		OAuthCfg:    cfg.googleOAuthConfig(),
 	}
@@ -120,6 +121,7 @@ type config struct {
 	SMTPFrom           string
 	AdminHandle        string
 	Debug              bool
+	PlaytestKey        string
 	GoogleClientID     string
 	GoogleClientSecret string
 	// derived
@@ -147,9 +149,10 @@ func loadConfig() config {
 		SMTPPort:      envOr("SMTP_PORT", "587"),
 		SMTPUser:      os.Getenv("SMTP_USER"),
 		SMTPPass:      os.Getenv("SMTP_PASS"),
-		SMTPFrom:      envOr("SMTP_FROM", "commonplace <noreply@example.com>"),
+		SMTPFrom:      envOr("SMTP_FROM", "Comma, <noreply@example.com>"),
 		AdminHandle:        strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
 		Debug:              os.Getenv("DEBUG") == "1",
+		PlaytestKey:        os.Getenv("PLAYTEST_LOGIN_KEY"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 	}

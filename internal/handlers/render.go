@@ -137,6 +137,7 @@ type Server struct {
 	Auth        *auth.Auth
 	Pages       *Pages
 	Debug       bool
+	PlaytestKey string            // non-empty enables /_dev/login?key=... outside Debug mode
 	AdminHandle string            // empty disables admin entirely
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
 }

@@ -6,7 +6,9 @@
 	- [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
 - [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
+  - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
 - [ ] minimal deployment to Railway TONIGHT
+  - prep done: Dockerfile builds the Postgres binary as-is, `docker-compose.yml` for local Postgres, env vars documented in `.env.example`/README — not yet actually deployed
 
 > Navigation, Exploration, Interaction.
 
@@ -22,8 +24,8 @@
 	- [x] masonry (wall)
 	- [/] graph (sorta) → note should be like cards
 		- [ ] graph 不要「點兩下」
-    - [ ] global graph
-		- [ ] local graph
+    - [x] global graph
+		- [x] local graph
 	- [ ] timeline (linear)
 	- [ ] canvas (like sticky notes on a bulletin board or whiteboard)
     - [ ] like 
@@ -32,9 +34,9 @@
 	- [ ] kanban?
 	- [ ] calendar (date view)
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
-- [ ] 好的資料模型 — 現用 SQLite、未來改 Postgres；GraphDB vs SQL、是否走 GraphQL 待評估。
-	- [ ] ~~postgres > 100 users 再考慮~~
-- [ ] new backend architecture: postgres DB service + serverless worker service to deploy. `flyio` sucks 🛫 2026-06-16 📅 2026-06-20
+- [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
+	- [x] ~~postgres > 100 users 再考慮~~
+- [x] new backend architecture: postgres DB service 已換完，serverless worker 評估後否決（單一 Go binary on Railway，理由見 spec 的 Design decisions），`flyio` sucks 🛫 2026-06-16 📅 2026-06-20
 - [ ] 逆向 Obsidian 的殺手功能 — 
   - [x] 例如 [obsidian-flavored markdown](https://obsidian.md/help/syntax)
   - [ ] others… check [Home - Developer Documentation](https://docs.obsidian.md/Home)
@@ -115,7 +117,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 
 ## Could Have
 
-- [ ] 圖片支援（待定）。
+- [x] 圖片支援 — note image upload (1/note, bytea, dedicated route, same pattern as avatar PNG)。
 - [ ] Library page: 優質公有領域文本，like Project Gutenberg
 
 ## Won't Have
@@ -126,9 +128,9 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 
 ## Scaling Issues
 
-- [ x ] 現況 — SQLite 單檔當 DB，需要一台 24/7 不掉資料的專屬機（用 [Fly.io](https://fly.io/)）。
-- [ ] 計畫 — DB 換 hosted Postgres（[Neon](https://neon.com/)），Go server 改用 Vercel 等 serverless 平台處理 request、query、HTML render。
-  - [ ] or perhaps cloudflare 全家桶
+- [x] ~~現況 — SQLite 單檔當 DB，需要一台 24/7 不掉資料的專屬機（用 [Fly.io](https://fly.io/)）。~~ 已換 Postgres，這項已成過去式。
+- [x] 計畫 — DB 換 hosted Postgres，但用 Railway 不是 Neon；Go server 維持單一 binary 部署在 Railway，不走 Vercel serverless（理由見 `.claude/postgres-railway-rebuild-spec.md` Design decisions）。
+  - [ ] or perhaps cloudflare 全家桶（未評估，仍開放）
 - [ ] DDoS issues
 - [ ] concurrent users issue
   - [ ] writing queue?
@@ -143,13 +145,13 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] linked by self or by others
 - [ ] need random / suprise-me / I'm feeling lucky button or page
 - [ ] can users change their @handle (ID)? 
-- [ ] maybe no "folders"? how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders?
-- [ ]   what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already?
+- [x] maybe no "folders"? how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders? — resolved: folders removed from product, `folder_path` column dropped entirely in the Postgres rebuild.
+- [x] what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already? — resolved: no production data existed, so the Postgres rebuild shipped as a clean rip-and-replace with no migration/rollback tooling (see `.claude/postgres-railway-rebuild-spec.md`).
 - [ ] migrations: in early dev it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
 - [x] need quick reply to others note
 - [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
 - [ ] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
-> Note: the single-note page redesign (formerly B1–B7) is now tracked in `SPEC.md`.
+> Note: the single-note page redesign (formerly B1–B7) is now tracked in `.claude/postgres-railway-rebuild-spec.md`.
 

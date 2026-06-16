@@ -59,13 +59,14 @@ Visit <http://localhost:8080>.
 | Var | Default | Purpose |
 | --- | --- | --- |
 | `ADDR` | `:8080` | Listen address |
-| `DB_PATH` | `./commonplace.db` | SQLite file |
+| `DATABASE_URL` | `postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable` | Postgres connection string |
 | `BASE_URL` | `http://localhost:<port>` | Used in magic-link emails |
 | `SESSION_SECRET` | auto-generated (`.session_secret`) | Hex-encoded HMAC key for session cookies |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | unset | If unset, magic links are printed to stdout (dev mode) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | Enables the "Continue with Google" button on `/login`; redirect URI is `${BASE_URL}/auth/google/callback` |
 | `ADMIN_HANDLE` | unset | Handle granted access to `/admin/*` |
-| `DEBUG` | `0` | Verbose error pages |
+| `DEBUG` | `0` | Verbose error pages + unlocks `/_dev/login` unconditionally. Leave unset on any deploy reachable outside the team |
+| `PLAYTEST_LOGIN_KEY` | unset | Unlocks `/_dev/login?as=<handle>&key=<this>` without needing `DEBUG` — shared-secret login for playtests when SMTP/OAuth aren't set up |
 | `SEED_DEV` | `0` | Install multi-user fake data (alice/bob/carol/dave) on startup |
 | `SEED_TOUR` | `0` | Also install the legacy English onboarding-fork seed |
 

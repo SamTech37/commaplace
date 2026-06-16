@@ -17,8 +17,8 @@ func (s *Server) Routes() *http.ServeMux {
 	// conflicts with user routes.
 	static := http.StripPrefix("/assets/", http.FileServerFS(StaticFS()))
 
-	// Dev-only: skip-login cookie issuer. The handler is a no-op (404)
-	// when Debug is false, so registering unconditionally is safe.
+	// Skip-login cookie issuer. 404s unless Debug is true or a matching
+	// PlaytestKey is supplied via ?key=, so registering unconditionally is safe.
 	mux.HandleFunc("GET /_dev/login", s.GetDevLogin)
 
 	// Home
