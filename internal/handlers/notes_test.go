@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
-	"path/filepath"
+	"os"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"commonplace/internal/auth"
 	"commonplace/internal/db"
@@ -12,29 +14,44 @@ import (
 
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
-	d, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set, skipping Postgres-backed tests")
+	}
+	d, err := db.Open(dsn)
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
 	if err := db.Migrate(d); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
+	t.Cleanup(func() {
+		d.Exec(`TRUNCATE users, notes, links, note_tags, likes, follows, reports, auth_tokens, note_images CASCADE`)
+		d.Close()
+	})
+	if _, err := d.Exec(`TRUNCATE users, notes, links, note_tags, likes, follows, reports, auth_tokens, note_images CASCADE`); err != nil {
+		t.Fatalf("truncate: %v", err)
+	}
+	pages, err := LoadPages()
+	if err != nil {
+		t.Fatalf("load pages: %v", err)
+	}
 	return &Server{
-		DB:   d,
-		Auth: &auth.Auth{DB: d, Secret: []byte("test")},
+		DB:    d,
+		Auth:  &auth.Auth{DB: d, Secret: []byte("test")},
+		Pages: pages,
 	}
 }
 
-func mkUser(t *testing.T, s *Server, handle string) int64 {
+func mkUser(t *testing.T, s *Server, handle string) uuid.UUID {
 	t.Helper()
-	res, err := s.DB.Exec(
-		`INSERT INTO users(handle, email, created_at) VALUES(?, ?, 0)`,
-		handle, handle+"@example.com",
-	)
-	if err != nil {
+	var id uuid.UUID
+	if err := s.DB.QueryRow(
+		`INSERT INTO users(handle, handle_ci, email, created_at) VALUES($1, $2, $3, 0) RETURNING id`,
+		handle, handle, handle+"@example.com",
+	).Scan(&id); err != nil {
 		t.Fatalf("mkUser: %v", err)
 	}
-	id, _ := res.LastInsertId()
 	return id
 }
 
@@ -105,9 +122,9 @@ func TestSaveResolvesAndBacklinks(t *testing.T) {
 	}
 
 	// Backlinks for bob's foo should include alice's intro.
-	var fooID int64
+	var fooID uuid.UUID
 	if err := s.DB.QueryRow(
-		`SELECT id FROM notes WHERE author_id = ? AND slug = 'foo'`, bobID,
+		`SELECT id FROM notes WHERE author_id = $1 AND slug = 'foo'`, bobID,
 	).Scan(&fooID); err != nil {
 		t.Fatal(err)
 	}

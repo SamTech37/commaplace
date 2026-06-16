@@ -15,9 +15,10 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"commonplace/internal/config"
 )
@@ -32,7 +33,7 @@ var (
 )
 
 type User struct {
-	ID        int64
+	ID        uuid.UUID
 	Handle    string
 	Email     string
 	CreatedAt int64
@@ -54,32 +55,32 @@ type Auth struct {
 // ---------- session signing ----------
 
 // Sign returns "<uid>.<hmac_hex>".
-func (a *Auth) Sign(userID int64) string {
-	payload := strconv.FormatInt(userID, 10)
+func (a *Auth) Sign(userID uuid.UUID) string {
+	payload := userID.String()
 	mac := hmac.New(sha256.New, a.Secret)
 	mac.Write([]byte(payload))
 	return payload + "." + hex.EncodeToString(mac.Sum(nil))
 }
 
-func (a *Auth) Verify(cookie string) (int64, error) {
+func (a *Auth) Verify(cookie string) (uuid.UUID, error) {
 	i := strings.LastIndexByte(cookie, '.')
 	if i <= 0 || i == len(cookie)-1 {
-		return 0, errors.New("malformed cookie")
+		return uuid.UUID{}, errors.New("malformed cookie")
 	}
 	payload, sig := cookie[:i], cookie[i+1:]
 	want, err := hex.DecodeString(sig)
 	if err != nil {
-		return 0, err
+		return uuid.UUID{}, err
 	}
 	mac := hmac.New(sha256.New, a.Secret)
 	mac.Write([]byte(payload))
 	if !hmac.Equal(mac.Sum(nil), want) {
-		return 0, errors.New("bad signature")
+		return uuid.UUID{}, errors.New("bad signature")
 	}
-	return strconv.ParseInt(payload, 10, 64)
+	return uuid.Parse(payload)
 }
 
-func (a *Auth) SetSession(w http.ResponseWriter, userID int64) {
+func (a *Auth) SetSession(w http.ResponseWriter, userID uuid.UUID) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookie,
 		Value:    a.Sign(userID),
@@ -113,7 +114,7 @@ func (a *Auth) CurrentUser(r *http.Request) (*User, error) {
 	}
 	var u User
 	err = a.DB.QueryRowContext(r.Context(),
-		`SELECT id, handle, email, created_at, theme FROM users WHERE id = ?`, uid,
+		`SELECT id, handle, email, created_at, theme FROM users WHERE id = $1`, uid,
 	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt, &u.Theme)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -139,7 +140,7 @@ func (a *Auth) IssueToken(ctx context.Context, email string) error {
 	}
 	expires := time.Now().Add(cfg.TokenTTL).Unix()
 	if _, err := a.DB.ExecContext(ctx,
-		`INSERT INTO auth_tokens(token, email, expires_at) VALUES(?, ?, ?)`,
+		`INSERT INTO auth_tokens(token, email, expires_at) VALUES($1, $2, $3)`,
 		token, email, expires,
 	); err != nil {
 		return err
@@ -169,7 +170,7 @@ func (a *Auth) ConsumeToken(ctx context.Context, token string) (*User, error) {
 		usedAt    sql.NullInt64
 	)
 	err = tx.QueryRowContext(ctx,
-		`SELECT email, expires_at, used_at FROM auth_tokens WHERE token = ?`, token,
+		`SELECT email, expires_at, used_at FROM auth_tokens WHERE token = $1`, token,
 	).Scan(&email, &expiresAt, &usedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("invalid link")
@@ -185,7 +186,7 @@ func (a *Auth) ConsumeToken(ctx context.Context, token string) (*User, error) {
 	}
 
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE auth_tokens SET used_at = ? WHERE token = ?`,
+		`UPDATE auth_tokens SET used_at = $1 WHERE token = $2`,
 		time.Now().Unix(), token,
 	); err != nil {
 		return nil, err
@@ -244,7 +245,7 @@ func IsReservedHandle(h string) bool { return reservedHandles[h] }
 func findOrCreateUser(ctx context.Context, tx *sql.Tx, email string) (*User, error) {
 	var u User
 	err := tx.QueryRowContext(ctx,
-		`SELECT id, handle, email, created_at, theme FROM users WHERE email = ?`, email,
+		`SELECT id, handle, email, created_at, theme FROM users WHERE email = $1`, email,
 	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt, &u.Theme)
 	if err == nil {
 		return &u, nil
@@ -257,15 +258,11 @@ func findOrCreateUser(ctx context.Context, tx *sql.Tx, email string) (*User, err
 		return nil, err
 	}
 	now := time.Now().Unix()
-	res, err := tx.ExecContext(ctx,
-		`INSERT INTO users(handle, email, created_at) VALUES(?, ?, ?)`,
-		handle, email, now,
-	)
-	if err != nil {
-		return nil, err
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
+	var id uuid.UUID
+	if err := tx.QueryRowContext(ctx,
+		`INSERT INTO users(handle, handle_ci, email, created_at) VALUES($1, $2, $3, $4) RETURNING id`,
+		handle, strings.ToLower(handle), email, now,
+	).Scan(&id); err != nil {
 		return nil, err
 	}
 	return &User{ID: id, Handle: handle, Email: email, CreatedAt: now, Theme: "auto"}, nil
@@ -276,7 +273,7 @@ func uniqueHandle(ctx context.Context, tx *sql.Tx, base string) (string, error) 
 	for i := 2; i < cfg.MaxCollisions; i++ {
 		var one int
 		err := tx.QueryRowContext(ctx,
-			`SELECT 1 FROM users WHERE handle = ?`, candidate,
+			`SELECT 1 FROM users WHERE handle_ci = $1`, candidate,
 		).Scan(&one)
 		if errors.Is(err, sql.ErrNoRows) {
 			return candidate, nil

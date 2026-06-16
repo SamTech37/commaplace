@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var nonSlugRE = regexp.MustCompile(`[^a-z0-9]+`)
@@ -14,7 +16,7 @@ var nonSlugRE = regexp.MustCompile(`[^a-z0-9]+`)
 // ApplyDev seeds a realistic multi-user dataset for local development.
 // Safe to call multiple times — exits early if alice already exists.
 // Activate with SEED_DEV=1.
-func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID int64, authorHandle, body string) error) error {
+func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, authorHandle, body string) error) error {
 	var existing int
 	err := db.QueryRowContext(ctx, `SELECT 1 FROM users WHERE handle = 'alice'`).Scan(&existing)
 	if err == nil {
@@ -33,15 +35,13 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 	base := time.Now().Unix()
 	tick := func(n int64) int64 { return base - n*3600 } // n hours ago
 
-	insertUser := func(handle, email string) (int64, error) {
-		r, err := tx.ExecContext(ctx,
-			`INSERT INTO users(handle, email, created_at, onboarded_at) VALUES(?, ?, ?, ?)`,
-			handle, email, tick(720), tick(720),
-		)
-		if err != nil {
-			return 0, err
-		}
-		return r.LastInsertId()
+	insertUser := func(handle, email string) (uuid.UUID, error) {
+		var id uuid.UUID
+		err := tx.QueryRowContext(ctx,
+			`INSERT INTO users(handle, handle_ci, email, created_at, onboarded_at) VALUES($1, $2, $3, $4, $4) RETURNING id`,
+			handle, strings.ToLower(handle), email, tick(720),
+		).Scan(&id)
+		return id, err
 	}
 
 	slugify := func(title string) string {
@@ -50,50 +50,50 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 		return strings.Trim(s, "-")
 	}
 
-	insertNote := func(authorID int64, handle, folder, title, body string, tags []string, hoursAgo int64) (int64, error) {
+	insertNote := func(authorID uuid.UUID, handle, folder, title, body string, tags []string, hoursAgo int64) (uuid.UUID, error) {
 		slug := slugify(title)
 		t := tick(hoursAgo)
-		r, err := tx.ExecContext(ctx, `
-			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, '', ?, ?, ?, ?, ?)`,
-			authorID, slug, title, body, t, t,
-		)
+		var nid uuid.UUID
+		err := tx.QueryRowContext(ctx, `
+			INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
+			VALUES($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+			authorID, slug, strings.ToLower(slug), title, body, t,
+		).Scan(&nid)
 		if err != nil {
-			return 0, err
+			return uuid.UUID{}, err
 		}
-		nid, _ := r.LastInsertId()
 		for _, tag := range tags {
 			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`, nid, tag, t,
+				`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`, nid, tag, t,
 			); err != nil {
-				return 0, err
+				return uuid.UUID{}, err
 			}
 		}
 		if err := recompute(ctx, tx, nid, handle, body); err != nil {
-			return 0, err
+			return uuid.UUID{}, err
 		}
 		// Resolve any previously-inserted dangling links pointing to this note.
 		if _, err := tx.ExecContext(ctx, `
-			UPDATE links SET resolved_target_id = ?
+			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_slug = ?`,
+			  AND target_user_handle = $2 AND target_slug = $3`,
 			nid, handle, slug,
 		); err != nil {
-			return 0, err
+			return uuid.UUID{}, err
 		}
 		return nid, nil
 	}
 
-	follow := func(followerID, followedID int64) {
+	follow := func(followerID, followedID uuid.UUID) {
 		tx.ExecContext(ctx,
-			`INSERT OR IGNORE INTO follows(follower_id, followed_id, created_at) VALUES(?, ?, ?)`,
+			`INSERT INTO follows(follower_id, followed_id, created_at) VALUES($1, $2, $3) ON CONFLICT (follower_id, followed_id) DO NOTHING`,
 			followerID, followedID, tick(500),
 		)
 	}
 
-	like := func(userID, noteID int64) {
+	like := func(userID, noteID uuid.UUID) {
 		tx.ExecContext(ctx,
-			`INSERT OR IGNORE INTO likes(user_id, note_id, created_at) VALUES(?, ?, ?)`,
+			`INSERT INTO likes(user_id, note_id, created_at) VALUES($1, $2, $3) ON CONFLICT (user_id, note_id) DO NOTHING`,
 			userID, noteID, tick(10),
 		)
 	}

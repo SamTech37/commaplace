@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"commonplace/internal/markdown"
 )
@@ -22,15 +24,17 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 	}
 	bodyMD := ""
 	if id := r.URL.Query().Get("reply-to"); id != "" {
-		var slug, handle string
-		err := s.DB.QueryRowContext(r.Context(),
-			`SELECT n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id WHERE n.id = ?`,
-			id).Scan(&slug, &handle)
-		if err == nil {
-			if handle == u.Handle {
-				bodyMD = "[[" + slug + "]]\n\n"
-			} else {
-				bodyMD = "[[@" + handle + "/" + slug + "]]\n\n"
+		if replyID, err := uuid.Parse(id); err == nil {
+			var slug, handle string
+			err := s.DB.QueryRowContext(r.Context(),
+				`SELECT n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id WHERE n.id = $1`,
+				replyID).Scan(&slug, &handle)
+			if err == nil {
+				if handle == u.Handle {
+					bodyMD = "[[" + slug + "]]\n\n"
+				} else {
+					bodyMD = "[[@" + handle + "/" + slug + "]]\n\n"
+				}
 			}
 		}
 	}
@@ -44,7 +48,7 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
-	if err := r.ParseForm(); err != nil {
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		s.renderError(w, r, http.StatusBadRequest, "bad form")
 		return
 	}
@@ -76,7 +80,8 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 		tagsInput += "," + strings.Join(inline, ",")
 	}
 	tags := parseTags(tagsInput)
-	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags); err != nil {
+	noteID, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags)
+	if err != nil {
 		msg := err.Error()
 		if isUniqueViolation(err) {
 			msg = "A note with this title already exists. Pick a different title."
@@ -85,6 +90,10 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 			"Form":  form,
 			"Error": msg,
 		})
+		return
+	}
+	if err := s.saveNoteImage(r, noteID); err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	http.Redirect(w, r, noteURL(u.Handle, slug), http.StatusSeeOther)
@@ -120,17 +129,17 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
-	noteID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil || noteID <= 0 {
+	noteID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
 	}
 
-	var authorID int64
+	var authorID uuid.UUID
 	var slug, title, body string
 	err = s.DB.QueryRowContext(r.Context(), `
 		SELECT author_id, slug, title, body_md
-		FROM notes WHERE id = ?`, noteID,
+		FROM notes WHERE id = $1`, noteID,
 	).Scan(&authorID, &slug, &title, &body)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
@@ -152,12 +161,13 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		"Form": map[string]string{
 			"Title": title, "BodyMD": body, "Tags": tagsStr,
 		},
-		"Action":      "/edit/" + strconv.FormatInt(noteID, 10),
+		"Action":      "/edit/" + noteID.String(),
 		"Heading":     "編輯筆記",
 		"SubmitLabel": "儲存",
 		"EditNote": map[string]any{
-			"ID":   noteID,
-			"Slug": slug,
+			"ID":       noteID,
+			"Slug":     slug,
+			"HasImage": noteHasImage(r, s.DB, noteID),
 		},
 	})
 }
@@ -167,20 +177,20 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
-	noteID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil || noteID <= 0 {
+	noteID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
 	}
-	if err := r.ParseForm(); err != nil {
+	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		s.renderError(w, r, http.StatusBadRequest, "bad form")
 		return
 	}
 
-	var authorID int64
+	var authorID uuid.UUID
 	var slug string
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, slug FROM notes WHERE id = ?`, noteID,
+		SELECT author_id, slug FROM notes WHERE id = $1`, noteID,
 	).Scan(&authorID, &slug)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
@@ -205,7 +215,7 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 	rerender := func(msg string) {
 		s.render(w, r, "write", map[string]any{
 			"Form":        form,
-			"Action":      "/edit/" + strconv.FormatInt(noteID, 10),
+			"Action":      "/edit/" + noteID.String(),
 			"Heading":     "編輯筆記",
 			"SubmitLabel": "儲存",
 			"EditNote": map[string]any{
@@ -228,12 +238,16 @@ func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
 		rerender(err.Error())
 		return
 	}
+	if err := s.saveNoteImage(r, noteID); err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 	http.Redirect(w, r, noteURL(u.Handle, slug), http.StatusSeeOther)
 }
 
 // updateNote updates an existing note's title/body/tags and recomputes its
 // outgoing links. Slug is intentionally not editable so inbound wikilinks remain valid.
-func (s *Server) updateNote(ctx context.Context, noteID int64, authorHandle, title, body string, tags []string) error {
+func (s *Server) updateNote(ctx context.Context, noteID uuid.UUID, authorHandle, title, body string, tags []string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -242,18 +256,18 @@ func (s *Server) updateNote(ctx context.Context, noteID int64, authorHandle, tit
 
 	now := nowUnix()
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE notes SET title = ?, body_md = ?, updated_at = ?
-		WHERE id = ?`, title, body, now, noteID,
+		UPDATE notes SET title = $1, body_md = $2, updated_at = $3
+		WHERE id = $4`, title, body, now, noteID,
 	); err != nil {
 		return err
 	}
 
-	if _, err := tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id = ?`, noteID); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id = $1`, noteID); err != nil {
 		return err
 	}
 	for _, t := range tags {
 		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+			`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
 			noteID, t, now,
 		); err != nil {
 			return err
@@ -277,12 +291,12 @@ type backlink struct {
 }
 
 type noteView struct {
-	ID        int64
+	ID        uuid.UUID
 	Title     string
 	BodyMD    string
 	UpdatedAt int64
 	Slug      string
-	AuthorID  int64
+	AuthorID  uuid.UUID
 	HiddenAt  sql.NullInt64
 	DeletedAt sql.NullInt64
 }
@@ -301,7 +315,7 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		       n.author_id, n.hidden_at, n.deleted_at
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE u.handle = ? AND n.slug = ?`,
+		WHERE u.handle = $1 AND n.slug = $2`,
 		handle, slug,
 	).Scan(&n.ID, &n.Title, &n.BodyMD, &n.UpdatedAt, &n.Slug,
 		&n.AuthorID, &n.HiddenAt, &n.DeletedAt)
@@ -342,7 +356,7 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	authorStats, _ := loadAuthorStats(r.Context(), s.DB, n.AuthorID)
 
 	viewer, _ := s.Auth.CurrentUser(r)
-	var viewerID int64
+	var viewerID uuid.UUID
 	if viewer != nil {
 		viewerID = viewer.ID
 	}
@@ -369,12 +383,13 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		"ViewerLoggedIn": viewer != nil,
 		"IsAuthor":       viewer != nil && viewer.ID == n.AuthorID,
 		"IsHidden":       n.HiddenAt.Valid,
+		"HasImage":       noteHasImage(r, s.DB, n.ID),
 	})
 }
 
-func loadTagsForNote(ctx context.Context, db *sql.DB, noteID int64) ([]string, error) {
+func loadTagsForNote(ctx context.Context, db *sql.DB, noteID uuid.UUID) ([]string, error) {
 	rows, err := db.QueryContext(ctx,
-		`SELECT tag FROM note_tags WHERE note_id = ? ORDER BY tag`, noteID)
+		`SELECT tag FROM note_tags WHERE note_id = $1 ORDER BY tag`, noteID)
 	if err != nil {
 		return nil, err
 	}
@@ -390,13 +405,13 @@ func loadTagsForNote(ctx context.Context, db *sql.DB, noteID int64) ([]string, e
 	return out, rows.Err()
 }
 
-func (s *Server) loadBacklinksSplit(ctx context.Context, noteID int64, vaultHandle string) (sameVault, crossVault []backlink, err error) {
+func (s *Server) loadBacklinksSplit(ctx context.Context, noteID uuid.UUID, vaultHandle string) (sameVault, crossVault []backlink, err error) {
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT n.title, n.slug, u.handle, n.updated_at
 		FROM links l
 		JOIN notes n ON n.id = l.source_note_id
 		JOIN users u ON u.id = n.author_id
-		WHERE l.resolved_target_id = ?
+		WHERE l.resolved_target_id = $1
 		ORDER BY n.updated_at DESC`, noteID)
 	if err != nil {
 		return nil, nil, err
@@ -431,13 +446,13 @@ type outlink struct {
 	SameVault    bool
 }
 
-func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandle string) (same, cross []outlink, err error) {
+func (s *Server) loadOutgoingSplit(ctx context.Context, noteID uuid.UUID, vaultHandle string) (same, cross []outlink, err error) {
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT DISTINCT n.id, n.title, n.slug, u.handle
 		FROM links l
 		JOIN notes n ON n.id = l.resolved_target_id
 		JOIN users u ON u.id = n.author_id
-		WHERE l.source_note_id = ? AND l.resolved_target_id IS NOT NULL
+		WHERE l.source_note_id = $1 AND l.resolved_target_id IS NOT NULL
 		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		ORDER BY n.updated_at DESC`, noteID)
 	if err != nil {
@@ -445,7 +460,7 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID int64, vaultHandl
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id int64
+		var id uuid.UUID
 		var title, slug, handle string
 		if err := rows.Scan(&id, &title, &slug, &handle); err != nil {
 			return nil, nil, err
@@ -470,13 +485,13 @@ type authorStats struct {
 	Notes     int
 }
 
-func loadAuthorStats(ctx context.Context, db *sql.DB, authorID int64) (authorStats, error) {
+func loadAuthorStats(ctx context.Context, db *sql.DB, authorID uuid.UUID) (authorStats, error) {
 	var s authorStats
 	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM follows WHERE followed_id = ?`, authorID,
+		`SELECT COUNT(*) FROM follows WHERE followed_id = $1`, authorID,
 	).Scan(&s.Followers)
 	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM notes WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL`, authorID,
+		`SELECT COUNT(*) FROM notes WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`, authorID,
 	).Scan(&s.Notes)
 	return s, nil
 }
@@ -492,63 +507,59 @@ func readingMinutes(body string) int {
 
 // ---------- save + link recomputation ----------
 
-func (s *Server) saveNote(ctx context.Context, authorID int64, authorHandle, slug, title, body string, tags []string) (int64, error) {
+func (s *Server) saveNote(ctx context.Context, authorID uuid.UUID, authorHandle, slug, title, body string, tags []string) (uuid.UUID, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, err
+		return uuid.UUID{}, err
 	}
 	defer tx.Rollback()
 
 	now := nowUnix()
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-		VALUES(?, '', ?, ?, ?, ?, ?)`,
-		authorID, slug, title, body, now, now,
-	)
-	if err != nil {
-		return 0, err
-	}
-	noteID, err := res.LastInsertId()
-	if err != nil {
-		return 0, err
+	var noteID uuid.UUID
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
+		VALUES($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+		authorID, slug, strings.ToLower(slug), title, body, now,
+	).Scan(&noteID); err != nil {
+		return uuid.UUID{}, err
 	}
 
 	for _, t := range tags {
 		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+			`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
 			noteID, t, now,
 		); err != nil {
-			return 0, err
+			return uuid.UUID{}, err
 		}
 	}
 
 	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
-		return 0, err
+		return uuid.UUID{}, err
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE links SET resolved_target_id = ?
+		UPDATE links SET resolved_target_id = $1
 		WHERE resolved_target_id IS NULL
-		  AND target_user_handle = ?
-		  AND target_slug = ?`,
+		  AND target_user_handle = $2
+		  AND target_slug = $3`,
 		noteID, authorHandle, slug,
 	); err != nil {
-		return 0, err
+		return uuid.UUID{}, err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return 0, err
+		return uuid.UUID{}, err
 	}
 	return noteID, nil
 }
 
 // RecomputeLinks is exported so the seed package can call it.
-func RecomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAuthorHandle, body string) error {
+func RecomputeLinks(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, sourceAuthorHandle, body string) error {
 	return recomputeLinks(ctx, tx, sourceID, sourceAuthorHandle, body)
 }
 
-func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAuthorHandle, body string) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM links WHERE source_note_id = ?`, sourceID); err != nil {
+func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, sourceAuthorHandle, body string) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM links WHERE source_note_id = $1`, sourceID); err != nil {
 		return err
 	}
 	for _, l := range markdown.Extract(body) {
@@ -556,23 +567,23 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID int64, sourceAutho
 		if targetHandle == "" {
 			targetHandle = sourceAuthorHandle
 		}
-		var resolved sql.NullInt64
-		var found int64
+		var resolved *uuid.UUID
+		var found uuid.UUID
 		err := tx.QueryRowContext(ctx, `
 			SELECT n.id FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = ? AND n.slug = ?`,
+			WHERE u.handle = $1 AND n.slug = $2`,
 			targetHandle, l.Slug,
 		).Scan(&found)
 		if err == nil {
-			resolved = sql.NullInt64{Int64: found, Valid: true}
+			resolved = &found
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO links(source_note_id, target_user_handle, target_folder_path, target_slug, resolved_target_id)
-			VALUES(?, ?, '', ?, ?)`,
-			sourceID, targetHandle, l.Slug, resolved,
+			INSERT INTO links(source_note_id, target_user_handle, target_slug, raw_target, resolved_target_id)
+			VALUES($1, $2, $3, $4, $5)`,
+			sourceID, targetHandle, l.Slug, l.Raw, resolved,
 		); err != nil {
 			return err
 		}
@@ -591,12 +602,8 @@ func nowUnix() int64 { return timeNow().Unix() }
 var timeNow = func() time.Time { return time.Now() }
 
 func isUniqueViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "UNIQUE constraint failed") ||
-		strings.Contains(msg, "constraint failed: UNIQUE")
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []markdown.WikiLink) markdown.Resolver {
@@ -616,11 +623,11 @@ func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []
 		if h == "" {
 			h = vaultHandle
 		}
-		var id int64
+		var id uuid.UUID
 		err := s.DB.QueryRowContext(ctx, `
 			SELECT n.id FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = ? AND n.slug = ?`,
+			WHERE u.handle = $1 AND n.slug = $2`,
 			h, l.Slug,
 		).Scan(&id)
 		if err == nil {
@@ -637,14 +644,14 @@ func (s *Server) PostDeleteNote(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		s.renderError(w, r, http.StatusBadRequest, "invalid note id")
 		return
 	}
 	res, err := s.DB.ExecContext(r.Context(),
-		`UPDATE notes SET deleted_at = unixepoch() WHERE id = ? AND author_id = ?`,
-		id, u.ID)
+		`UPDATE notes SET deleted_at = $1 WHERE id = $2 AND author_id = $3`,
+		nowUnix(), id, u.ID)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return

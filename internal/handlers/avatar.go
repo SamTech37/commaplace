@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // GetAvatarBuilder renders the part picker page, pre-populated from the
@@ -56,7 +58,7 @@ func (s *Server) PostAvatarBuilder(w http.ResponseWriter, r *http.Request) {
 	}
 	choiceJSON, _ := json.Marshal(c)
 	if _, err := s.DB.ExecContext(r.Context(),
-		`UPDATE users SET avatar = ?, avatar_choice = ? WHERE id = ?`,
+		`UPDATE users SET avatar = $1, avatar_choice = $2 WHERE id = $3`,
 		png, string(choiceJSON), u.ID,
 	); err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
@@ -82,7 +84,7 @@ func (s *Server) GetAvatarPNG(w http.ResponseWriter, r *http.Request) {
 	}
 	var blob []byte
 	err := s.DB.QueryRowContext(r.Context(),
-		`SELECT avatar FROM users WHERE handle = ?`, handle,
+		`SELECT avatar FROM users WHERE handle = $1`, handle,
 	).Scan(&blob)
 	if errors.Is(err, sql.ErrNoRows) || len(blob) == 0 {
 		http.NotFound(w, r)
@@ -101,10 +103,10 @@ func (s *Server) GetAvatarPNG(w http.ResponseWriter, r *http.Request) {
 
 // loadAvatarChoice reads the saved JSON, or returns a sensible default
 // (first option in each category, mid-skin) for the initial builder render.
-func loadAvatarChoice(r *http.Request, db *sql.DB, userID int64) AvatarChoice {
+func loadAvatarChoice(r *http.Request, db *sql.DB, userID uuid.UUID) AvatarChoice {
 	var raw string
 	db.QueryRowContext(r.Context(),
-		`SELECT avatar_choice FROM users WHERE id = ?`, userID,
+		`SELECT avatar_choice FROM users WHERE id = $1`, userID,
 	).Scan(&raw)
 	if raw != "" {
 		var c AvatarChoice
@@ -122,10 +124,10 @@ func loadAvatarChoice(r *http.Request, db *sql.DB, userID int64) AvatarChoice {
 }
 
 // userHasAvatar is the cheap predicate used by gates (e.g. onboarding).
-func userHasAvatar(r *http.Request, db *sql.DB, userID int64) bool {
+func userHasAvatar(r *http.Request, db *sql.DB, userID uuid.UUID) bool {
 	var n int
 	db.QueryRowContext(r.Context(),
-		`SELECT length(avatar) FROM users WHERE id = ?`, userID,
+		`SELECT length(avatar) FROM users WHERE id = $1`, userID,
 	).Scan(&n)
 	return n > 0
 }

@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"commonplace/internal/auth"
 	"commonplace/internal/markdown"
 )
@@ -28,11 +30,11 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var profile struct {
-		ID     int64
+		ID     uuid.UUID
 		Handle string
 	}
 	err := s.DB.QueryRowContext(r.Context(),
-		`SELECT id, handle FROM users WHERE handle = ?`, handle,
+		`SELECT id, handle FROM users WHERE handle = $1`, handle,
 	).Scan(&profile.ID, &profile.Handle)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "no such user")
@@ -65,7 +67,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	viewer, _ := s.Auth.CurrentUser(r)
-	var viewerID int64
+	var viewerID uuid.UUID
 	if viewer != nil {
 		viewerID = viewer.ID
 	}
@@ -87,7 +89,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "profile", data)
 }
 
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]profileNote, int64, error) {
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, olderThan int64) ([]profileNote, int64, error) {
 	var (
 		query string
 		args  []any
@@ -95,13 +97,13 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]
 	if olderThan > 0 {
 		query = `SELECT title, slug, body_md, updated_at
 		FROM notes
-		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL AND updated_at < ?
+		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL AND updated_at < $2
 		ORDER BY updated_at DESC LIMIT 20`
 		args = []any{authorID, olderThan}
 	} else {
 		query = `SELECT title, slug, body_md, updated_at
 		FROM notes
-		WHERE author_id = ? AND hidden_at IS NULL AND deleted_at IS NULL
+		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL
 		ORDER BY updated_at DESC LIMIT 20`
 		args = []any{authorID}
 	}
@@ -113,7 +115,7 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, olderThan int64) ([]
 
 	var handle string
 	if err := db.QueryRowContext(r.Context(),
-		`SELECT handle FROM users WHERE id = ?`, authorID,
+		`SELECT handle FROM users WHERE id = $1`, authorID,
 	).Scan(&handle); err != nil {
 		return nil, 0, err
 	}

@@ -6,6 +6,8 @@ import (
 	htmlpkg "html"
 	"net/http"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // GetWikiSuggest returns an HTML <li> fragment for autocomplete in the editor.
@@ -39,7 +41,7 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 	}
 	user, _ := s.Auth.CurrentUser(r)
 	var (
-		myID     int64
+		myID     uuid.UUID
 		myHandle string
 	)
 	if user != nil {
@@ -50,7 +52,7 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix string) {
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT handle FROM users WHERE handle LIKE ? ORDER BY handle LIMIT 10`,
+		`SELECT handle FROM users WHERE handle LIKE $1 ORDER BY handle LIMIT 10`,
 		strings.ToLower(prefix)+"%")
 	if err != nil {
 		return
@@ -77,7 +79,7 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE u.handle = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`
 		args = []any{handle}
 	} else {
@@ -85,7 +87,7 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE u.handle = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`
 		args = []any{handle, "%" + strings.ToLower(q) + "%"}
 	}
@@ -107,15 +109,15 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 }
 
 type wikiSuggestion struct {
-	NoteID int64
+	NoteID uuid.UUID
 	Title  string
 	Slug   string
 	Handle string
 }
 
-func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID int64, myHandle, q string) {
+func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID uuid.UUID, myHandle, q string) {
 	pattern := "%" + strings.ToLower(q) + "%"
-	seen := map[int64]bool{}
+	seen := map[uuid.UUID]bool{}
 	var results []wikiSuggestion
 
 	collect := func(query string, args ...any) {
@@ -143,11 +145,11 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 		}
 	}
 
-	if myID != 0 {
+	if myID != uuid.Nil {
 		collect(`
-			SELECT n.id, n.title, n.slug, ? AS handle
+			SELECT n.id, n.title, n.slug, $1::text AS handle
 			FROM notes n
-			WHERE n.author_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE n.author_id = $2 AND lower(n.title) LIKE $3 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`,
 			myHandle, myID, pattern)
 
@@ -156,7 +158,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 			FROM notes n
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
-			WHERE f.follower_id = ? AND lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE f.follower_id = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 10`,
 			myID, pattern)
 	}
@@ -165,7 +167,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID i
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE lower(n.title) LIKE ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+		WHERE lower(n.title) LIKE $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		ORDER BY n.updated_at DESC LIMIT 20`,
 		pattern)
 

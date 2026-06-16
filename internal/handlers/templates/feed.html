@@ -67,12 +67,7 @@
     </div>
   {{end}}
   <div class="card-meta">
-    {{if .IsExternal}}
-      <span class="external-badge" title="indexed from Obsidian Publish">外</span>
-      <span class="meta-handle">{{if .ExternalSite}}{{.ExternalSite}}{{else}}{{.AuthorHandle}}{{end}}</span>
-    {{else}}
-      <span class="meta-handle">@{{.AuthorHandle}}</span>
-    {{end}}
+    <span class="meta-handle">@{{.AuthorHandle}}</span>
     <span class="meta-spacer"></span>
     {{if gt .LikeCount 0}}<span class="meta-like">♡ {{.LikeCount}}</span>{{end}}
     {{if gt .LinkCount 0}}<span class="meta-links">→ {{.LinkCount}}</span>{{end}}

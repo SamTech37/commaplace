@@ -16,7 +16,6 @@ import (
 
 	"commonplace/internal/auth"
 	"commonplace/internal/db"
-	"commonplace/internal/external"
 	"commonplace/internal/handlers"
 	"commonplace/internal/seed"
 )
@@ -24,7 +23,7 @@ import (
 func main() {
 	cfg := loadConfig()
 
-	d, err := db.Open(cfg.DBPath)
+	d, err := db.Open(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
@@ -66,29 +65,17 @@ func main() {
 		log.Fatalf("load pages: %v", err)
 	}
 
-	// External-vault crawler worker (background goroutine).
-	store := &external.Store{DB: d}
-	fetchers := map[string]external.Fetcher{
-		"publish": external.NewPublishFetcher(),
-		"quartz":  external.NewQuartzFetcher(),
-		"github":  external.NewGitHubFetcher(),
-	}
-	crawler := external.NewCrawler(store, fetchers)
-	worker := external.NewWorker(crawler)
-	worker.Start(context.Background())
-
 	srv := &handlers.Server{
 		DB:          d,
 		Auth:        a,
 		Pages:       pages,
 		Debug:       cfg.Debug,
 		AdminHandle: cfg.AdminHandle,
-		Crawler:     worker,
 		OAuthCfg:    cfg.googleOAuthConfig(),
 	}
 
-	log.Printf("commonplace listening on %s (db=%s, mailer=%s)",
-		cfg.Addr, cfg.DBPath, mailerKind(cfg))
+	log.Printf("commonplace listening on %s (db=postgres, mailer=%s)",
+		cfg.Addr, mailerKind(cfg))
 	if cfg.Mailer == "stdout" {
 		log.Printf("[dev mode] magic-link emails will be printed to stdout")
 	}
@@ -123,7 +110,7 @@ func main() {
 
 type config struct {
 	Addr               string
-	DBPath             string
+	DatabaseURL        string
 	SessionSecret      string
 	BaseURL            string
 	SMTPHost           string
@@ -153,7 +140,7 @@ func (c config) googleOAuthConfig() *auth.OAuthConfig {
 func loadConfig() config {
 	c := config{
 		Addr:          envOr("ADDR", ":8080"),
-		DBPath:        envOr("DB_PATH", "./commonplace.db"),
+		DatabaseURL:   envOr("DATABASE_URL", "postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable"),
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 		BaseURL:       envOr("BASE_URL", ""),
 		SMTPHost:      os.Getenv("SMTP_HOST"),

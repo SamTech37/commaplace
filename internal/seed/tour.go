@@ -8,7 +8,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"commonplace/internal/config"
 )
@@ -39,10 +42,10 @@ type DemoNote struct {
 
 // ApplyDemo ensures the demo user + DemoNotes exist. Idempotent — if the
 // demo user already exists we assume the seed has already run.
-func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID int64, authorHandle, body string) error) error {
+func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, authorHandle, body string) error) error {
 	var existing int
 	if err := db.QueryRowContext(ctx,
-		`SELECT 1 FROM users WHERE handle = ?`, DemoHandle,
+		`SELECT 1 FROM users WHERE handle = $1`, DemoHandle,
 	).Scan(&existing); err == nil {
 		return nil
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -56,27 +59,26 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 	defer tx.Rollback()
 
 	now := time.Now().Unix()
-	res, err := tx.ExecContext(ctx,
-		`INSERT INTO users(handle, email, created_at, onboarded_at) VALUES(?, ?, ?, ?)`,
-		DemoHandle, DemoHandle+"@demo.local", now, now)
-	if err != nil {
+	var authorID uuid.UUID
+	if err := tx.QueryRowContext(ctx,
+		`INSERT INTO users(handle, handle_ci, email, created_at, onboarded_at) VALUES($1, $2, $3, $4, $4) RETURNING id`,
+		DemoHandle, strings.ToLower(DemoHandle), DemoHandle+"@demo.local", now,
+	).Scan(&authorID); err != nil {
 		return err
 	}
-	authorID, _ := res.LastInsertId()
 
 	for _, n := range DemoNotes {
-		res, err := tx.ExecContext(ctx, `
-			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, '', ?, ?, ?, ?, ?)`,
-			authorID, n.Slug, n.Title, n.Body, now, now,
-		)
-		if err != nil {
+		var nid uuid.UUID
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
+			VALUES($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+			authorID, n.Slug, strings.ToLower(n.Slug), n.Title, n.Body, now,
+		).Scan(&nid); err != nil {
 			return err
 		}
-		nid, _ := res.LastInsertId()
 		for _, t := range n.Tags {
 			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+				`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
 				nid, t, now,
 			); err != nil {
 				return err
@@ -86,9 +88,9 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `
-			UPDATE links SET resolved_target_id = ?
+			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_slug = ?`,
+			  AND target_user_handle = $2 AND target_slug = $3`,
 			nid, DemoHandle, n.Slug,
 		); err != nil {
 			return err
@@ -250,10 +252,10 @@ See [[@commonplace-tour/welcome]] if you want to see how this whole linking thin
 
 // Apply ensures the seed users and their notes exist in db. Idempotent —
 // if @commonplace-tour already exists we assume the seed has already run.
-func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID int64, authorHandle, body string) error) error {
+func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, authorHandle, body string) error) error {
 	var existing int
 	if err := db.QueryRowContext(ctx,
-		`SELECT 1 FROM users WHERE handle = ?`, TourHandle,
+		`SELECT 1 FROM users WHERE handle = $1`, TourHandle,
 	).Scan(&existing); err == nil {
 		return nil // already seeded
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -267,15 +269,15 @@ func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, 
 	defer tx.Rollback()
 
 	now := time.Now().Unix()
-	authors := map[string]int64{}
+	authors := map[string]uuid.UUID{}
 	for _, h := range []string{TourHandle, MakerHandle} {
-		res, err := tx.ExecContext(ctx,
-			`INSERT INTO users(handle, email, created_at, onboarded_at) VALUES(?, ?, ?, ?)`,
-			h, h+"@seed.local", now, now)
-		if err != nil {
+		var id uuid.UUID
+		if err := tx.QueryRowContext(ctx,
+			`INSERT INTO users(handle, handle_ci, email, created_at, onboarded_at) VALUES($1, $2, $3, $4, $4) RETURNING id`,
+			h, strings.ToLower(h), h+"@seed.local", now,
+		).Scan(&id); err != nil {
 			return err
 		}
-		id, _ := res.LastInsertId()
 		authors[h] = id
 	}
 
@@ -284,18 +286,17 @@ func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, 
 		if !ok {
 			continue
 		}
-		res, err := tx.ExecContext(ctx, `
-			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, ?, ?, ?, ?, ?, ?)`,
-			authorID, n.Folder, n.Slug, n.Title, n.Body, now, now,
-		)
-		if err != nil {
+		var nid uuid.UUID
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
+			VALUES($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+			authorID, n.Slug, strings.ToLower(n.Slug), n.Title, n.Body, now,
+		).Scan(&nid); err != nil {
 			return err
 		}
-		nid, _ := res.LastInsertId()
 		for _, t := range n.Tags {
 			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+				`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
 				nid, t, now,
 			); err != nil {
 				return err
@@ -306,16 +307,16 @@ func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, 
 		}
 		// Re-resolve any earlier-seeded notes whose links pointed at this one.
 		if _, err := tx.ExecContext(ctx, `
-			UPDATE links SET resolved_target_id = ?
+			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_folder_path = ? AND target_slug = ?`,
-			nid, n.Author, n.Folder, n.Slug,
+			  AND target_user_handle = $2 AND target_slug = $3`,
+			nid, n.Author, n.Slug,
 		); err != nil {
 			return err
 		}
 		if n.IsWelcome {
 			if _, err := tx.ExecContext(ctx,
-				`UPDATE users SET pinned_note_id = ? WHERE id = ?`, nid, authorID,
+				`UPDATE users SET pinned_note_id = $1 WHERE id = $2`, nid, authorID,
 			); err != nil {
 				return err
 			}

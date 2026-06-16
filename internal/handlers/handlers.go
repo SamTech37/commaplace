@@ -90,17 +90,11 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /admin/reports", s.GetAdminReports)
 	mux.HandleFunc("POST /admin/hide", s.PostAdminHide)
 
-	// External (indexed Obsidian Publish vaults)
-	mux.HandleFunc("GET /admin/external", s.GetAdminExternal)
-	mux.HandleFunc("POST /admin/external/add", s.PostAdminExternalAdd)
-	mux.HandleFunc("POST /admin/external/recrawl", s.PostAdminExternalRecrawl)
-	mux.HandleFunc("POST /admin/external/delete", s.PostAdminExternalDelete)
-	mux.HandleFunc("GET /x/{vault}", s.GetExternalIndex)
-	mux.HandleFunc("GET /x/{vault}/{path...}", s.GetExternalNote)
-	mux.HandleFunc("GET /api/x/notes/{id}/raw", s.GetExternalNoteRaw)
-
 	// Markdown export
 	mux.HandleFunc("GET /api/notes/{id}/raw", s.GetNoteRaw)
+
+	// Note image
+	mux.HandleFunc("GET /api/notes/{id}/image", s.GetNoteImage)
 
 	// Profile + note view + assets (last; catch-all for user routes).
 	mux.HandleFunc("GET /{path...}", s.GetCatchAll(static))

@@ -3,8 +3,7 @@
   <h1>Admin</h1>
   <p class="note-meta">
     <a href="/admin">dashboard</a> ·
-    <a href="/admin/reports">reports</a> ·
-    <a href="/admin/external">external vaults</a>
+    <a href="/admin/reports">reports</a>
   </p>
 
   <h2 style="margin-top:1.5em">Numbers</h2>
@@ -69,31 +68,5 @@
     </table>
   {{else}}
     <p class="note-meta">No notes yet.</p>
-  {{end}}
-
-  <h2 style="margin-top:2em">External vaults</h2>
-  {{if .Vaults}}
-    <table style="width:100%;border-collapse:collapse;font-size:0.9rem">
-      <thead>
-        <tr style="text-align:left;border-bottom:1px solid var(--border)">
-          <th style="padding:0.5em 0.5em 0.5em 0">Slug</th>
-          <th style="padding:0.5em">Status</th>
-          <th style="padding:0.5em">Notes</th>
-          <th style="padding:0.5em">Last crawl</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{range .Vaults}}
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:0.5em 0.5em 0.5em 0"><a href="{{.BrowseURL}}">{{.Slug}}</a></td>
-            <td style="padding:0.5em">{{.Status}}</td>
-            <td style="padding:0.5em">{{.NoteCount}}</td>
-            <td style="padding:0.5em">{{if .LastCrawlRel}}{{.LastCrawlRel}}{{else}}—{{end}}</td>
-          </tr>
-        {{end}}
-      </tbody>
-    </table>
-  {{else}}
-    <p class="note-meta">No external vaults indexed.</p>
   {{end}}
 {{end}}

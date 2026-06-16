@@ -3,8 +3,9 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // PostReport accepts a report from any signed-in user. The admin sees it
@@ -18,7 +19,7 @@ func (s *Server) PostReport(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	noteID, err := strconv.ParseInt(r.PostFormValue("note_id"), 10, 64)
+	noteID, err := uuid.Parse(r.PostFormValue("note_id"))
 	if err != nil {
 		http.Error(w, "bad note id", http.StatusBadRequest)
 		return
@@ -32,7 +33,7 @@ func (s *Server) PostReport(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := s.DB.ExecContext(r.Context(), `
 		INSERT INTO reports(note_id, reporter_id, reason, created_at, status)
-		VALUES(?, ?, ?, ?, 'open')`,
+		VALUES($1, $2, $3, $4, 'open')`,
 		noteID, u.ID, reason, nowUnix(),
 	); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -43,10 +44,10 @@ func (s *Server) PostReport(w http.ResponseWriter, r *http.Request) {
 	if s.AdminHandle != "" && s.Auth.Mailer != nil {
 		var adminEmail string
 		_ = s.DB.QueryRowContext(r.Context(),
-			`SELECT email FROM users WHERE handle = ?`, s.AdminHandle).Scan(&adminEmail)
+			`SELECT email FROM users WHERE handle = $1`, s.AdminHandle).Scan(&adminEmail)
 		if adminEmail != "" {
 			_ = s.Auth.Mailer.Send(adminEmail, emailCfg.ReportSubj,
-				fmt.Sprintf("Note id %d reported by @%s.\nReason: %s\n",
+				fmt.Sprintf("Note id %s reported by @%s.\nReason: %s\n",
 					noteID, u.Handle, reason))
 		}
 	}

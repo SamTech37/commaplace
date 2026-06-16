@@ -16,7 +16,7 @@ func (s *Server) PostThemeSetting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.DB.ExecContext(r.Context(),
-		`UPDATE users SET theme = ? WHERE id = ?`, v, u.ID,
+		`UPDATE users SET theme = $1 WHERE id = $2`, v, u.ID,
 	); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

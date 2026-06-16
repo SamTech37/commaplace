@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 
 	"commonplace/internal/auth"
 )
@@ -33,16 +34,16 @@ func (s *Server) requireAdmin(w http.ResponseWriter, r *http.Request) *auth.User
 }
 
 type adminReportRow struct {
-	ID           int64
-	Reason       string
-	CreatedRel   string
-	Status       string
-	NoteID       int64
-	NoteTitle    string
-	NoteURL      string
-	NoteHidden   bool
-	AuthorHandle string
-	ReporterID   int64
+	ID             uuid.UUID
+	Reason         string
+	CreatedRel     string
+	Status         string
+	NoteID         uuid.UUID
+	NoteTitle      string
+	NoteURL        string
+	NoteHidden     bool
+	AuthorHandle   string
+	ReporterID     uuid.UUID
 	ReporterHandle string
 }
 
@@ -98,7 +99,7 @@ func (s *Server) PostAdminHide(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	noteID, err := strconv.ParseInt(r.PostFormValue("note_id"), 10, 64)
+	noteID, err := uuid.Parse(r.PostFormValue("note_id"))
 	if err != nil {
 		http.Error(w, "bad note id", http.StatusBadRequest)
 		return
@@ -110,8 +111,8 @@ func (s *Server) PostAdminHide(w http.ResponseWriter, r *http.Request) {
 	}
 	if action == "hide" {
 		if _, err := s.DB.ExecContext(r.Context(),
-			`UPDATE reports SET status = 'resolved' WHERE note_id = ?`, noteID); err != nil {
-			log.Printf("admin hide: resolve reports for note %d: %v", noteID, err)
+			`UPDATE reports SET status = 'resolved' WHERE note_id = $1`, noteID); err != nil {
+			log.Printf("admin hide: resolve reports for note %s: %v", noteID, err)
 		}
 	}
 	http.Redirect(w, r, "/admin/reports", http.StatusSeeOther)
@@ -138,16 +139,8 @@ type adminRecentNote struct {
 	Hidden      bool
 }
 
-type adminVaultRow struct {
-	Slug         string
-	Status       string
-	NoteCount    int64
-	LastCrawlRel string
-	BrowseURL    string
-}
-
 // GetAdminDashboard is a minimal monitoring view: site totals, recent
-// signups and notes, external vault status, open reports.
+// signups and notes, open reports.
 func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	if a := s.requireAdmin(w, r); a == nil {
 		return
@@ -169,16 +162,15 @@ func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	scalar("Users", "total", `SELECT COUNT(*) FROM users`)
-	scalar("Users (7d)", "new this week", `SELECT COUNT(*) FROM users WHERE created_at >= ?`, week)
-	scalar("Users (24h)", "new today", `SELECT COUNT(*) FROM users WHERE created_at >= ?`, day)
+	scalar("Users (7d)", "new this week", `SELECT COUNT(*) FROM users WHERE created_at >= $1`, week)
+	scalar("Users (24h)", "new today", `SELECT COUNT(*) FROM users WHERE created_at >= $1`, day)
 	scalar("Notes", "visible", `SELECT COUNT(*) FROM notes WHERE hidden_at IS NULL AND deleted_at IS NULL`)
 	scalar("Notes hidden", "moderated", `SELECT COUNT(*) FROM notes WHERE hidden_at IS NOT NULL`)
-	scalar("Notes (7d)", "new this week", `SELECT COUNT(*) FROM notes WHERE created_at >= ?`, week)
-	scalar("Notes (24h)", "new today", `SELECT COUNT(*) FROM notes WHERE created_at >= ?`, day)
+	scalar("Notes (7d)", "new this week", `SELECT COUNT(*) FROM notes WHERE created_at >= $1`, week)
+	scalar("Notes (24h)", "new today", `SELECT COUNT(*) FROM notes WHERE created_at >= $1`, day)
 	scalar("Likes", "total", `SELECT COUNT(*) FROM likes`)
 	scalar("Follows", "total", `SELECT COUNT(*) FROM follows`)
 	scalar("Reports open", "pending review", `SELECT COUNT(*) FROM reports WHERE status = 'open'`)
-	scalar("External notes", "indexed", `SELECT COUNT(*) FROM external_notes`)
 
 	// Recent signups
 	var recentUsers []adminRecentUser
@@ -225,46 +217,20 @@ func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// External vault status summary
-	var vaults []adminVaultRow
-	vRows, err := s.DB.QueryContext(ctx, `
-		SELECT v.slug, v.status, v.last_crawled_at,
-		       (SELECT COUNT(*) FROM external_notes en WHERE en.vault_id = v.id)
-		FROM external_vaults v
-		ORDER BY v.last_crawled_at DESC NULLS LAST, v.id DESC
-		LIMIT 20`)
-	if err == nil {
-		defer vRows.Close()
-		for vRows.Next() {
-			var (
-				vr     adminVaultRow
-				lastAt sql.NullInt64
-			)
-			if err := vRows.Scan(&vr.Slug, &vr.Status, &lastAt, &vr.NoteCount); err == nil {
-				if lastAt.Valid {
-					vr.LastCrawlRel = relativeTime(lastAt.Int64)
-				}
-				vr.BrowseURL = "/x/" + vr.Slug
-				vaults = append(vaults, vr)
-			}
-		}
-	}
-
 	s.render(w, r, "admin_dashboard", map[string]any{
 		"Stats":       stats,
 		"RecentUsers": recentUsers,
 		"RecentNotes": recentNotes,
-		"Vaults":      vaults,
 	})
 }
 
-func setHidden(ctx context.Context, db *sql.DB, noteID int64, hide bool) error {
+func setHidden(ctx context.Context, db *sql.DB, noteID uuid.UUID, hide bool) error {
 	if hide {
 		_, err := db.ExecContext(ctx,
-			`UPDATE notes SET hidden_at = ? WHERE id = ?`, time.Now().Unix(), noteID)
+			`UPDATE notes SET hidden_at = $1 WHERE id = $2`, time.Now().Unix(), noteID)
 		return err
 	}
 	_, err := db.ExecContext(ctx,
-		`UPDATE notes SET hidden_at = NULL WHERE id = ?`, noteID)
+		`UPDATE notes SET hidden_at = NULL WHERE id = $1`, noteID)
 	return err
 }

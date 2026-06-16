@@ -138,6 +138,9 @@
   </div>
 
   <h1 class="article-title">{{.Note.Title}}</h1>
+  {{if .HasImage}}
+  <img src="/api/notes/{{.Note.ID}}/image" class="note-image" alt="" />
+  {{end}}
   <div class="article-body">{{.BodyHTML}}</div>
 </article>
 
@@ -193,7 +196,7 @@
     <summary>顯示關聯圖</summary>
     <div
       class="local-graph"
-      data-lazy-graph="/api/graph/local?note=n:{{.Note.ID}}"
+      data-lazy-graph="/api/graph/local?note={{.Note.ID}}"
       data-graph-height="280"
     >
       <canvas></canvas>

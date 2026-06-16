@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
+
+	"github.com/google/uuid"
 
 	"commonplace/internal/markdown"
 )
@@ -22,7 +23,7 @@ func (s *Server) PostLike(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	noteID, err := strconv.ParseInt(r.PostFormValue("note_id"), 10, 64)
+	noteID, err := uuid.Parse(r.PostFormValue("note_id"))
 	if err != nil {
 		http.Error(w, "bad note id", http.StatusBadRequest)
 		return
@@ -30,7 +31,7 @@ func (s *Server) PostLike(w http.ResponseWriter, r *http.Request) {
 
 	// Toggle: try insert; if already there, delete.
 	res, err := s.DB.ExecContext(r.Context(),
-		`INSERT OR IGNORE INTO likes(user_id, note_id, created_at) VALUES(?, ?, ?)`,
+		`INSERT INTO likes(user_id, note_id, created_at) VALUES($1, $2, $3) ON CONFLICT (user_id, note_id) DO NOTHING`,
 		u.ID, noteID, nowUnix())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -40,7 +41,7 @@ func (s *Server) PostLike(w http.ResponseWriter, r *http.Request) {
 	liked := inserted == 1
 	if !liked {
 		if _, err := s.DB.ExecContext(r.Context(),
-			`DELETE FROM likes WHERE user_id = ? AND note_id = ?`, u.ID, noteID,
+			`DELETE FROM likes WHERE user_id = $1 AND note_id = $2`, u.ID, noteID,
 		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -53,7 +54,7 @@ func (s *Server) PostLike(w http.ResponseWriter, r *http.Request) {
 
 // writeHeartFragment renders the heart button + count. The button toggles
 // itself when clicked.
-func writeHeartFragment(w http.ResponseWriter, noteID int64, liked bool, count int) {
+func writeHeartFragment(w http.ResponseWriter, noteID uuid.UUID, liked bool, count int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	cls := "heart"
 	icon := "♡"
@@ -62,26 +63,26 @@ func writeHeartFragment(w http.ResponseWriter, noteID int64, liked bool, count i
 		icon = "♥"
 	}
 	fmt.Fprintf(w, `<form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML">
-  <input type="hidden" name="note_id" value="%d">
+  <input type="hidden" name="note_id" value="%s">
   <button type="submit" class="%s" aria-pressed="%t">%s <span class="count">%d</span></button>
 </form>`, noteID, cls, liked, icon, count)
 }
 
-func likeCount(ctx context.Context, db *sql.DB, noteID int64) (int, error) {
+func likeCount(ctx context.Context, db *sql.DB, noteID uuid.UUID) (int, error) {
 	var n int
 	err := db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM likes WHERE note_id = ?`, noteID,
+		`SELECT COUNT(*) FROM likes WHERE note_id = $1`, noteID,
 	).Scan(&n)
 	return n, err
 }
 
-func userHasLiked(ctx context.Context, db *sql.DB, userID, noteID int64) (bool, error) {
-	if userID == 0 {
+func userHasLiked(ctx context.Context, db *sql.DB, userID, noteID uuid.UUID) (bool, error) {
+	if userID == uuid.Nil {
 		return false, nil
 	}
 	var one int
 	err := db.QueryRowContext(ctx,
-		`SELECT 1 FROM likes WHERE user_id = ? AND note_id = ?`, userID, noteID,
+		`SELECT 1 FROM likes WHERE user_id = $1 AND note_id = $2`, userID, noteID,
 	).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
@@ -103,7 +104,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 		FROM likes l
 		JOIN notes n  ON n.id = l.note_id
 		JOIN users u2 ON u2.id = n.author_id
-		WHERE l.user_id = ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+		WHERE l.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		ORDER BY l.created_at DESC
 		LIMIT 200`, u.ID)
 	if err != nil {

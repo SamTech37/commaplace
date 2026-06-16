@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"strings"
 	"unicode"
@@ -22,33 +23,36 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 
 	var hits []searchHit
 	if q != "" {
-		fts := buildFTSQuery(q)
-		if fts != "" {
-			args := []any{fts}
+		tsq := buildTSQuery(q)
+		if tsq != "" {
+			args := []any{tsq}
 			where := ""
 			switch scope {
 			case "mine":
 				if viewer != nil {
-					where = " AND n.author_id = ?"
+					where = " AND n.author_id = $2"
 					args = append(args, viewer.ID)
 				}
 			case "following":
 				if viewer != nil {
-					where = " AND n.author_id IN (SELECT followed_id FROM follows WHERE follower_id = ?)"
+					where = " AND n.author_id IN (SELECT followed_id FROM follows WHERE follower_id = $2)"
 					args = append(args, viewer.ID)
 				}
 			}
 
 			rows, err := s.DB.QueryContext(r.Context(), `
 				SELECT n.title, n.slug, u.handle, n.updated_at,
-				       snippet(notes_fts, 1, '<mark>', '</mark>', '…', 16) AS snip
-				FROM notes_fts
-				JOIN notes n ON n.id = notes_fts.rowid
+				       ts_headline('simple', n.body_md, query,
+				         'StartSel=<mark>, StopSel=</mark>, MaxFragments=1, MaxWords=16, MinWords=8') AS snip
+				FROM notes n
 				JOIN users u ON u.id = n.author_id
-				WHERE notes_fts MATCH ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL`+where+`
-				ORDER BY bm25(notes_fts, 2.0, 1.0)
+				CROSS JOIN to_tsquery('simple', $1) query
+				WHERE n.search_tsv @@ query AND n.hidden_at IS NULL AND n.deleted_at IS NULL`+where+`
+				ORDER BY ts_rank(n.search_tsv, query) DESC
 				LIMIT 50`, args...)
-			if err == nil {
+			if err != nil {
+				log.Printf("search query: %v", err)
+			} else {
 				defer rows.Close()
 				for rows.Next() {
 					var title, slug, handle, snip string
@@ -77,10 +81,10 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// buildFTSQuery turns a free-text query into an FTS5 expression. Strips
-// punctuation that FTS5 treats as syntax, then quotes each term and adds
-// '*' for prefix matching: "foo bar!" -> `"foo"* "bar"*`.
-func buildFTSQuery(q string) string {
+// buildTSQuery turns a free-text query into a Postgres tsquery expression.
+// Strips punctuation, then emits prefix-match terms joined by '&':
+// "foo bar!" -> "foo:* & bar:*".
+func buildTSQuery(q string) string {
 	var b strings.Builder
 	for _, r := range q {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
@@ -94,7 +98,7 @@ func buildFTSQuery(q string) string {
 		return ""
 	}
 	for i, p := range parts {
-		parts[i] = `"` + p + `"*`
+		parts[i] = p + ":*"
 	}
-	return strings.Join(parts, " ")
+	return strings.Join(parts, " & ")
 }

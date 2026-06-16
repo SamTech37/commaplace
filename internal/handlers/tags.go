@@ -61,7 +61,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		JOIN users u ON u.id = n.author_id
-		WHERE nt.tag = ? AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+		WHERE nt.tag = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		ORDER BY n.updated_at DESC
 		LIMIT 200`, tag)
 	if err != nil {

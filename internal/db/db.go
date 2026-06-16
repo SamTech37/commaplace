@@ -10,20 +10,19 @@ import (
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-// Open opens (creating if needed) the SQLite database at path with WAL +
-// foreign keys enabled.
-func Open(path string) (*sql.DB, error) {
-	dsn := path + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
-	d, err := sql.Open("sqlite", dsn)
+// Open opens a connection pool to the Postgres database at dsn.
+func Open(dsn string) (*sql.DB, error) {
+	d, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
+	d.SetMaxOpenConns(25)
 	if err := d.Ping(); err != nil {
 		d.Close()
 		return nil, err
@@ -37,7 +36,7 @@ func Open(path string) (*sql.DB, error) {
 func Migrate(d *sql.DB) error {
 	if _, err := d.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version    INTEGER PRIMARY KEY,
-		applied_at INTEGER NOT NULL
+		applied_at BIGINT NOT NULL
 	)`); err != nil {
 		return fmt.Errorf("create schema_migrations: %w", err)
 	}
@@ -98,7 +97,7 @@ func Migrate(d *sql.DB) error {
 			tx.Rollback()
 			return fmt.Errorf("apply %s: %w", m.name, err)
 		}
-		if _, err := tx.Exec(`INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`,
+		if _, err := tx.Exec(`INSERT INTO schema_migrations(version, applied_at) VALUES($1, $2)`,
 			m.version, time.Now().Unix()); err != nil {
 			tx.Rollback()
 			return err

@@ -17,7 +17,6 @@ import (
 
 	"commonplace/internal/auth"
 	"commonplace/internal/config"
-	"commonplace/internal/external"
 )
 
 var (
@@ -58,7 +57,6 @@ func LoadPages() (*Pages, error) {
 	pageNames := []string{
 		"login", "write", "note", "profile", "feed", "error",
 		"tag", "saved", "search", "onboarding", "admin_dashboard", "admin_reports", "graph",
-		"admin_external", "external_vault", "external_note",
 		"avatar_builder",
 	}
 	// Partials are standalone fragments (no _base.html wrapper) used for
@@ -139,12 +137,8 @@ type Server struct {
 	Auth        *auth.Auth
 	Pages       *Pages
 	Debug       bool
-	AdminHandle string          // empty disables admin entirely
-	Crawler     ExternalCrawler // optional; nil disables admin-triggered crawls
+	AdminHandle string            // empty disables admin entirely
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
-
-	// extStore is initialised lazily on first call to externalStore().
-	extStore *external.Store
 }
 
 // render is a small wrapper that injects the current user and site config automatically.

@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"commonplace/internal/seed"
 )
@@ -42,7 +45,7 @@ func (s *Server) PostOnboardingFork(w http.ResponseWriter, r *http.Request) {
 
 	if skip {
 		if _, err := s.DB.ExecContext(r.Context(),
-			`UPDATE users SET onboarded_at = ? WHERE id = ?`, now, u.ID,
+			`UPDATE users SET onboarded_at = $1 WHERE id = $2`, now, u.ID,
 		); err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -57,7 +60,7 @@ func (s *Server) PostOnboardingFork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.DB.ExecContext(r.Context(),
-		`UPDATE users SET pinned_note_id = ?, onboarded_at = ? WHERE id = ?`,
+		`UPDATE users SET pinned_note_id = $1, onboarded_at = $2 WHERE id = $3`,
 		welcomeID, now, u.ID,
 	); err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
@@ -70,10 +73,10 @@ func (s *Server) PostOnboardingFork(w http.ResponseWriter, r *http.Request) {
 // Same-vault wiki links naturally re-resolve to the new copies. Cross-vault
 // links (e.g. [[@maker/...]]) keep pointing at the originals because they
 // carry an explicit @user prefix.
-func (s *Server) forkTour(ctx context.Context, newUserID int64, newUserHandle string) (welcomeID int64, err error) {
+func (s *Server) forkTour(ctx context.Context, newUserID uuid.UUID, newUserHandle string) (welcomeID uuid.UUID, err error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, err
+		return uuid.UUID{}, err
 	}
 	defer tx.Rollback()
 	now := time.Now().Unix()
@@ -82,46 +85,45 @@ func (s *Server) forkTour(ctx context.Context, newUserID int64, newUserHandle st
 		if n.Author != seed.TourHandle {
 			continue
 		}
-		res, err := tx.ExecContext(ctx, `
-			INSERT INTO notes(author_id, folder_path, slug, title, body_md, created_at, updated_at)
-			VALUES(?, '', ?, ?, ?, ?, ?)`,
-			newUserID, n.Slug, n.Title, n.Body, now, now,
-		)
-		if err != nil {
-			return 0, err
+		var nid uuid.UUID
+		if err := tx.QueryRowContext(ctx, `
+			INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
+			VALUES($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+			newUserID, n.Slug, strings.ToLower(n.Slug), n.Title, n.Body, now,
+		).Scan(&nid); err != nil {
+			return uuid.UUID{}, err
 		}
-		nid, _ := res.LastInsertId()
 		if n.IsWelcome {
 			welcomeID = nid
 		}
 		for _, t := range n.Tags {
 			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO note_tags(note_id, tag, created_at) VALUES(?, ?, ?)`,
+				`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
 				nid, t, now,
 			); err != nil {
-				return 0, err
+				return uuid.UUID{}, err
 			}
 		}
 		if err := recomputeLinks(ctx, tx, nid, newUserHandle, n.Body); err != nil {
-			return 0, err
+			return uuid.UUID{}, err
 		}
 		// Re-resolve previously-unresolved links pointing at this just-copied note.
 		if _, err := tx.ExecContext(ctx, `
-			UPDATE links SET resolved_target_id = ?
+			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = ? AND target_slug = ?`,
+			  AND target_user_handle = $2 AND target_slug = $3`,
 			nid, newUserHandle, n.Slug,
 		); err != nil {
-			return 0, err
+			return uuid.UUID{}, err
 		}
 	}
 	return welcomeID, tx.Commit()
 }
 
-func userOnboarded(ctx context.Context, db *sql.DB, userID int64) (bool, error) {
+func userOnboarded(ctx context.Context, db *sql.DB, userID uuid.UUID) (bool, error) {
 	var t sql.NullInt64
 	err := db.QueryRowContext(ctx,
-		`SELECT onboarded_at FROM users WHERE id = ?`, userID,
+		`SELECT onboarded_at FROM users WHERE id = $1`, userID,
 	).Scan(&t)
 	if err != nil {
 		return false, err
@@ -130,11 +132,11 @@ func userOnboarded(ctx context.Context, db *sql.DB, userID int64) (bool, error) 
 }
 
 // pinnedNoteForUser fetches the user's pinned welcome note (or nil).
-func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID int64) (*pinnedNote, error) {
-	var pinnedID sql.NullInt64
+func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID uuid.UUID) (*pinnedNote, error) {
+	var pinnedID *uuid.UUID
 	if err := db.QueryRowContext(ctx,
-		`SELECT pinned_note_id FROM users WHERE id = ?`, userID,
-	).Scan(&pinnedID); err != nil || !pinnedID.Valid {
+		`SELECT pinned_note_id FROM users WHERE id = $1`, userID,
+	).Scan(&pinnedID); err != nil || pinnedID == nil {
 		return nil, err
 	}
 	var (
@@ -143,8 +145,8 @@ func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID int64) (*pinnedNo
 	err := db.QueryRowContext(ctx, `
 		SELECT n.title, n.slug
 		FROM notes n
-		WHERE n.id = ? AND n.author_id = ?`,
-		pinnedID.Int64, userID,
+		WHERE n.id = $1 AND n.author_id = $2`,
+		*pinnedID, userID,
 	).Scan(&title, &slug)
 	if err != nil {
 		return nil, nil
@@ -160,8 +162,8 @@ type pinnedNote struct {
 	URL   string
 }
 
-func authorHandleByID(ctx context.Context, db *sql.DB, userID int64) string {
+func authorHandleByID(ctx context.Context, db *sql.DB, userID uuid.UUID) string {
 	var h string
-	db.QueryRowContext(ctx, `SELECT handle FROM users WHERE id = ?`, userID).Scan(&h)
+	db.QueryRowContext(ctx, `SELECT handle FROM users WHERE id = $1`, userID).Scan(&h)
 	return h
 }

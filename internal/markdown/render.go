@@ -43,42 +43,6 @@ func Render(md, currentUser string, resolve Resolver) (template.HTML, error) {
 	return template.HTML(buf.String()), nil
 }
 
-// ExternalLink represents a [[ ... ]] resolved by an external-mode caller.
-type ExternalLink struct {
-	URL   string
-	Class string
-	Label string
-}
-
-// ExternalResolver returns the rendered link for a raw [[token]] string.
-// raw is the contents inside [[ ]] before any alias/anchor splitting.
-type ExternalResolver func(raw string) ExternalLink
-
-// RenderExternal converts md to HTML using a caller-supplied resolver for
-// every [[wiki link]]. Used for external (Obsidian Publish) notes where
-// commonplace's own /@user/slug URL scheme doesn't apply.
-func RenderExternal(md string, resolve ExternalResolver) (template.HTML, error) {
-	md = stripComments(md)
-	g := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			extension.Footnote,
-			&externalWikiExt{resolve: resolve},
-			&headingIDExt{},
-			&tagExt{},
-			&highlightExt{},
-			&calloutExt{},
-			&mathExt{},
-			&codeBlockExt{},
-		),
-	)
-	var buf bytes.Buffer
-	if err := g.Convert([]byte(md), &buf); err != nil {
-		return "", err
-	}
-	return template.HTML(buf.String()), nil
-}
-
 // stripLeadingMarker removes one line-leading markdown marker so card excerpts
 // don't show raw "- ", "1. ", "# " etc.
 func stripLeadingMarker(ln string) string {
@@ -182,94 +146,6 @@ func Excerpt(md string, n int) string {
 	}
 	r := []rune(s)
 	return strings.TrimSpace(string(r[:n])) + "…"
-}
-
-// ---------- external wiki-link extension ----------
-
-type externalWikiExt struct {
-	resolve ExternalResolver
-}
-
-func (e *externalWikiExt) Extend(m goldmark.Markdown) {
-	m.Parser().AddOptions(parser.WithInlineParsers(
-		util.Prioritized(&externalWikiParser{}, 198),
-	))
-	m.Renderer().AddOptions(renderer.WithNodeRenderers(
-		util.Prioritized(&externalWikiRenderer{resolve: e.resolve}, 198),
-	))
-}
-
-var kindExternalWiki = ast.NewNodeKind("ExternalWikiLink")
-
-type externalWikiNode struct {
-	ast.BaseInline
-	Raw string
-}
-
-func (n *externalWikiNode) Kind() ast.NodeKind            { return kindExternalWiki }
-func (n *externalWikiNode) Dump(source []byte, level int) { ast.DumpHelper(n, source, level, nil, nil) }
-
-type externalWikiParser struct{}
-
-func (p *externalWikiParser) Trigger() []byte { return []byte{'['} }
-
-func (p *externalWikiParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
-	line, _ := block.PeekLine()
-	if len(line) < 5 || line[0] != '[' || line[1] != '[' {
-		return nil
-	}
-	end := -1
-	for i := 2; i+1 < len(line); i++ {
-		if line[i] == '\n' {
-			return nil
-		}
-		if line[i] == '[' && i+1 < len(line) && line[i+1] == '[' {
-			return nil
-		}
-		if line[i] == ']' && line[i+1] == ']' {
-			end = i
-			break
-		}
-	}
-	if end < 0 {
-		return nil
-	}
-	inner := strings.TrimSpace(string(line[2:end]))
-	if inner == "" {
-		return nil
-	}
-	block.Advance(end + 2)
-	return &externalWikiNode{Raw: inner}
-}
-
-type externalWikiRenderer struct {
-	resolve ExternalResolver
-}
-
-func (r *externalWikiRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
-	reg.Register(kindExternalWiki, r.render)
-}
-
-func (r *externalWikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	if !entering {
-		return ast.WalkContinue, nil
-	}
-	n := node.(*externalWikiNode)
-	link := ExternalLink{URL: "#", Class: "wiki wiki-unresolved", Label: n.Raw}
-	if r.resolve != nil {
-		link = r.resolve(n.Raw)
-	}
-	if link.Label == "" {
-		link.Label = n.Raw
-	}
-	w.WriteString(`<a href="`)
-	w.WriteString(htmlpkg.EscapeString(link.URL))
-	w.WriteString(`" class="`)
-	w.WriteString(htmlpkg.EscapeString(link.Class))
-	w.WriteString(`">`)
-	w.WriteString(htmlpkg.EscapeString(link.Label))
-	w.WriteString(`</a>`)
-	return ast.WalkSkipChildren, nil
 }
 
 // ---------- comment pre-processing ----------

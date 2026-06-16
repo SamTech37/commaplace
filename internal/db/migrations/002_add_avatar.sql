@@ -1,2 +1,0 @@
-ALTER TABLE users ADD COLUMN avatar BLOB;
-ALTER TABLE users ADD COLUMN avatar_choice TEXT NOT NULL DEFAULT '';

@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strconv"
+
+	"github.com/google/uuid"
 )
 
 func (s *Server) GetNoteRaw(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		s.renderError(w, r, http.StatusBadRequest, "bad id")
 		return
@@ -19,7 +20,7 @@ func (s *Server) GetNoteRaw(w http.ResponseWriter, r *http.Request) {
 		slug string
 	)
 	err = s.DB.QueryRowContext(r.Context(),
-		`SELECT body_md, slug FROM notes WHERE id = ?`, id,
+		`SELECT body_md, slug FROM notes WHERE id = $1`, id,
 	).Scan(&body, &slug)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "not found")

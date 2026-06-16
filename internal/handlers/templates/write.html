@@ -33,7 +33,7 @@
 })();
 </script>
 {{end}}
-<form method="POST" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
+<form method="POST" enctype="multipart/form-data" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
   <label
     >Title
     <input
@@ -59,6 +59,14 @@
       >(comma-separated, e.g. <code>混音, workflow</code>)</small
     >
     <input type="text" name="tags" maxlength="500" value="{{.Form.Tags}}" />
+  </label>
+  <label
+    >Image
+    <small style="font-weight: 400; color: var(--muted)">(optional, png/jpeg/webp)</small>
+    {{if .EditNote.HasImage}}
+    <img src="/api/notes/{{.EditNote.ID}}/image" class="image-preview" alt="" />
+    {{end}}
+    <input type="file" name="image" accept="image/png,image/jpeg,image/webp" />
   </label>
   <label
     >Markdown Body<small style="font-weight: 400; color: var(--muted)"

@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
+
+	"github.com/google/uuid"
 )
 
 // PostFollow toggles a follow row from the current user to target user_id.
@@ -20,14 +21,14 @@ func (s *Server) PostFollow(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	targetID, err := strconv.ParseInt(r.PostFormValue("user_id"), 10, 64)
+	targetID, err := uuid.Parse(r.PostFormValue("user_id"))
 	if err != nil || targetID == u.ID {
 		http.Error(w, "bad target", http.StatusBadRequest)
 		return
 	}
 
 	res, err := s.DB.ExecContext(r.Context(),
-		`INSERT OR IGNORE INTO follows(follower_id, followed_id, created_at) VALUES(?, ?, ?)`,
+		`INSERT INTO follows(follower_id, followed_id, created_at) VALUES($1, $2, $3) ON CONFLICT (follower_id, followed_id) DO NOTHING`,
 		u.ID, targetID, nowUnix())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -37,7 +38,7 @@ func (s *Server) PostFollow(w http.ResponseWriter, r *http.Request) {
 	following := inserted == 1
 	if !following {
 		if _, err := s.DB.ExecContext(r.Context(),
-			`DELETE FROM follows WHERE follower_id = ? AND followed_id = ?`,
+			`DELETE FROM follows WHERE follower_id = $1 AND followed_id = $2`,
 			u.ID, targetID,
 		); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -48,7 +49,7 @@ func (s *Server) PostFollow(w http.ResponseWriter, r *http.Request) {
 	writeFollowFragment(w, targetID, following, followers)
 }
 
-func writeFollowFragment(w http.ResponseWriter, targetID int64, following bool, followers int) {
+func writeFollowFragment(w http.ResponseWriter, targetID uuid.UUID, following bool, followers int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	cls := "follow-btn"
 	label := "Follow"
@@ -57,7 +58,7 @@ func writeFollowFragment(w http.ResponseWriter, targetID int64, following bool, 
 		label = "Following"
 	}
 	fmt.Fprintf(w, `<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
-  <input type="hidden" name="user_id" value="%d">
+  <input type="hidden" name="user_id" value="%s">
   <button type="submit" class="%s" aria-pressed="%t">%s</button>
   <span class="follower-count"> · %d follower%s</span>
 </form>`, targetID, cls, following, label, followers, plural(followers))
@@ -70,27 +71,27 @@ func plural(n int) string {
 	return "s"
 }
 
-func followerCount(ctx context.Context, db *sql.DB, userID int64) (int, error) {
+func followerCount(ctx context.Context, db *sql.DB, userID uuid.UUID) (int, error) {
 	var n int
 	err := db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM follows WHERE followed_id = ?`, userID).Scan(&n)
+		`SELECT COUNT(*) FROM follows WHERE followed_id = $1`, userID).Scan(&n)
 	return n, err
 }
 
-func followingCount(ctx context.Context, db *sql.DB, userID int64) (int, error) {
+func followingCount(ctx context.Context, db *sql.DB, userID uuid.UUID) (int, error) {
 	var n int
 	err := db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM follows WHERE follower_id = ?`, userID).Scan(&n)
+		`SELECT COUNT(*) FROM follows WHERE follower_id = $1`, userID).Scan(&n)
 	return n, err
 }
 
-func userFollows(ctx context.Context, db *sql.DB, follower, followed int64) (bool, error) {
-	if follower == 0 {
+func userFollows(ctx context.Context, db *sql.DB, follower, followed uuid.UUID) (bool, error) {
+	if follower == uuid.Nil {
 		return false, nil
 	}
 	var one int
 	err := db.QueryRowContext(ctx,
-		`SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?`,
+		`SELECT 1 FROM follows WHERE follower_id = $1 AND followed_id = $2`,
 		follower, followed,
 	).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {

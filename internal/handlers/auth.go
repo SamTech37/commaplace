@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 func (s *Server) GetLogin(w http.ResponseWriter, r *http.Request) {
@@ -81,20 +83,19 @@ func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
 	if handle == "" {
 		handle = "dev"
 	}
-	var userID int64
+	var userID uuid.UUID
 	err := s.DB.QueryRowContext(r.Context(),
-		`SELECT id FROM users WHERE handle = ?`, handle,
+		`SELECT id FROM users WHERE handle = $1`, handle,
 	).Scan(&userID)
 	if err != nil {
-		res, err := s.DB.ExecContext(r.Context(),
-			`INSERT INTO users(handle, email, created_at) VALUES(?, ?, ?)`,
-			handle, handle+"@dev.local", nowUnix(),
-		)
+		err := s.DB.QueryRowContext(r.Context(),
+			`INSERT INTO users(handle, handle_ci, email, created_at) VALUES($1, $2, $3, $4) RETURNING id`,
+			handle, strings.ToLower(handle), handle+"@dev.local", nowUnix(),
+		).Scan(&userID)
 		if err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		userID, _ = res.LastInsertId()
 	}
 	s.Auth.SetSession(w, userID)
 	next := r.URL.Query().Get("next")

@@ -1001,6 +1001,18 @@ html[data-theme="dark"] .action-menu-list { box-shadow: 0 8px 30px rgba(0,0,0,0.
   letter-spacing: -0.025em;
   color: var(--text);
 }
+.note-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 0.75em;
+}
+.image-preview {
+  display: block;
+  max-width: 200px;
+  border-radius: 8px;
+  margin: 0.4em 0;
+}
 .article-body {
   font-size: 1rem;
   line-height: 1.82;
