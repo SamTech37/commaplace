@@ -192,16 +192,6 @@
     {{end}}
   </div>
   {{end}}
-  <details class="local-graph-toggle">
-    <summary>顯示關聯圖</summary>
-    <div
-      class="local-graph"
-      data-lazy-graph="/api/graph/local?note={{.Note.ID}}"
-      data-graph-height="280"
-    >
-      <canvas></canvas>
-    </div>
-  </details>
 </section>
 {{end}} {{/* ── 引用了這篇筆記的人 ── */}} {{if or .BacklinksSame
 .BacklinksCross}}
@@ -242,4 +232,15 @@
     {{end}}
   </div>
 </section>
+{{end}} {{if or .OutgoingSame .OutgoingCross .BacklinksSame .BacklinksCross}}
+<details class="local-graph-toggle">
+  <summary>顯示關聯圖</summary>
+  <div
+    class="local-graph"
+    data-lazy-graph="/api/graph/local?note={{.Note.ID}}"
+    data-graph-height="280"
+  >
+    <canvas></canvas>
+  </div>
+</details>
 {{end}} {{end}}

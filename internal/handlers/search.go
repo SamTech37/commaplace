@@ -25,17 +25,17 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 	if q != "" {
 		tsq := buildTSQuery(q)
 		if tsq != "" {
-			args := []any{tsq}
+			args := []any{tsq, "%" + q + "%"}
 			where := ""
 			switch scope {
 			case "mine":
 				if viewer != nil {
-					where = " AND n.author_id = $2"
+					where = " AND n.author_id = $3"
 					args = append(args, viewer.ID)
 				}
 			case "following":
 				if viewer != nil {
-					where = " AND n.author_id IN (SELECT followed_id FROM follows WHERE follower_id = $2)"
+					where = " AND n.author_id IN (SELECT followed_id FROM follows WHERE follower_id = $3)"
 					args = append(args, viewer.ID)
 				}
 			}
@@ -47,7 +47,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 				FROM notes n
 				JOIN users u ON u.id = n.author_id
 				CROSS JOIN to_tsquery('simple', $1) query
-				WHERE n.search_tsv @@ query AND n.hidden_at IS NULL AND n.deleted_at IS NULL`+where+`
+				WHERE (n.search_tsv @@ query OR u.handle ILIKE $2) AND n.hidden_at IS NULL AND n.deleted_at IS NULL`+where+`
 				ORDER BY ts_rank(n.search_tsv, query) DESC
 				LIMIT 50`, args...)
 			if err != nil {

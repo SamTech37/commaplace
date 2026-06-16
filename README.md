@@ -2,7 +2,7 @@
 
 A markdown-based social knowledge platform — Pinterest × Obsidian × 小紅書.
 
-Users publish folders of markdown notes; readers browse a feed, dive into
+Users publish a vault of markdown notes; readers browse a feed, dive into
 someone's note, follow internal `[[wiki links]]` into the same vault or
 `[[@user/note]]` into another person's vault. The killer feature is
 **cross-vault rabbit holes**.
@@ -10,12 +10,12 @@ someone's note, follow internal `[[wiki links]]` into the same vault or
 ## Features (v0)
 
 - **Magic-link auth** — no passwords, just an emailed link
-- **One vault per user**, organised into folders of markdown notes
+- **One vault per user** — a flat collection of markdown notes
 - **Wiki links** with two flavours:
   - `[[note]]` — same vault
   - `[[@user/note]]` — into someone else's vault
 - **Live preview** editor (textarea + rendered HTML side-by-side)
-- **Profile pages** at `/[user]` showing the folder tree and recent notes
+- **Profile pages** at `/[user]` showing recent notes
 - **Note view** at `/[user]/[...path]` with clickable wiki links + backlinks
 - **Feed** (`/feed`) — recommended + following tabs, masonry cards
 - **Graph view** (`/graph`) — Obsidian-style force-directed map of every note and its links
