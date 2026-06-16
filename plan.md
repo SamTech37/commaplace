@@ -6,6 +6,7 @@
 	- [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
 - [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
+- [ ] minimal deployment to Railway TONIGHT
 
 > Navigation, Exploration, Interaction.
 
@@ -14,14 +15,18 @@
 - [x] CRUD — 筆記的基本增刪改查。
 	- [x] progressive load (not pagination) of data
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
+  - [ ] ctrl + O search title
+  - [ ] ctrl + F search body, and those operators: line(), tag(), section()...
+  - [ ] or different keymaps to avoid conflict with browser hotkeys
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
 	- [x] masonry (wall)
-	- [/] graph (sorta)
+	- [/] graph (sorta) → note should be like cards
 		- [ ] graph 不要「點兩下」
     - [ ] global graph
 		- [ ] local graph
 	- [ ] timeline (linear)
 	- [ ] canvas (like sticky notes on a bulletin board or whiteboard)
+    - [ ] like 
 	- [ ] [[RSVP reader]]
 	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight, switch focus)
 	- [ ] kanban?
