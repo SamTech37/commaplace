@@ -40,7 +40,6 @@
 
 {{define "card"}}
 <a class="entry" href="{{.URL}}" data-reveal>
-  <div class="entry-no">{{.EntryNo}}</div>
   <h2 class="entry-title">{{.Title}}</h2>
   <div class="entry-meta">@{{.AuthorHandle}}{{if .UpdatedRel}} · {{.UpdatedRel}}{{end}}</div>
   {{if eq .Variant "quote"}}

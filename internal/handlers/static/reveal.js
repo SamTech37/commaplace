@@ -17,6 +17,14 @@
             requestAnimationFrame(function () {
               el.classList.add("revealed");
               el.style.clipPath = ""; // let CSS .revealed take over
+              // After the clip-path transition finishes, remove it so absolutely
+              // positioned children (e.g. dropdown menus) aren't clipped.
+              el.addEventListener("transitionend", function clear(e) {
+                if (e.propertyName === "clip-path") {
+                  el.style.clipPath = "none";
+                  el.removeEventListener("transitionend", clear);
+                }
+              });
             });
             makeObserver(false).unobserve(el);
           }
