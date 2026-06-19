@@ -191,13 +191,41 @@
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
+          <!-- hamburger: mobile only -->
+          <details class="action-menu nav-menu">
+            <summary class="nav-hamburger" aria-label="選單">≡</summary>
+            <div class="action-menu-list">
+              {{if .User}}
+              <a href="/write">書寫</a>
+              <a href="/feed">閱覽</a>
+              <a href="/graph">圖譜</a>
+              <div class="action-menu-sep"></div>
+              <form method="POST" action="/logout" class="inline-form" style="padding:0">
+                <button type="submit" class="link-btn" style="padding: 0.48em 0.85em; width:100%; text-align:left; font-size:0.85rem">登出</button>
+              </form>
+              {{else}}
+              <a href="/feed">閱覽</a>
+              <a href="/graph">圖譜</a>
+              <a href="/login">登入</a>
+              {{end}}
+            </div>
+          </details>
+          <!-- flat links: desktop only -->
+          <div class="nav-links">
+            {{if .User}}
+            <a href="/write">書寫</a>
+            <a href="/feed">閱覽</a>
+            <a href="/graph">圖譜</a>
+            <form method="POST" action="/logout" class="inline-form">
+              <button type="submit" class="link-btn">登出</button>
+            </form>
+            {{else}}
+            <a href="/feed">閱覽</a>
+            <a href="/graph">圖譜</a>
+            <a href="/login">登入</a>
+            {{end}}
+          </div>
           {{if .User}}
-          <a href="/write">書寫</a>
-          <a href="/feed">閱覽</a>
-          <a href="/graph">圖譜</a>
-          <form method="POST" action="/logout" class="inline-form">
-            <button type="submit" class="link-btn">登出</button>
-          </form>
           <a
             class="profile-dot"
             href="/{{.User.Handle}}"
@@ -214,10 +242,6 @@
               >{{avatarInitial .User.Handle}}</span
             >
           </a>
-          {{else}}
-          <a href="/feed">閱覽</a>
-          <a href="/graph">圖譜</a>
-          <a href="/login">登入</a>
           {{end}}
         </nav>
       </header>

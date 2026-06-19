@@ -19,6 +19,7 @@ type profileNote struct {
 	Excerpt    string
 	UpdatedRel string
 	UpdatedAt  int64
+	IsDraft    bool
 }
 
 func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
@@ -50,13 +51,15 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		olderThan, _ = strconv.ParseInt(s, 10, 64)
 	}
 
+	tab := r.URL.Query().Get("tab")
+
 	viewer, _ := s.Auth.CurrentUser(r)
 	var viewerID uuid.UUID
 	if viewer != nil {
 		viewerID = viewer.ID
 	}
 
-	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, viewerID, olderThan)
+	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, viewerID, tab, olderThan)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -66,6 +69,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		"Handle":     profile.Handle,
 		"Recent":     recent,
 		"NextCursor": nextCursor,
+		"Tab":        tab,
 	}
 	if r.URL.Query().Get("partial") == "1" {
 		s.Pages.RenderPartial(w, "profile", "profile-notes", data)
@@ -83,6 +87,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	isSelf := viewer != nil && viewer.ID == profile.ID
 	data["IsSelf"] = isSelf
 	data["ViewerLoggedIn"] = viewer != nil
+	data["Tab"] = tab
 	if isSelf {
 		data["Email"] = viewer.Email
 		data["Pinned"], _ = pinnedNoteForUser(r.Context(), s.DB, profile.ID)
@@ -92,12 +97,17 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 // loadRecentNotes lists a user's notes. Unpublished drafts are included only
 // when the viewer is the author themselves.
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, olderThan int64) ([]profileNote, int64, error) {
-	query := `SELECT title, slug, body_md, updated_at
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, tab string, olderThan int64) ([]profileNote, int64, error) {
+	query := `SELECT title, slug, body_md, updated_at, published_at
 		FROM notes
 		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`
 	args := []any{authorID}
-	if viewerID != authorID {
+	isSelf := viewerID == authorID
+	if !isSelf {
+		query += ` AND published_at IS NOT NULL`
+	} else if tab == "drafts" {
+		query += ` AND published_at IS NULL`
+	} else {
 		query += ` AND published_at IS NOT NULL`
 	}
 	if olderThan > 0 {
@@ -122,7 +132,8 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, 
 	for rows.Next() {
 		var title, slug, body string
 		var updated int64
-		if err := rows.Scan(&title, &slug, &body, &updated); err != nil {
+		var publishedAt sql.NullInt64
+		if err := rows.Scan(&title, &slug, &body, &updated, &publishedAt); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, profileNote{
@@ -131,6 +142,7 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, 
 			Excerpt:    markdown.Excerpt(body, 150),
 			UpdatedRel: relativeTime(updated),
 			UpdatedAt:  updated,
+			IsDraft:    !publishedAt.Valid,
 		})
 	}
 	if err := rows.Err(); err != nil {

@@ -16,6 +16,12 @@
 
 - [x] CRUD — 筆記的基本增刪改查。
 	- [x] progressive load (not pagination) of data
+- [ ] wikilink caveats
+  - [ ] embed
+  - [ ] empty links?
+  - [ ] duplicated note names?
+- [ ] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
+- [ ] address all of these: [[# some concerns]]
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
   - [ ] ctrl + O search title
   - [ ] ctrl + F search body, and those operators: line(), tag(), section()...
@@ -27,11 +33,12 @@
     - [x] global graph
 		- [x] local graph
 	- [ ] timeline (linear)
+    - [ ] horizontal or vertical? 
 	- [ ] canvas (like sticky notes on a bulletin board or whiteboard)
-    - [ ] like 
+    - [ ] like graph view but not shaky and dynamic, only static draggables
+	  - [ ] kanban? 
+	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight on current focus node, switch focus)
 	- [ ] [[RSVP reader]]
-	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight, switch focus)
-	- [ ] kanban?
 	- [ ] calendar (date view)
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
@@ -47,24 +54,19 @@
 - [x] 簡單的上傳與編輯。
   - [x] empty slate
   - [x] or start from a markdown
-  - [ ] better writing UX
+  - [ ] better writing UX see [[editor-medium-style-spec.md]] 
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
 - [ ] 權限與授權管控。
-- [x] 管理後台（SQLite 不附，要自己做）。
+- [x] 管理後台（SQLite or postgres 都不附，要自己做）。
 - [ ] 付費牆管理。
   - [ ] stripe or something?
 - [ ] Dev workflow & engineering best-practices
   - [x] KEEP CLAUDE.MD LEAN
   - [x] explore -> plan -> run 
-  - [ ] `/goal` also cool
   - [x] start using skills/commands
   - [ ] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
-- [ ] address [[# some concerns]]
-- [ ] wikilink caveats
-  - [ ] embed
-  - [ ] empty links?
-  - [ ] duplicated note names?
+  - [ ] `/goal` also cool
 - [ ] `/random` take people to a random node
 - [ ] share button, webshare api...
 

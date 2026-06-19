@@ -91,14 +91,14 @@ func TestDraftLifecycle(t *testing.T) {
 		t.Fatalf("author note count = %d, want 1 (draft excluded)", stats.Notes)
 	}
 
-	// Owner sees own draft on profile; stranger does not.
-	ownerReq := authedRequest(s, alice, http.MethodGet, "/alice", "")
-	owned, _, _ := loadRecentNotes(ownerReq, s.DB, alice, alice, 0)
+	// Owner sees own draft via drafts tab; stranger does not.
+	ownerReq := authedRequest(s, alice, http.MethodGet, "/alice?tab=drafts", "")
+	owned, _, _ := loadRecentNotes(ownerReq, s.DB, alice, alice, "drafts", 0)
 	if !hasNoteTitle(owned, "My Draft") {
-		t.Fatal("owner should see own draft on profile")
+		t.Fatal("owner should see own draft on drafts tab")
 	}
 	strangerReq := authedRequest(s, bob, http.MethodGet, "/alice", "")
-	seen, _, _ := loadRecentNotes(strangerReq, s.DB, alice, bob, 0)
+	seen, _, _ := loadRecentNotes(strangerReq, s.DB, alice, bob, "", 0)
 	if hasNoteTitle(seen, "My Draft") {
 		t.Fatal("stranger should not see alice's draft")
 	}

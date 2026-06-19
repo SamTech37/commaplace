@@ -43,7 +43,14 @@
 </form>
 {{end}}
 </div>
+{{if .IsSelf}}
+<nav class="feed-tabs" style="margin-top: 1.5em;">
+  <a href="/{{.Profile.Handle}}" class="feed-tab{{if ne .Tab "drafts"}} active{{end}}">公開</a>
+  <a href="/{{.Profile.Handle}}?tab=drafts" class="feed-tab{{if eq .Tab "drafts"}} active{{end}}">草稿</a>
+</nav>
+{{else}}
 <h2 style="margin-top: 1.5em; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-family: var(--font-sans); font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 0.75em;">最近的筆記</h2>
+{{end}}
 <div id="notes-list" data-reveal-group>
   {{block "profile-notes" .}} {{if .Recent}} {{range .Recent}}
   <a class="note-card" href="{{.URL}}" data-reveal>
@@ -55,14 +62,14 @@
   </a>
   {{end}} {{if .NextCursor}}
   <div
-    hx-get="?older={{.NextCursor}}&partial=1"
+    hx-get="?older={{.NextCursor}}{{if .Tab}}&tab={{.Tab}}{{end}}&partial=1"
     hx-trigger="revealed"
     hx-swap="outerHTML"
     hx-target="this"
     style="height: 1px"
   ></div>
   {{end}} {{else}}
-  <p class="note-meta">No notes yet.</p>
+  <p class="note-meta">還沒有筆記。</p>
   {{end}} {{end}}
 </div>
 {{end}}
