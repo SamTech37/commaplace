@@ -35,6 +35,12 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
     {{end}}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -200,8 +206,24 @@
               <a href="/feed">閱覽</a>
               <a href="/graph">圖譜</a>
               <div class="action-menu-sep"></div>
-              <form method="POST" action="/logout" class="inline-form" style="padding:0">
-                <button type="submit" class="link-btn" style="padding: 0.48em 0.85em; width:100%; text-align:left; font-size:0.85rem">登出</button>
+              <form
+                method="POST"
+                action="/logout"
+                class="inline-form"
+                style="padding: 0"
+              >
+                <button
+                  type="submit"
+                  class="link-btn"
+                  style="
+                    padding: 0.48em 0.85em;
+                    width: 100%;
+                    text-align: left;
+                    font-size: 0.85rem;
+                  "
+                >
+                  登出
+                </button>
               </form>
               {{else}}
               <a href="/feed">閱覽</a>

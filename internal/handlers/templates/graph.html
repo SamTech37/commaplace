@@ -1,10 +1,10 @@
-{{define "title"}}graph · {{.Site.Title}}{{end}}
+{{define "title"}}{{if .GraphTitle}}{{.GraphTitle}} · {{end}}graph · {{.Site.Title}}{{end}}
 {{define "content"}}
-  <h1 style="margin:0 0 0.4em">graph</h1>
+  <h1 style="margin:0 0 0.4em">{{if .GraphTitle}}{{.GraphTitle}}{{else}}graph{{end}}</h1>
   <p class="note-meta" style="margin:0 0 1em">
-    每個點是一篇筆記，線是 <code>[[wiki link]]</code> 連結。拖拉節點可以重新排版，點兩下打開那篇筆記。
+    每個點是一篇筆記，線是 <code>[[wiki link]]</code> 連結。拖拉節點可以重新排版，點一下打開那篇筆記。
   </p>
-  <div id="graph-wrap" data-graph-source="/api/graph">
+  <div id="graph-wrap" data-graph-source="{{if .GraphSource}}{{.GraphSource}}{{else}}/api/graph{{end}}">
     <canvas id="graph-canvas"></canvas>
     <div id="graph-empty" class="graph-empty" hidden>還沒有筆記可以畫。<a href="/write">寫一篇</a> 試試。</div>
     <div id="graph-tooltip" class="graph-tooltip" hidden></div>

@@ -30,6 +30,7 @@ type feedItem struct {
 // feedCard powers the masonry feed: meta-rich card with variant selection.
 type feedCard struct {
 	NoteID       uuid.UUID
+	EntryNo      string
 	Title        string
 	URL          string
 	AuthorHandle string
@@ -223,6 +224,7 @@ func scanCards(rows *sql.Rows) ([]feedCard, error) {
 		c.URL = noteURL(handle, slug)
 		c.UpdatedRel = relativeTime(c.UpdatedAt)
 		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
+		c.EntryNo = fmt.Sprintf("No.%03d", len(out)+1)
 		out = append(out, c)
 	}
 	return out, rows.Err()

@@ -1,6 +1,6 @@
 // Force-directed graph engine, reused by:
 //   - /graph (global)            <div data-graph-source="/api/graph" ...>
-//   - per-note pages (local)     <div data-graph-source="/api/graph/local?note=..." ...>
+//   - per-note pages (local)     <div data-lazy-graph="/api/graph/local?note=..." ...>
 //
 // Container HTML expected:
 //   <div data-graph-source="…" data-graph-height="420">
@@ -9,108 +9,127 @@
 //     <div class="graph-tooltip" hidden></div>   (optional)
 //   </div>
 (function () {
-  const palette = ['#fb7185','#fbbf24','#a78bfa','#34d399','#60a5fa','#f472b6','#94a3b8','#fb923c'];
-  function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } return h; }
-  function colorFor(author) { return palette[hashStr(author || '') % palette.length]; }
+  // Read theme-aware colors from CSS vars so dark mode works on canvas.
+  function themeColors() {
+    const s = getComputedStyle(document.documentElement);
+    return {
+      text:    s.getPropertyValue("--text").trim()    || "#1a1a1a",
+      bg:      s.getPropertyValue("--bg-2").trim()    || "#ffffff",
+      border:  s.getPropertyValue("--border").trim()  || "rgba(0,0,0,0.2)",
+      muted:   s.getPropertyValue("--text-3").trim()  || "rgba(0,0,0,0.4)",
+    };
+  }
 
   function initGraph(wrap) {
     const url = wrap.dataset.graphSource;
     if (!url) return;
-    const canvas = wrap.querySelector('canvas');
+    const canvas = wrap.querySelector("canvas");
     if (!canvas) return;
-    const empty = wrap.querySelector('.graph-empty');
-    const tooltip = wrap.querySelector('.graph-tooltip');
-    const ctx = canvas.getContext('2d');
+    const empty = wrap.querySelector(".graph-empty");
+    const tooltip = wrap.querySelector(".graph-tooltip");
+    const ctx = canvas.getContext("2d");
 
-    const fixedHeight = parseInt(wrap.dataset.graphHeight || '0', 10) || 0;
+    const fixedHeight = parseInt(wrap.dataset.graphHeight || "0", 10) || 0;
     const isCompact = !!fixedHeight;
 
     let dpr = window.devicePixelRatio || 1;
     function resize() {
       const w = wrap.clientWidth;
-      const h = fixedHeight || Math.max(420, Math.round(window.innerHeight * 0.72));
-      canvas.style.width = w + 'px';
-      canvas.style.height = h + 'px';
+      const h =
+        fixedHeight || Math.max(420, Math.round(window.innerHeight * 0.72));
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
     resize();
 
-    // ---- state ----
     let nodes = [];
     let edges = [];
     let nodeById = new Map();
     let hovered = null;
     let dragging = null;
     let centerNode = null;
+    let animating = false;
 
-    // ---- fetch & init ----
-    fetch(url).then(r => r.json()).then(data => {
-      if (!data.nodes || data.nodes.length === 0) {
-        if (empty) { empty.hidden = false; }
-        canvas.hidden = true;
-        return;
-      }
-      const cw = canvas.clientWidth, ch = canvas.clientHeight;
-      nodes = data.nodes.map(n => ({
-        id: n.id,
-        title: n.title,
-        url: n.url,
-        author: n.author,
-        isExternal: !!n.ext,
-        x: cw / 2 + (Math.random() - 0.5) * cw * 0.6,
-        y: ch / 2 + (Math.random() - 0.5) * ch * 0.6,
-        vx: 0, vy: 0,
-        degree: 0,
-        color: colorFor(n.author),
-      }));
-      nodeById = new Map(nodes.map(n => [n.id, n]));
-      edges = (data.edges || []).map(e => {
-        const a = nodeById.get(e.s), b = nodeById.get(e.t);
-        if (!a || !b) return null;
-        a.degree++; b.degree++;
-        return { a, b };
-      }).filter(Boolean);
-      for (const n of nodes) n.r = (isCompact ? 4 : 3.5) + Math.min(8, Math.sqrt(n.degree) * 1.6);
-      if (data.center) {
-        centerNode = nodeById.get(data.center) || null;
-        if (centerNode) {
-          centerNode.r += 2;
-          // pin center at middle initially
-          centerNode.x = cw / 2;
-          centerNode.y = ch / 2;
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.nodes || data.nodes.length === 0) {
+          if (empty) empty.hidden = false;
+          canvas.hidden = true;
+          return;
         }
-      }
-      requestAnimationFrame(tick);
-    }).catch(err => {
-      if (empty) { empty.hidden = false; empty.textContent = '載入失敗：' + err; }
-      canvas.hidden = true;
-    });
+        const cw = canvas.clientWidth,
+          ch = canvas.clientHeight;
+        nodes = data.nodes.map((n) => ({
+          id: n.id,
+          title: n.title || "",
+          url: n.url,
+          author: n.author || "",
+          isExternal: !!n.ext,
+          x: cw / 2 + (Math.random() - 0.5) * cw * 0.6,
+          y: ch / 2 + (Math.random() - 0.5) * ch * 0.6,
+          vx: 0,
+          vy: 0,
+          degree: 0,
+        }));
+        nodeById = new Map(nodes.map((n) => [n.id, n]));
+        edges = (data.edges || [])
+          .map((e) => {
+            const a = nodeById.get(e.s),
+              b = nodeById.get(e.t);
+            if (!a || !b) return null;
+            a.degree++;
+            b.degree++;
+            return { a, b, cross: !!(a.isExternal || b.isExternal) };
+          })
+          .filter(Boolean);
+        if (data.center) {
+          centerNode = nodeById.get(data.center) || null;
+          if (centerNode) {
+            centerNode.x = cw / 2;
+            centerNode.y = ch / 2;
+          }
+        }
+        startAnim();
+      })
+      .catch((err) => {
+        if (empty) {
+          empty.hidden = false;
+          empty.textContent = "載入失敗：" + err;
+        }
+        canvas.hidden = true;
+      });
 
     // ---- simulation ----
-    const REPULSION = isCompact ? 800 : 1400;
-    const SPRING_LEN = isCompact ? 45 : 60;
-    const SPRING_K = 0.02;
-    const CENTER_K = isCompact ? 0.01 : 0.005;
-    const FRICTION = 0.85;
-    let alpha = 1.0;
+    const REPULSION  = isCompact ? 1200 : 4000;
+    const SPRING_LEN = isCompact ? 70   : 150;
+    const SPRING_K   = 0.018;
+    // ponytail: CENTER_K kept tiny; repulsion is now alpha-independent so the
+    // equilibrium holds at any alpha — previously repulsion decayed to 0 while
+    // CENTER_K stayed constant, causing everything to clump.
+    const CENTER_K   = isCompact ? 0.004 : 0.0008;
+    const FRICTION   = 0.85;
+    let totalKE = Infinity; // kinetic energy; used to detect convergence
 
     function step() {
-      if (alpha < 0.005 && !dragging) return;
       const cw = canvas.clientWidth, ch = canvas.clientHeight;
       const cx = cw / 2, cy = ch / 2;
-
+      // Repulsion: constant (NOT alpha-scaled). Gives a stable equilibrium
+      // independent of simulation temperature.
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j++) {
           const b = nodes[j];
           let dx = a.x - b.x, dy = a.y - b.y;
           let d2 = dx * dx + dy * dy;
-          if (d2 < 0.01) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
+          if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
           const d = Math.sqrt(d2);
-          const f = (REPULSION * alpha) / d2;
+          // +200 softening prevents runaway force at very short distances
+          const f = REPULSION / (d2 + 200);
           const fx = (dx / d) * f, fy = (dy / d) * f;
           a.vx += fx; a.vy += fy;
           b.vx -= fx; b.vy -= fy;
@@ -126,71 +145,142 @@
         e.b.vx -= fx; e.b.vy -= fy;
       }
       for (const n of nodes) {
-        const k = (n === centerNode) ? CENTER_K * 6 : CENTER_K;
+        const k = n === centerNode ? CENTER_K * 6 : CENTER_K;
         n.vx += (cx - n.x) * k;
         n.vy += (cy - n.y) * k;
       }
+      totalKE = 0;
       for (const n of nodes) {
         if (n === dragging) { n.vx = 0; n.vy = 0; continue; }
-        n.vx *= FRICTION; n.vy *= FRICTION;
-        n.x += n.vx; n.y += n.vy;
+        n.vx *= FRICTION;
+        n.vy *= FRICTION;
+        n.x += n.vx;
+        n.y += n.vy;
+        totalKE += n.vx * n.vx + n.vy * n.vy;
       }
-      alpha *= 0.995;
+    }
+
+    function connectedTo(node) {
+      const set = new Set();
+      for (const e of edges) {
+        if (e.a === node) set.add(e.b);
+        if (e.b === node) set.add(e.a);
+      }
+      return set;
+    }
+
+    // Compute card dimensions from text at draw time.
+    function cardDims(n) {
+      const fontSize = isCompact ? 9 : 10;
+      if (n.isExternal) {
+        ctx.font = fontSize + 'px "IBM Plex Mono",monospace';
+        const tw = ctx.measureText("↗ @" + n.author).width;
+        return { w: Math.max(50, tw + 12), h: isCompact ? 22 : 26 };
+      }
+      ctx.font = 'italic ' + fontSize + 'px "Newsreader",Georgia,serif';
+      const maxLen = isCompact ? 11 : 14;
+      const label = n.title.length > maxLen ? n.title.slice(0, maxLen - 1) + "…" : n.title;
+      const tw = ctx.measureText(label).width;
+      return { w: Math.max(50, tw + 12), h: isCompact ? 28 : 36 };
     }
 
     function draw() {
-      const cw = canvas.clientWidth, ch = canvas.clientHeight;
+      const cw = canvas.clientWidth,
+        ch = canvas.clientHeight;
       ctx.clearRect(0, 0, cw, ch);
 
-      ctx.strokeStyle = 'rgba(200,200,200,0.18)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
+      const C = themeColors();
+      const neighbors = hovered ? connectedTo(hovered) : null;
+
+      // Edges
       for (const e of edges) {
+        const highlighted = hovered && (e.a === hovered || e.b === hovered);
+        ctx.lineWidth = 0.75;
+        if (e.cross) {
+          ctx.setLineDash([3, 2]);
+          ctx.strokeStyle = highlighted ? C.text : C.muted;
+        } else {
+          ctx.setLineDash([]);
+          ctx.strokeStyle = highlighted
+            ? C.text + "99"   // ~60% alpha
+            : C.text + "33";  // ~20% alpha
+        }
+        ctx.beginPath();
         ctx.moveTo(e.a.x, e.a.y);
         ctx.lineTo(e.b.x, e.b.y);
+        ctx.stroke();
       }
-      ctx.stroke();
+      ctx.setLineDash([]);
 
+      // Nodes (index cards)
       for (const n of nodes) {
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        const { w, h } = cardDims(n);
+        const x = n.x - w / 2,
+          y = n.y - h / 2;
+        const isCurrent = n === centerNode;
+        const isHov = n === hovered || n === dragging;
+        const isDimmed =
+          neighbors && !isCurrent && n !== hovered && !neighbors.has(n);
+
+        ctx.globalAlpha = isDimmed ? 0.3 : 1;
+
+        // Fill
+        ctx.fillStyle = isCurrent ? C.text : C.bg;
+        ctx.fillRect(x, y, w, h);
+
+        // Border
         if (n.isExternal) {
-          ctx.fillStyle = '#1c1b19';
-          ctx.fill();
-          ctx.lineWidth = 1.5;
-          ctx.strokeStyle = n.color;
-          ctx.stroke();
+          ctx.setLineDash([3, 2]);
+          ctx.strokeStyle = C.text;
+          ctx.lineWidth = 0.75;
         } else {
-          ctx.fillStyle = n.color;
-          ctx.fill();
+          ctx.setLineDash([]);
+          ctx.strokeStyle = isHov ? C.text : C.border;
+          ctx.lineWidth = isHov ? 1 : 0.5;
         }
-        if (n === centerNode) {
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = '#fff';
-          ctx.stroke();
-        }
-        if (n === hovered || n === dragging) {
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = '#fff';
-          ctx.stroke();
-        }
-      }
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
 
-      ctx.fillStyle = '#ececec';
-      ctx.font = (isCompact ? '11px' : '12px') + ' system-ui, sans-serif';
-      ctx.textBaseline = 'middle';
-      for (const n of nodes) {
-        // labels: hover always, plus high-degree (global) / center+neighbors (local)
-        const labelMe = (n === hovered) ||
-                       (isCompact && (n === centerNode || nodes.length <= 12)) ||
-                       (!isCompact && n.degree >= 4);
-        if (labelMe) {
-          ctx.fillText(n.title, n.x + n.r + 4, n.y);
+        // Text
+        ctx.fillStyle = isCurrent ? C.bg : C.text;
+        ctx.textAlign = "left";
+
+        const fontSize = isCompact ? 9 : 10;
+        if (n.isExternal) {
+          ctx.font = fontSize + 'px "IBM Plex Mono",monospace';
+          ctx.textBaseline = "middle";
+          ctx.fillText("↗ @" + n.author, x + 5, n.y, w - 8);
+        } else {
+          const maxLen = isCompact ? 11 : 14;
+          const title =
+            n.title.length > maxLen
+              ? n.title.slice(0, maxLen - 1) + "…"
+              : n.title;
+          ctx.font = "italic " + fontSize + 'px "Newsreader",Georgia,serif';
+          ctx.textBaseline = "middle";
+          ctx.fillText(title, x + 5, n.y, w - 8);
         }
+
+        ctx.globalAlpha = 1;
       }
     }
 
-    function tick() { step(); draw(); requestAnimationFrame(tick); }
+    function startAnim() {
+      if (animating) return;
+      animating = true;
+      totalKE = Infinity;
+      function tick() {
+        step();
+        draw();
+        // Stop when kinetic energy per node is negligible.
+        if (totalKE > nodes.length * 0.05 || dragging) {
+          requestAnimationFrame(tick);
+        } else {
+          animating = false;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
 
     // ---- pointer interaction ----
     function pointerPos(e) {
@@ -200,65 +290,106 @@
     function nodeAt(p) {
       for (let i = nodes.length - 1; i >= 0; i--) {
         const n = nodes[i];
-        const dx = p.x - n.x, dy = p.y - n.y;
-        if (dx * dx + dy * dy <= (n.r + 4) * (n.r + 4)) return n;
+        const { w, h } = cardDims(n);
+        if (
+          p.x >= n.x - w / 2 &&
+          p.x <= n.x + w / 2 &&
+          p.y >= n.y - h / 2 &&
+          p.y <= n.y + h / 2
+        )
+          return n;
       }
       return null;
     }
-    canvas.addEventListener('mousemove', (e) => {
+
+    canvas.addEventListener("mousemove", (e) => {
       const p = pointerPos(e);
       if (dragging) {
-        dragging.x = p.x; dragging.y = p.y;
-        alpha = Math.max(alpha, 0.5);
+        dragging.x = p.x;
+        dragging.y = p.y;
+        totalKE = Infinity; // keep simulation alive while dragging
+        if (!animating) startAnim();
         return;
       }
       const h = nodeAt(p);
       if (h !== hovered) {
         hovered = h;
+        if (!animating) draw();
         if (h && tooltip) {
           tooltip.hidden = false;
-          const prefix = h.isExternal ? '外 · ' : '@';
-          tooltip.textContent = h.title + '  ' + prefix + h.author;
-          tooltip.style.left = (p.x + 14) + 'px';
-          tooltip.style.top = (p.y + 14) + 'px';
-          canvas.style.cursor = 'pointer';
+          tooltip.textContent =
+            h.title + (h.isExternal ? "  外 · @" : "  @") + h.author;
+          tooltip.style.left = p.x + 14 + "px";
+          tooltip.style.top = p.y - 8 + "px";
+          canvas.style.cursor = "pointer";
         } else if (tooltip) {
           tooltip.hidden = true;
-          canvas.style.cursor = 'default';
+          canvas.style.cursor = "default";
         }
       } else if (h && tooltip) {
-        tooltip.style.left = (p.x + 14) + 'px';
-        tooltip.style.top = (p.y + 14) + 'px';
+        tooltip.style.left = p.x + 14 + "px";
+        tooltip.style.top = p.y - 8 + "px";
       }
     });
-    canvas.addEventListener('mousedown', (e) => {
+    canvas.addEventListener("mouseleave", () => {
+      if (hovered || dragging) {
+        hovered = null;
+        if (tooltip) tooltip.hidden = true;
+        canvas.style.cursor = "default";
+        if (!animating) draw();
+      }
+    });
+
+    // Single click = navigate; drag = drag. Distinguish by movement.
+    let downPos = null;
+    let downNode = null;
+    canvas.addEventListener("mousedown", (e) => {
       const p = pointerPos(e);
       const n = nodeAt(p);
-      if (n) { dragging = n; canvas.style.cursor = 'grabbing'; }
+      downPos = p;
+      downNode = n;
+      if (n) {
+        dragging = n;
+        canvas.style.cursor = "grabbing";
+      }
     });
-    window.addEventListener('mouseup', () => {
-      if (dragging) { dragging = null; canvas.style.cursor = 'default'; alpha = Math.max(alpha, 0.3); }
-    });
-    canvas.addEventListener('dblclick', (e) => {
+    window.addEventListener("mouseup", (e) => {
+      if (!dragging) return;
       const p = pointerPos(e);
-      const n = nodeAt(p);
-      if (n && n !== centerNode) window.location.href = n.url;
+      const moved =
+        downPos &&
+        Math.hypot(p.x - downPos.x, p.y - downPos.y) < 5;
+      const wasNode = downNode;
+      dragging = null;
+      downPos = null;
+      downNode = null;
+      canvas.style.cursor = hovered ? "pointer" : "default";
+      totalKE = Infinity;
+      if (!animating) startAnim();
+      // Navigate on click (not drag)
+      if (moved && wasNode && wasNode !== centerNode) {
+        window.location.href = wasNode.url;
+      }
     });
   }
 
-  // Init every container on the page.
-  document.querySelectorAll('[data-graph-source]').forEach(initGraph);
+  // Global graph: initialize immediately.
+  document.querySelectorAll("[data-graph-source]").forEach(initGraph);
 
-  // Lazy-init containers inside collapsed <details> — upgrade on first open.
-  document.querySelectorAll('details.local-graph-toggle').forEach(function (d) {
-    d.addEventListener('toggle', function onToggle() {
-      if (!d.open) return;
-      const c = d.querySelector('[data-lazy-graph]');
-      if (!c) return;
-      c.setAttribute('data-graph-source', c.dataset.lazyGraph);
-      c.removeAttribute('data-lazy-graph');
-      initGraph(c);
-      d.removeEventListener('toggle', onToggle);
-    });
+  // Local graph (per-note): lazy — initialize when <details> is opened.
+  document.querySelectorAll("[data-lazy-graph]").forEach((wrap) => {
+    const details = wrap.closest("details");
+    if (!details) {
+      // No details wrapper — init now.
+      wrap.dataset.graphSource = wrap.dataset.lazyGraph;
+      initGraph(wrap);
+      return;
+    }
+    details.addEventListener("toggle", function onToggle() {
+      if (!details.open) return;
+      details.removeEventListener("toggle", onToggle);
+      wrap.dataset.graphSource = wrap.dataset.lazyGraph;
+      initGraph(wrap);
+    }, { once: false });
   });
 })();

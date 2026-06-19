@@ -28,6 +28,7 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /graph", s.GetGraph)
 	mux.HandleFunc("GET /api/graph", s.GetGraphData)
 	mux.HandleFunc("GET /api/graph/local", s.GetGraphLocal)
+	mux.HandleFunc("GET /tag/{tag}/graph", s.GetTagGraph)
 
 	// Auth
 	mux.HandleFunc("GET /login", s.GetLogin)
@@ -99,6 +100,9 @@ func (s *Server) Routes() *http.ServeMux {
 	// Note image
 	mux.HandleFunc("GET /api/notes/{id}/image", s.GetNoteImage)
 	mux.HandleFunc("POST /api/notes/{id}/image", s.PostNoteImage)
+
+	// Per-user graph.
+	mux.HandleFunc("GET /u/{user}/graph", s.GetUserGraph)
 
 	// Profile + note view + assets (last; catch-all for user routes).
 	mux.HandleFunc("GET /{path...}", s.GetCatchAll(static))

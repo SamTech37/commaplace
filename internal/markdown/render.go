@@ -709,21 +709,6 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 	}
 	resolved := rt != nil
 	crossVault := n.Link.User != "" && n.Link.User != r.currentUser
-
-	var cls string
-	switch {
-	case crossVault && resolved:
-		cls = "wiki wiki-cross-resolved"
-	case crossVault && !resolved:
-		cls = "wiki wiki-cross-unresolved"
-	case !crossVault && resolved:
-		cls = "wiki wiki-resolved"
-	default:
-		cls = "wiki wiki-unresolved"
-	}
-	// Resolved links build their href from the target's CURRENT handle/slug so
-	// renaming the target updates every inbound link. Unresolved links fall
-	// back to the author-typed slug.
 	url := n.Link.URL(r.currentUser)
 	if rt != nil {
 		url = "/" + rt.Handle + "/" + rt.Slug
@@ -731,12 +716,34 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 			url += "#" + headingAnchor(n.Link.Anchor)
 		}
 	}
-	w.WriteString(`<a href="`)
-	w.WriteString(htmlpkg.EscapeString(url))
-	w.WriteString(`" class="`)
-	w.WriteString(cls)
-	w.WriteString(`">`)
-	w.WriteString(htmlpkg.EscapeString(n.Link.Label()))
-	w.WriteString(`</a>`)
+	if crossVault {
+		cls := "wikilink-cross"
+		if !resolved {
+			cls += " wiki-cross-unresolved"
+		}
+		label := n.Link.Label()
+		if n.Link.Alias == "" {
+			if rt != nil {
+				label = "@" + rt.Handle + " / " + rt.Slug
+			} else {
+				label = "@" + n.Link.User + " / " + n.Link.Slug
+			}
+		}
+		w.WriteString(`<a href="`)
+		w.WriteString(htmlpkg.EscapeString(url))
+		w.WriteString(`" class="` + cls + `"><span class="arrow">↗</span> `)
+		w.WriteString(htmlpkg.EscapeString(label))
+		w.WriteString(`</a>`)
+	} else {
+		cls := "wiki-unresolved"
+		if resolved {
+			cls = "wiki-resolved"
+		}
+		w.WriteString(`<a href="`)
+		w.WriteString(htmlpkg.EscapeString(url))
+		w.WriteString(`" class="` + cls + `">`)
+		w.WriteString(htmlpkg.EscapeString(n.Link.Label()))
+		w.WriteString(`</a>`)
+	}
 	return ast.WalkSkipChildren, nil
 }

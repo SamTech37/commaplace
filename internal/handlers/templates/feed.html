@@ -1,6 +1,5 @@
 {{define "title"}}Feed · {{.Site.Title}}{{end}}
 {{define "content"}}
-  <h1>Feed</h1>
   <nav class="feed-tabs">
     <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
     <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
@@ -19,7 +18,7 @@
   {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
     <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
   {{else if .Cards}}
-    <div class="masonry" data-reveal-group>
+    <div class="feed-grid" data-reveal-group>
       {{range .Cards}}
         {{template "card" .}}
       {{end}}
@@ -29,7 +28,7 @@
            class="feed-sentinel" aria-label="載入中"
            hx-get="{{.OlderURL}}&partial=1"
            hx-trigger="revealed"
-           hx-target=".masonry"
+           hx-target=".feed-grid"
            hx-swap="beforeend"><span></span><span></span><span></span></div>
     {{else}}
       <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
@@ -40,38 +39,21 @@
 {{end}}
 
 {{define "card"}}
-<a class="masonry-card variant-{{.Variant}}" href="{{.URL}}" data-reveal>
-  <div class="card-title">{{.Title}}</div>
-  {{if eq .Variant "text"}}
-    {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
+<a class="entry" href="{{.URL}}" data-reveal>
+  <div class="entry-no">{{.EntryNo}}</div>
+  <h2 class="entry-title">{{.Title}}</h2>
+  <div class="entry-meta">@{{.AuthorHandle}}{{if .UpdatedRel}} · {{.UpdatedRel}}{{end}}</div>
+  {{if eq .Variant "quote"}}
+    <p class="entry-excerpt">{{.Quote}}</p>
   {{else if eq .Variant "list"}}
-    <ul class="card-list">
-      {{range .ListItems}}<li>{{.}}</li>{{end}}
-    </ul>
-  {{else if eq .Variant "quote"}}
-    <blockquote class="card-quote">{{.Quote}}</blockquote>
-  {{else if eq .Variant "links"}}
-    {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
-    <div class="card-connections">
-      {{range $i, $chip := .LinkChips}}
-        {{if lt $i 2}}<div class="connection">→ {{$chip}}</div>{{end}}
-      {{end}}
-      {{if gt (len .LinkChips) 2}}
-        <div class="connection-more">+ {{sub (len .LinkChips) 2}} 篇相關筆記</div>
-      {{end}}
-    </div>
+    <p class="entry-excerpt">{{index .ListItems 0}}{{if gt (len .ListItems) 1}} · {{index .ListItems 1}}{{end}}</p>
+  {{else if .Excerpt}}
+    <p class="entry-excerpt">{{.Excerpt}}</p>
   {{end}}
   {{if .Tags}}
-    <div class="card-tags">
-      {{range .Tags}}<span class="card-tag">#{{.}}</span>{{end}}
+    <div class="entry-tags">
+      {{range .Tags}}<span class="entry-tag">#{{.}}</span>{{end}}
     </div>
   {{end}}
-  <div class="card-meta">
-    <span class="meta-handle">@{{.AuthorHandle}}</span>
-    <span class="meta-spacer"></span>
-    {{if gt .LikeCount 0}}<span class="meta-like">♡ {{.LikeCount}}</span>{{end}}
-    {{if gt .LinkCount 0}}<span class="meta-links">→ {{.LinkCount}}</span>{{end}}
-    {{if gt .CrossCount 0}}<span class="meta-cross">↝ {{.CrossCount}}</span>{{end}}
-  </div>
 </a>
 {{end}}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -33,17 +34,60 @@ type graphPayload struct {
 	Edges []graphEdge `json:"edges"`
 }
 
+// GetUserGraph renders a graph view filtered to one user's notes.
+// Route: GET /u/{user}/graph
+func (s *Server) GetUserGraph(w http.ResponseWriter, r *http.Request) {
+	handle := r.PathValue("user")
+	s.render(w, r, "graph", map[string]any{
+		"GraphTitle":  "@" + handle,
+		"GraphSource": "/api/graph?user=" + handle,
+	})
+}
+
+func (s *Server) GetTagGraph(w http.ResponseWriter, r *http.Request) {
+	tag := r.PathValue("tag")
+	s.render(w, r, "graph", map[string]any{
+		"GraphTitle":  "#" + tag,
+		"GraphSource": "/api/graph?tag=" + tag,
+	})
+}
+
 func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	payload := graphPayload{Nodes: []graphNode{}, Edges: []graphEdge{}}
 
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT n.id, n.title, n.slug, u.handle
-		FROM notes n
-		JOIN users u ON u.id = n.author_id
-		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
-		ORDER BY n.id`)
+	user := r.URL.Query().Get("user")
+	tag := r.URL.Query().Get("tag")
+
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	switch {
+	case user != "":
+		rows, err = s.DB.QueryContext(ctx, `
+			SELECT n.id, n.title, n.slug, u.handle
+			FROM notes n JOIN users u ON u.id = n.author_id
+			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			  AND u.handle = $1
+			ORDER BY n.id`, user)
+	case tag != "":
+		rows, err = s.DB.QueryContext(ctx, `
+			SELECT DISTINCT n.id, n.title, n.slug, u.handle
+			FROM notes n JOIN users u ON u.id = n.author_id
+			JOIN note_tags t ON t.note_id = n.id
+			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			  AND t.tag = $1
+			ORDER BY n.id`, tag)
+	default:
+		rows, err = s.DB.QueryContext(ctx, `
+			SELECT n.id, n.title, n.slug, u.handle
+			FROM notes n
+			JOIN users u ON u.id = n.author_id
+			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			ORDER BY n.id`)
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

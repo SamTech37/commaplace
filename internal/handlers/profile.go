@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -80,10 +81,28 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	followers, _ := followerCount(r.Context(), s.DB, profile.ID)
 	followingN, _ := followingCount(r.Context(), s.DB, profile.ID)
 
+	var noteCount int
+	_ = s.DB.QueryRowContext(r.Context(),
+		`SELECT COUNT(*) FROM notes WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`,
+		profile.ID,
+	).Scan(&noteCount)
+
+	var createdAt int64
+	_ = s.DB.QueryRowContext(r.Context(),
+		`SELECT created_at FROM users WHERE id = $1`,
+		profile.ID,
+	).Scan(&createdAt)
+	estYear := 0
+	if createdAt > 0 {
+		estYear = time.Unix(createdAt, 0).Year()
+	}
+
 	data["Profile"] = profile
 	data["Following"] = following
 	data["FollowerCount"] = followers
 	data["FollowingCount"] = followingN
+	data["NoteCount"] = noteCount
+	data["EstYear"] = estYear
 	isSelf := viewer != nil && viewer.ID == profile.ID
 	data["IsSelf"] = isSelf
 	data["ViewerLoggedIn"] = viewer != nil

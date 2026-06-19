@@ -1,10 +1,12 @@
-{{define "title"}}@{{.Profile.Handle}} · {{.Site.Title}}{{end}} {{define
-"content"}}
-<div data-reveal>
-<div class="profile-header">
-  <img class="avatar-img-lg" src="{{avatarURL .Profile.Handle}}" alt="@{{.Profile.Handle}}" onerror="this.style.display='none'" />
-  <h1 style="margin-bottom: 0.25em">@{{.Profile.Handle}}</h1>
-</div>
+{{define "title"}}@{{.Profile.Handle}} · {{.Site.Title}}{{end}}
+{{define "content"}}
+<header class="vault-masthead" data-reveal>
+  <div class="profile-header">
+    <img class="avatar-img-lg" src="{{avatarURL .Profile.Handle}}" alt="@{{.Profile.Handle}}" onerror="this.style.display='none'" />
+    <h1 class="vault-name">@{{.Profile.Handle}}</h1>
+  </div>
+  <div class="vault-meta">{{if .EstYear}}Est. {{.EstYear}} · {{end}}{{.NoteCount}} entries</div>
+</header>
 <p class="note-meta">
   {{.FollowerCount}} follower{{if ne .FollowerCount 1}}s{{end}}
   <span class="crumb-sep">·</span>
@@ -42,34 +44,38 @@
   </button>
 </form>
 {{end}}
-</div>
 {{if .IsSelf}}
 <nav class="feed-tabs" style="margin-top: 1.5em;">
   <a href="/{{.Profile.Handle}}" class="feed-tab{{if ne .Tab "drafts"}} active{{end}}">公開</a>
   <a href="/{{.Profile.Handle}}?tab=drafts" class="feed-tab{{if eq .Tab "drafts"}} active{{end}}">草稿</a>
 </nav>
 {{else}}
-<h2 style="margin-top: 1.5em; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-family: var(--font-sans); font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 0.75em;">最近的筆記</h2>
+<div class="profile-notes-heading" style="margin-top:1.5em">最近的筆記</div>
 {{end}}
 <div id="notes-list" data-reveal-group>
-  {{block "profile-notes" .}} {{if .Recent}} {{range .Recent}}
-  <a class="note-card" href="{{.URL}}" data-reveal>
-    <div class="note-title">{{.Title}}</div>
-    {{if .Excerpt}}
-    <div class="note-excerpt">{{.Excerpt}}</div>
+  {{block "profile-notes" .}}
+  {{if .Recent}}
+    {{range .Recent}}
+    <a class="note-card" href="{{.URL}}" data-reveal>
+      <div class="note-title">{{.Title}}</div>
+      {{if .Excerpt}}
+      <div class="note-excerpt">{{.Excerpt}}</div>
+      {{end}}
+      <div class="note-foot">{{.UpdatedRel}}</div>
+    </a>
     {{end}}
-    <div class="note-foot">{{.UpdatedRel}}</div>
-  </a>
-  {{end}} {{if .NextCursor}}
-  <div
-    hx-get="?older={{.NextCursor}}{{if .Tab}}&tab={{.Tab}}{{end}}&partial=1"
-    hx-trigger="revealed"
-    hx-swap="outerHTML"
-    hx-target="this"
-    style="height: 1px"
-  ></div>
-  {{end}} {{else}}
+    {{if .NextCursor}}
+    <div
+      hx-get="?older={{.NextCursor}}{{if .Tab}}&tab={{.Tab}}{{end}}&partial=1"
+      hx-trigger="revealed"
+      hx-swap="outerHTML"
+      hx-target="this"
+      style="height: 1px"
+    ></div>
+    {{end}}
+  {{else}}
   <p class="note-meta">還沒有筆記。</p>
-  {{end}} {{end}}
+  {{end}}
+  {{end}}
 </div>
 {{end}}

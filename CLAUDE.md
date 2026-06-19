@@ -31,7 +31,9 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Dev Commands
 
-See Makefile. Prefer `make dev-full`.
+See Makefile. Prefer `make watch` for hot-reload.
+
+## 6. Adding Features Should Not Cause Regression in Existing Ones
 
 ---
 
