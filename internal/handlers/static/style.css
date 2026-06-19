@@ -219,8 +219,9 @@ body {
   font-family: var(--font-serif);
 }
 .brand-logo {
-  height: 64px;
+  height: 96px;
   width: auto;
+  /* exceed navbar border for dramatic effect, looks nice */
 }
 .brand-mark {
   font-family: var(--font-serif);
@@ -338,13 +339,24 @@ mark {
   background: none;
   border: none;
 }
-.nav-hamburger::-webkit-details-marker { display: none; }
-.nav-menu { position: relative; }
+.nav-hamburger::-webkit-details-marker {
+  display: none;
+}
+.nav-menu {
+  position: relative;
+}
 
 @media (max-width: 600px) {
-  .nav-hamburger { display: inline-flex; align-items: center; }
-  .nav-links { display: none; }
-  .search-form { max-width: 8rem; }
+  .nav-hamburger {
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-links {
+    display: none;
+  }
+  .search-form {
+    max-width: 8rem;
+  }
 }
 
 .inline-form {
@@ -465,7 +477,9 @@ img {
   text-underline-offset: 3px;
 }
 /* Cross-vault [[@user/note]] — ↗ inverted pill capsule */
-.wiki-cross-resolved, .wiki-cross-unresolved, .wikilink-cross {
+.wiki-cross-resolved,
+.wiki-cross-unresolved,
+.wikilink-cross {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 0.82em;
@@ -475,15 +489,24 @@ img {
   border-radius: var(--r-pill);
   text-decoration: none;
   vertical-align: baseline;
-  transition: transform 0.15s var(--ease), background 0.15s var(--ease);
+  transition:
+    transform 0.15s var(--ease),
+    background 0.15s var(--ease);
 }
-.wiki-cross-resolved:hover, .wikilink-cross:hover {
+.wiki-cross-resolved:hover,
+.wikilink-cross:hover {
   transform: translateY(1px);
   background: var(--text-2);
   color: var(--bg);
 }
-.wiki-cross-unresolved { background: var(--text-3); opacity: 0.75; }
-.wikilink-cross .arrow { margin-right: 2px; opacity: 0.7; }
+.wiki-cross-unresolved {
+  background: var(--text-3);
+  opacity: 0.75;
+}
+.wikilink-cross .arrow {
+  margin-right: 2px;
+  opacity: 0.7;
+}
 
 /* Collapsed local ego-graph under connected-notes mini-cards. */
 .local-graph-toggle {
@@ -786,6 +809,14 @@ html[data-theme="dark"] .masonry-card:hover {
   margin: 0 0 0.5em;
   font-family: var(--font-serif);
 }
+.card-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--r-btn);
+  margin: 0 0 0.7em;
+}
 .card-excerpt {
   color: var(--text-2);
   font-size: 0.82rem;
@@ -883,6 +914,37 @@ html[data-theme="dark"] .masonry-card:hover {
   font-family: var(--font-sans);
 }
 
+/* ── Layout toggle ───────────────────────────────────────────────────────── */
+.layout-toggle {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem 0;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 0;
+}
+.layout-btn {
+  display: inline-block;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  text-decoration: none;
+  transition:
+    background var(--dur-fast),
+    color var(--dur-fast);
+}
+.layout-btn.active,
+.layout-btn:hover {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+  text-decoration: none;
+}
+
 /* ── Feed grid — two-column directory listing ────────────────────────────── */
 .feed-grid {
   display: grid;
@@ -890,8 +952,26 @@ html[data-theme="dark"] .masonry-card:hover {
   border-top: 0.5px solid var(--border);
 }
 @media (min-width: 600px) {
-  .feed-grid { grid-template-columns: 1fr 1fr; }
-  .feed-grid .entry:nth-child(odd) { border-right: 0.5px solid var(--border); }
+  .feed-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .feed-grid .entry:nth-child(odd) {
+    border-right: 0.5px solid var(--border);
+  }
+}
+
+/* ── Feed list — dense single-column (reuses .note-card) ─────────────────── */
+.feed-list {
+  border-top: 0.5px solid var(--border);
+}
+.feed-list .note-card {
+  padding: 0.85rem 0.5rem;
+}
+.feed-list .note-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .entry {
@@ -902,7 +982,10 @@ html[data-theme="dark"] .masonry-card:hover {
   color: inherit;
   transition: background var(--dur-fast) ease;
 }
-.entry:hover { background: var(--bg-2); text-decoration: none; }
+.entry:hover {
+  background: var(--bg-2);
+  text-decoration: none;
+}
 
 .entry-title {
   font-family: var(--font-serif);
@@ -930,8 +1013,18 @@ html[data-theme="dark"] .masonry-card:hover {
   overflow: hidden;
   margin: 0;
 }
-.entry-tags { display: flex; gap: 0.3em; flex-wrap: wrap; margin-top: 5px; }
-.entry-tag { color: var(--text-3); font-size: 9px; font-family: var(--font-mono); letter-spacing: 0.04em; }
+.entry-tags {
+  display: flex;
+  gap: 0.3em;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+.entry-tag {
+  color: var(--text-3);
+  font-size: 9px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
 
 .avatar-dot {
   display: inline-flex;
@@ -1572,7 +1665,9 @@ html[data-theme="dark"] .action-menu-list {
   transition: background var(--dur-fast) ease;
   width: 100%;
 }
-.action-menu-danger:hover { background: var(--bg-2); }
+.action-menu-danger:hover {
+  background: var(--bg-2);
+}
 .action-menu-disabled {
   display: flex;
   align-items: center;
@@ -1641,12 +1736,16 @@ html[data-theme="dark"] .action-menu-list {
 .article-body hr {
   margin: 1.8em 0;
 }
-.article-body a:not(.wikilink-cross):not(.wiki-cross-resolved):not(.wiki-cross-unresolved) {
+.article-body
+  a:not(.wikilink-cross):not(.wiki-cross-resolved):not(.wiki-cross-unresolved) {
   color: var(--text);
   text-decoration: underline;
   text-decoration-color: var(--border-2);
 }
-.article-body a:not(.wikilink-cross):not(.wiki-cross-resolved):not(.wiki-cross-unresolved):hover {
+.article-body
+  a:not(.wikilink-cross):not(.wiki-cross-resolved):not(
+    .wiki-cross-unresolved
+  ):hover {
   text-decoration-color: var(--text);
 }
 

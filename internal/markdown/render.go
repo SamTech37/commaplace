@@ -122,8 +122,15 @@ func Excerpt(md string, n int) string {
 		if k := strings.LastIndexByte(inner, '/'); k >= 0 {
 			label = inner[k+1:]
 		}
-		s = s[:i] + label + rest[j+2:]
+		// an Obsidian embed "![[...]]" carries a leading "!" — drop it too
+		start := i
+		if start > 0 && s[start-1] == '!' {
+			start--
+		}
+		s = s[:start] + label + rest[j+2:]
 	}
+	// drop markdown images entirely, reduce markdown links to their text
+	s = StripMDLinks(s)
 	rep := strings.NewReplacer(
 		"**", "", "__", "", "*", "", "_", "",
 		"`", "", "\r", "",
@@ -154,6 +161,67 @@ func Excerpt(md string, n int) string {
 	}
 	r := []rune(s)
 	return strings.TrimSpace(string(r[:n])) + "…"
+}
+
+// StripMDLinks removes markdown image syntax (![alt](url)) entirely and reduces
+// markdown links ([text](url)) to their text, so plain-text previews never show
+// raw markdown link/image markup. Cheap single-pass scan; nested brackets are
+// not handled (matches the intentionally-cheap Excerpt style).
+func StripMDLinks(s string) string {
+	var b strings.Builder
+	for {
+		i := strings.IndexByte(s, '[')
+		if i < 0 {
+			b.WriteString(s)
+			break
+		}
+		// a "![" image: drop the whole token, including the leading "!"
+		img := i > 0 && s[i-1] == '!'
+		end := i
+		if img {
+			end = i - 1
+		}
+		close := strings.IndexByte(s[i:], ']')
+		// need "](" right after the closing bracket to be a real link/image
+		if close < 0 || i+close+1 >= len(s) || s[i+close+1] != '(' {
+			b.WriteString(s[:i+1])
+			s = s[i+1:]
+			continue
+		}
+		paren := strings.IndexByte(s[i+close+1:], ')')
+		if paren < 0 {
+			b.WriteString(s[:i+1])
+			s = s[i+1:]
+			continue
+		}
+		b.WriteString(s[:end])
+		if !img {
+			b.WriteString(s[i+1 : i+close]) // link text
+		}
+		s = s[i+close+1+paren+1:]
+	}
+	return b.String()
+}
+
+// FirstImageURL returns the url of the first markdown image (![alt](url)) in
+// md, or "" if none. Used to show one thumbnail on feed cards.
+func FirstImageURL(md string) string {
+	for s := md; ; {
+		i := strings.Index(s, "![")
+		if i < 0 {
+			return ""
+		}
+		rest := s[i+2:]
+		close := strings.Index(rest, "](")
+		if close < 0 {
+			return ""
+		}
+		after := rest[close+2:]
+		if paren := strings.IndexByte(after, ')'); paren >= 0 {
+			return strings.TrimSpace(after[:paren])
+		}
+		s = rest
+	}
 }
 
 // ---------- comment pre-processing ----------

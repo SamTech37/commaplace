@@ -173,3 +173,37 @@ func TestBlockMathFence(t *testing.T) {
 	out := renderMust(t, md)
 	assertContains(t, out, "math-block", `\frac{a}{b}`)
 }
+
+// ---------- Excerpt strips markdown links/images ----------
+
+func TestExcerptStripsLinksAndImages(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"see [test](http://x) here", "see test here"},
+		{"pic ![alt](http://y/img.png) gone", "pic gone"},
+		{"![](http://y) [a](http://z) mix", "a mix"},
+		{"embed ![[note-slug]] here", "embed note-slug here"},
+		{"no links here", "no links here"},
+	}
+	for _, c := range cases {
+		if got := Excerpt(c.in, 200); got != c.want {
+			t.Errorf("Excerpt(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+	// No raw markdown link/image markup may survive.
+	out := Excerpt("a [b](http://c) and ![d](http://e)", 200)
+	assertNotContains(t, out, "](", "![", "http://c", "http://e")
+}
+
+func TestFirstImageURL(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"text ![alt](/api/notes/x/image) more", "/api/notes/x/image"},
+		{"![](http://a) ![](http://b)", "http://a"},
+		{"no image [link](http://c)", ""},
+		{"plain text", ""},
+	}
+	for _, c := range cases {
+		if got := FirstImageURL(c.in); got != c.want {
+			t.Errorf("FirstImageURL(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}

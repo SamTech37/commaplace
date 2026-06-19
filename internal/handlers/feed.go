@@ -44,6 +44,7 @@ type feedCard struct {
 	Quote        string   // quote variant
 	LinkChips    []string // links variant
 	Tags         []string // shown as #hashtag row on the card
+	ImageURL     string   // first body image, shown as masonry thumbnail
 }
 
 type tagChip struct {
@@ -59,6 +60,10 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		tab = "recommended"
 	}
 	tagFilter := normalizeTag(q.Get("tag"))
+	layout := q.Get("layout")
+	if layout != "list" && layout != "masonry" && layout != "grid" {
+		layout = "grid"
+	}
 	var older int64
 	if v := q.Get("older"); v != "" {
 		older, _ = strconv.ParseInt(v, 10, 64)
@@ -91,6 +96,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+		v.Set("layout", layout)
 		v.Del("partial")
 		olderURL = "/feed?" + v.Encode()
 	}
@@ -100,6 +106,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		s.Pages.RenderPartial(w, "feed_partial", "feed_partial", map[string]any{
 			"Cards":    cards,
 			"OlderURL": olderURL,
+			"Layout":   layout,
 		})
 		return
 	}
@@ -113,6 +120,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		"TagChips":       tagChips,
 		"ViewerLoggedIn": viewer != nil,
 		"OlderURL":       olderURL,
+		"Layout":         layout,
 	})
 }
 
@@ -223,6 +231,7 @@ func scanCards(rows *sql.Rows) ([]feedCard, error) {
 		c.URL = noteURL(handle, slug)
 		c.UpdatedRel = relativeTime(c.UpdatedAt)
 		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
+		c.ImageURL = markdown.FirstImageURL(body)
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -268,7 +277,7 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 				break
 			}
 		}
-		q := strings.TrimSpace(qb.String())
+		q := strings.TrimSpace(markdown.StripMDLinks(qb.String()))
 		if runes := []rune(q); len(runes) > 200 {
 			q = string(runes[:200]) + "…"
 		}
@@ -318,7 +327,7 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 			continue
 		}
 		started = true
-		bullets = append(bullets, item)
+		bullets = append(bullets, markdown.StripMDLinks(item))
 		if len(bullets) >= 5 {
 			break
 		}

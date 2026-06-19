@@ -238,6 +238,17 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	).Scan(&n.ID, &n.Title, &n.BodyMD, &n.UpdatedAt, &n.Slug,
 		&n.AuthorID, &n.HiddenAt, &n.DeletedAt, &n.PublishedAt)
 	if errors.Is(err, sql.ErrNoRows) {
+		var userExists bool
+		s.DB.QueryRowContext(r.Context(),
+			`SELECT EXISTS(SELECT 1 FROM users WHERE handle = $1)`, handle,
+		).Scan(&userExists)
+		if userExists {
+			s.render(w, r, "note_stub", map[string]any{
+				"Handle": handle,
+				"Slug":   slug,
+			})
+			return
+		}
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
 	}
