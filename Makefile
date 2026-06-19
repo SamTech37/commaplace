@@ -2,18 +2,16 @@ DATABASE_URL ?= postgres://commaplace:commaplace@localhost:5432/commaplace?sslmo
 # Separate DB: the test harness TRUNCATEs on every run, so it must NEVER point at
 # the dev (or any real) database. Keep this distinct from DATABASE_URL.
 TEST_DATABASE_URL ?= postgres://commaplace:commaplace@localhost:5432/commaplace_test?sslmode=disable
-PORT    ?= 8080
-BINARY  := ./commonplace
+PORT     ?= 8080
+DEV_USER ?= alice
+DEV_URL  ?= http://localhost:$(PORT)/_dev/login?as=$(DEV_USER)
 
-.PHONY: run dev dev-windows dev-full dev-oauth watch build test clean db-up db-down
+OPEN    := $(shell which xdg-open 2>/dev/null || which open 2>/dev/null || echo echo)
+GO_ENV  := DEBUG=1 DATABASE_URL=$(DATABASE_URL) ADDR=:$(PORT) SEED_DEV=1
+OPEN_BG := ( sleep 2 && $(OPEN) "$(DEV_URL)" ) &
 
-## build: compile the server binary
-build:
-	go build -o $(BINARY) ./cmd/server
+.PHONY: dev dev-full dev-oauth watch test clean db-up db-down
 
-## run: run with no special flags
-run: build
-	$(BINARY)
 
 ## db-up: start local Postgres via Docker Compose
 db-up:
@@ -24,29 +22,23 @@ db-up:
 db-down:
 	docker compose down
 
-## dev: local dev mode — DEBUG=1, dev login at http://localhost:$(PORT)/_dev/login?as=alice
+## dev: local dev mode — DEBUG=1, dev login at http://localhost:$(PORT)/_dev/login?as=$(DEV_USER)
 dev: db-up
-	DEBUG=1 DATABASE_URL=$(DATABASE_URL) ADDR=:$(PORT) go run ./cmd/server
+	$(GO_ENV) go run ./cmd/server
 
-dev-windows:
-	powershell -Command "$$env:DEBUG='1'; $$env:DATABASE_URL='$(DATABASE_URL)'; $$env:ADDR=':8080'; $$env:SEED_DEV='1'; go run ./cmd/server"
-
-## dev-full: dev mode + multi-user seed data (alice, bob, carol, dave)
-# auto-opens browser at /_dev/login?as=alice
+## dev-full: dev + seed data (alice, bob, carol, dave), auto-opens browser
 dev-full: db-up
-	@( sleep 2 && open "http://localhost:$(PORT)/_dev/login?as=alice" ) &
-	DEBUG=1 DATABASE_URL=$(DATABASE_URL) ADDR=:$(PORT) SEED_DEV=1 go run ./cmd/server
+	@$(OPEN_BG)
+	$(GO_ENV) go run ./cmd/server
 
 ## dev-oauth: dev mode with Google OAuth (set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET first)
 dev-oauth: db-up
-	DEBUG=1 DATABASE_URL=$(DATABASE_URL) ADDR=:$(PORT) SEED_DEV=1 \
-	GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID) \
-	GOOGLE_CLIENT_SECRET=$(GOOGLE_CLIENT_SECRET) \
-	go run ./cmd/server
+	$(GO_ENV) GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID) GOOGLE_CLIENT_SECRET=$(GOOGLE_CLIENT_SECRET) go run ./cmd/server
 
 ## watch: live-reload dev server (requires: go install github.com/air-verse/air@latest)
-watch:
-	air
+watch: db-up
+	@$(OPEN_BG)
+	$(GO_ENV) air
 
 ## test: run all tests (against the dedicated test DB, never dev data)
 test: db-up
@@ -55,4 +47,4 @@ test: db-up
 
 ## clean: remove binary
 clean:
-	rm -f $(BINARY)
+	rm -f ./commonplace
