@@ -27,23 +27,27 @@ type ResolvedTarget struct {
 // link is unresolved. nil resolver treats every link as unresolved.
 type Resolver func(WikiLink) *ResolvedTarget
 
+// staticExts are the goldmark extensions that carry no per-request state.
+// They are allocated once and reused across all Render calls.
+var staticExts = []goldmark.Extender{
+	extension.GFM,
+	extension.Footnote,
+	&headingIDExt{},
+	&tagExt{},
+	&highlightExt{},
+	&calloutExt{},
+	&mathExt{},
+	&codeBlockExt{},
+}
+
 // Render converts md to safe HTML. Wiki links are wrapped in <a class="wiki ...">
 // with "wiki-resolved" or "wiki-unresolved" depending on resolver.
 func Render(md, currentUser string, resolve Resolver) (template.HTML, error) {
 	md = stripComments(md)
-	g := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			extension.Footnote,
-			&wikiExt{currentUser: currentUser, resolve: resolve},
-			&headingIDExt{},
-			&tagExt{},
-			&highlightExt{},
-			&calloutExt{},
-			&mathExt{},
-			&codeBlockExt{},
-		),
-	)
+	exts := make([]goldmark.Extender, 0, len(staticExts)+1)
+	exts = append(exts, &wikiExt{currentUser: currentUser, resolve: resolve})
+	exts = append(exts, staticExts...)
+	g := goldmark.New(goldmark.WithExtensions(exts...))
 	var buf bytes.Buffer
 	if err := g.Convert([]byte(md), &buf); err != nil {
 		return "", err

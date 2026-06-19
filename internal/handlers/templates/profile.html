@@ -66,7 +66,7 @@
     {{end}}
     {{if .NextCursor}}
     <div
-      hx-get="?older={{.NextCursor}}{{if .Tab}}&tab={{.Tab}}{{end}}&partial=1"
+      hx-get="?older={{.NextCursor}}{{if .Tab}}&tab={{.Tab}}{{end}}"
       hx-trigger="revealed"
       hx-swap="outerHTML"
       hx-target="this"

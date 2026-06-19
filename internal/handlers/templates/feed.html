@@ -44,7 +44,7 @@
       {{if .OlderURL}}
         <div id="feed-sentinel"
              class="feed-sentinel" aria-label="載入中"
-             hx-get="{{.OlderURL}}&partial=1"
+             hx-get="{{.OlderURL}}"
              hx-trigger="revealed"
              hx-target=".feed-items"
              hx-swap="beforeend"><span></span><span></span><span></span></div>

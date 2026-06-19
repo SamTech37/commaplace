@@ -60,7 +60,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		viewerID = viewer.ID
 	}
 
-	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, viewerID, tab, olderThan)
+	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, olderThan)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -72,7 +72,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		"NextCursor": nextCursor,
 		"Tab":        tab,
 	}
-	if r.URL.Query().Get("partial") == "1" {
+	if r.Header.Get("HX-Request") == "true" {
 		s.Pages.RenderPartial(w, "profile", "profile-notes", data)
 		return
 	}
@@ -116,7 +116,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 // loadRecentNotes lists a user's notes. Unpublished drafts are included only
 // when the viewer is the author themselves.
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, tab string, olderThan int64) ([]profileNote, int64, error) {
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]profileNote, int64, error) {
 	query := `SELECT title, slug, body_md, updated_at, published_at
 		FROM notes
 		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`
@@ -139,13 +139,6 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID, viewerID uuid.UUID, 
 		return nil, 0, err
 	}
 	defer rows.Close()
-
-	var handle string
-	if err := db.QueryRowContext(r.Context(),
-		`SELECT handle FROM users WHERE id = $1`, authorID,
-	).Scan(&handle); err != nil {
-		return nil, 0, err
-	}
 
 	var out []profileNote
 	for rows.Next() {

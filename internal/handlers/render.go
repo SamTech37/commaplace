@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -110,10 +111,16 @@ func (p *Pages) Render(w http.ResponseWriter, name string, data map[string]any) 
 	if _, has := data["Theme"]; !has {
 		data["Theme"] = ""
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := t.ExecuteTemplate(w, "base", data); err != nil {
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, "base", data); err != nil {
 		log.Printf("render %s: %v", name, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
+	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
+	w.Header().Set("Vary", "HX-Request")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
 }
 
 // RenderPartial executes a fragment template (no _base.html wrapper).
@@ -124,10 +131,16 @@ func (p *Pages) RenderPartial(w http.ResponseWriter, name, defined string, data 
 		http.Error(w, "partial not found: "+name, http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := t.ExecuteTemplate(w, defined, data); err != nil {
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, defined, data); err != nil {
 		log.Printf("render partial %s: %v", name, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
+	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
+	w.Header().Set("Vary", "HX-Request")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
 }
 
 // ---------- Server ----------

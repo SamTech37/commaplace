@@ -29,7 +29,7 @@
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
 	- [x] masonry (wall)
 	- [/] graph (sorta) → note should be like cards
-		- [ ] graph 不要「點兩下」
+		- [x] graph 不要「點兩下」
     - [x] global graph
 		- [x] local graph
 	- [ ] timeline (linear)
@@ -54,10 +54,11 @@
 - [x] 簡單的上傳與編輯。
   - [x] empty slate
   - [x] or start from a markdown
-  - [ ] better writing UX see [[editor-medium-style-spec.md]] 
+  - [x] better writing UX see [[editor-medium-style-spec.md]] 
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
 - [ ] 權限與授權管控。
 - [x] 管理後台（SQLite or postgres 都不附，要自己做）。
+  - [ ] 需要實際試用看看
 - [ ] 付費牆管理。
   - [ ] stripe or something?
 - [ ] Dev workflow & engineering best-practices
@@ -70,6 +71,64 @@
 - [ ] `/random` take people to a random node
 - [ ] share button, webshare api...
 
+
+## Tech Stack & Frontend Direction
+
+Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations).
+Context: 3-founder team — one backend/ponytail, two design/product who *will* push
+richer UI/UX over the product cycle. So the call is not "least JS now" but "what
+substrate survives feature #20 without a React rewrite."
+
+### Server / rendering — keep as-is
+- Go `net/http` (1.22 patterns) + stdlib `html/template` + `//go:embed` → **single
+  static binary, no build tooling.** This is the right shape; not changing it.
+- Postgres via `pgx/v5` (README was stale, said SQLite — fixed). FTS = `tsvector`+GIN.
+
+### htmx — keep, adopt the best practices we're missing
+- Vendored `htmx.min.js` + hand-written `hx-*` attributes **is** the best practice.
+- **Reject** `htmgo` (full framework rewrite off stdlib, max lock-in) and
+  `donseba/go-htmx` (wraps ~10 lines of header reads we already do — negative ROI).
+- **Fix the one wheel we reinvented:** replace the `?partial=1` query param with the
+  native `HX-Request` header (`r.Header.Get("HX-Request")`).
+- **Adopt incrementally as features need them** (all native, zero deps):
+  OOB swaps (`hx-swap-oob`), `HX-Trigger` response header (decoupled toasts/events),
+  `hx-indicator`+view-transitions (FOUC fix), `hx-boost`.
+
+### Alpine.js — ADOPT (vendored, no build step)
+- The forward bet for client-side state the design/product founders will want
+  (popovers, multi-step UI, optimistic toggles, persisted prefs via `$persist`).
+- htmx for server-driven 90%, Alpine for the stateful 10% — the proven pairing.
+- One vendored `alpine.min.js` + `defer` in `_base.html`. Single binary intact.
+- **Roll in incrementally, not big-bang:** first the feed layout-restore script,
+  then the wiki-autocomplete popup state (the worst hand-rolled state machine,
+  cmeditor.js). Leave EasyMDE (editor core) and the canvas graph alone — Alpine
+  doesn't help either.
+
+### templ — DEFER (adopt later, not now)
+- Type-safe Go templates (JSX-like, compiles `.templ`→`.go`). Genuinely attractive
+  for a JS/TS-primary team and would catch the silent `map[string]any` template-bag
+  typos at compile time.
+- **Cost blocks it today:** adds a `templ generate` codegen step → breaks the
+  "no build tooling" property and complicates `go:embed` (embed generated Go, not
+  `.html`). Both Go reviewers said no *at current size* (18 templates).
+- **Sequencing rule (important):** do NOT migrate to templ *before* the Meta-App
+  view-substrate refactor — that's a double migration. Refactor in stdlib first,
+  let the shared component boundary (`NoteListView`) stabilize, *then* templ is a
+  mechanical port of one clean component instead of 18 ad-hoc templates.
+- **Adopt trigger:** when templates exceed ~25, OR a second founder starts writing
+  templates regularly, OR the view-substrate refactor has landed and we want the
+  shared card components type-checked. Revisit then.
+
+### Cheap win — get the partial benefit free now
+- Replace the loose `map[string]any` template data bags with typed structs per page
+  — most of templ's type-safety, zero toolchain cost.
+
+### Code-organization debt (not a framework problem)
+- `notes.go` is an 800-line god file (CRUD + link resolution + backlinks + stats).
+  Split into `notes.go` / `links.go` / `notestats.go` — tidy within existing
+  structure. This is why "which file is the main logic" is unanswerable today.
+- Card-type duplication (`feedItem`/`profileNote`/`searchHit` + 5 scan loops) →
+  collapse to `feedCard` in the Meta-App view-substrate refactor (see spec).
 
 ## Dev & Testing
 

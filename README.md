@@ -26,7 +26,7 @@ someone's note, follow internal `[[wiki links]]` into the same vault or
 ## Stack
 
 - Go ≥ 1.22 (uses `net/http` enhanced pattern matching)
-- SQLite via `modernc.org/sqlite` (pure Go, no CGO)
+- Postgres via `github.com/jackc/pgx/v5` (full-text search via `tsvector` + GIN index)
 - `goldmark` for markdown + a custom wiki-link extension
 - HTMX (vendored) for incremental interactivity
 - Hand-written CSS, no build tooling

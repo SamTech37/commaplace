@@ -62,7 +62,6 @@
     if (inflight) {
       again = true;
       return new Promise(function (res) {
-        var orig = arguments.callee;
         var poll = setInterval(function () { if (!inflight) { clearInterval(poll); res(); } }, 50);
       });
     }

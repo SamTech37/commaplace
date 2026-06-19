@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -282,16 +283,28 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	tags, _ := loadTagsForNote(r.Context(), s.DB, n.ID)
 	sameVaultBL, crossVaultBL, _ := s.loadBacklinksSplit(r.Context(), n.ID, handle)
 	outgoingSame, outgoingCross, _ := s.loadOutgoingSplit(r.Context(), n.ID, handle)
-	authorStats, _ := loadAuthorStats(r.Context(), s.DB, n.AuthorID)
+	authorStats, err := loadAuthorStats(r.Context(), s.DB, n.AuthorID)
+	if err != nil {
+		log.Printf("GetNote loadAuthorStats %s: %v", n.ID, err)
+	}
 
 	viewer, _ := s.Auth.CurrentUser(r)
 	var viewerID uuid.UUID
 	if viewer != nil {
 		viewerID = viewer.ID
 	}
-	likeN, _ := likeCount(r.Context(), s.DB, n.ID)
-	liked, _ := userHasLiked(r.Context(), s.DB, viewerID, n.ID)
-	viewerFollows, _ := userFollows(r.Context(), s.DB, viewerID, n.AuthorID)
+	likeN, err := likeCount(r.Context(), s.DB, n.ID)
+	if err != nil {
+		log.Printf("GetNote likeCount %s: %v", n.ID, err)
+	}
+	liked, err := userHasLiked(r.Context(), s.DB, viewerID, n.ID)
+	if err != nil {
+		log.Printf("GetNote userHasLiked %s: %v", n.ID, err)
+	}
+	viewerFollows, err := userFollows(r.Context(), s.DB, viewerID, n.AuthorID)
+	if err != nil {
+		log.Printf("GetNote userFollows %s: %v", n.ID, err)
+	}
 
 	s.render(w, r, "note", map[string]any{
 		"Note":           n,
@@ -416,13 +429,16 @@ type authorStats struct {
 
 func loadAuthorStats(ctx context.Context, db *sql.DB, authorID uuid.UUID) (authorStats, error) {
 	var s authorStats
-	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM follows WHERE followed_id = $1`, authorID,
-	).Scan(&s.Followers)
-	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM notes WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL AND published_at IS NOT NULL`, authorID,
-	).Scan(&s.Notes)
-	return s, nil
+	err := db.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM follows WHERE followed_id = $1),
+			(SELECT COUNT(*) FROM notes  WHERE author_id   = $1
+			                           AND hidden_at IS NULL
+			                           AND deleted_at IS NULL
+			                           AND published_at IS NOT NULL)`,
+		authorID,
+	).Scan(&s.Followers, &s.Notes)
+	return s, err
 }
 
 func readingMinutes(body string) int {

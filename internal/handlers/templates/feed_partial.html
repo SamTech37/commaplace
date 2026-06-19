@@ -7,7 +7,7 @@
 {{if .OlderURL -}}
 <div id="feed-sentinel" hx-swap-oob="outerHTML"
      class="feed-sentinel"
-     hx-get="{{.OlderURL}}&partial=1"
+     hx-get="{{.OlderURL}}"
      hx-trigger="revealed"
      hx-target=".feed-items"
      hx-swap="beforeend">載入更多…</div>

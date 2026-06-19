@@ -97,12 +97,11 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
 		v.Set("layout", layout)
-		v.Del("partial")
 		olderURL = "/feed?" + v.Encode()
 	}
 
 	// HTMX request for the next batch → return only cards + a new sentinel.
-	if q.Get("partial") == "1" {
+	if r.Header.Get("HX-Request") == "true" {
 		s.Pages.RenderPartial(w, "feed_partial", "feed_partial", map[string]any{
 			"Cards":    cards,
 			"OlderURL": olderURL,
