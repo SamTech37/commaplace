@@ -30,13 +30,14 @@ func (s *Server) GetNoteImage(w http.ResponseWriter, r *http.Request) {
 		authorID    uuid.UUID
 		hiddenAt    sql.NullInt64
 		deletedAt   sql.NullInt64
+		publishedAt sql.NullInt64
 	)
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT i.image, i.content_type, n.author_id, n.hidden_at, n.deleted_at
+		SELECT i.image, i.content_type, n.author_id, n.hidden_at, n.deleted_at, n.published_at
 		FROM note_images i
 		JOIN notes n ON n.id = i.note_id
 		WHERE i.note_id = $1`, id,
-	).Scan(&blob, &contentType, &authorID, &hiddenAt, &deletedAt)
+	).Scan(&blob, &contentType, &authorID, &hiddenAt, &deletedAt, &publishedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.NotFound(w, r)
 		return
@@ -49,7 +50,7 @@ func (s *Server) GetNoteImage(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if hiddenAt.Valid {
+	if hiddenAt.Valid || !publishedAt.Valid {
 		viewer, _ := s.Auth.CurrentUser(r)
 		isAuthor := viewer != nil && viewer.ID == authorID
 		if !isAuthor && !s.IsAdmin(viewer) {

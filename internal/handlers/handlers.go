@@ -49,7 +49,6 @@ func (s *Server) Routes() *http.ServeMux {
 
 	// Edit + delete
 	mux.HandleFunc("GET /edit/{id}", s.GetEdit)
-	mux.HandleFunc("POST /edit/{id}", s.PostEdit)
 	mux.HandleFunc("POST /delete/{id}", s.PostDeleteNote)
 
 	// Import

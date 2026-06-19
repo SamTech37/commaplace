@@ -195,114 +195,6 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) PostEdit(w http.ResponseWriter, r *http.Request) {
-	u := s.requireUser(w, r)
-	if u == nil {
-		return
-	}
-	noteID, err := uuid.Parse(r.PathValue("id"))
-	if err != nil {
-		s.renderError(w, r, http.StatusNotFound, "note not found")
-		return
-	}
-	if err := r.ParseMultipartForm(5 << 20); err != nil {
-		s.renderError(w, r, http.StatusBadRequest, "bad form")
-		return
-	}
-
-	var authorID uuid.UUID
-	var slug string
-	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, slug FROM notes WHERE id = $1`, noteID,
-	).Scan(&authorID, &slug)
-	if errors.Is(err, sql.ErrNoRows) {
-		s.renderError(w, r, http.StatusNotFound, "note not found")
-		return
-	}
-	if err != nil {
-		s.renderError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if authorID != u.ID {
-		s.renderError(w, r, http.StatusForbidden, "you can only edit your own notes")
-		return
-	}
-
-	title := strings.TrimSpace(r.PostFormValue("title"))
-	body := r.PostFormValue("body_md")
-	tagsInput := r.PostFormValue("tags")
-
-	form := map[string]string{
-		"Title": title, "BodyMD": body, "Tags": tagsInput,
-	}
-	rerender := func(msg string) {
-		s.render(w, r, "write", map[string]any{
-			"Form":        form,
-			"Action":      "/edit/" + noteID.String(),
-			"Heading":     "編輯筆記",
-			"SubmitLabel": "儲存",
-			"EditNote": map[string]any{
-				"ID": noteID, "Slug": slug,
-			},
-			"Error": msg,
-		})
-	}
-	if title == "" {
-		rerender("Title is required.")
-		return
-	}
-
-	if inline := markdown.ExtractInlineTags(body); len(inline) > 0 {
-		tagsInput += "," + strings.Join(inline, ",")
-	}
-	tags := parseTags(tagsInput)
-
-	if err := s.updateNote(r.Context(), noteID, u.Handle, title, body, tags); err != nil {
-		rerender(err.Error())
-		return
-	}
-	if err := s.saveNoteImage(r, noteID); err != nil {
-		s.renderError(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	http.Redirect(w, r, noteURL(u.Handle, slug), http.StatusSeeOther)
-}
-
-// updateNote updates an existing note's title/body/tags and recomputes its
-// outgoing links. Slug is intentionally not editable so inbound wikilinks remain valid.
-func (s *Server) updateNote(ctx context.Context, noteID uuid.UUID, authorHandle, title, body string, tags []string) error {
-	tx, err := s.DB.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	now := nowUnix()
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE notes SET title = $1, body_md = $2, updated_at = $3
-		WHERE id = $4`, title, body, now, noteID,
-	); err != nil {
-		return err
-	}
-
-	if _, err := tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id = $1`, noteID); err != nil {
-		return err
-	}
-	for _, t := range tags {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
-			noteID, t, now,
-		); err != nil {
-			return err
-		}
-	}
-
-	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
-
 // ---------- note view ----------
 
 type backlink struct {
@@ -478,8 +370,7 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID uuid.UUID, vaultH
 		JOIN notes n ON n.id = l.resolved_target_id
 		JOIN users u ON u.id = n.author_id
 		WHERE l.source_note_id = $1 AND l.resolved_target_id IS NOT NULL
-		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
-		ORDER BY n.updated_at DESC`, noteID)
+		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`, noteID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -675,9 +566,10 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 	}
 	var authorID uuid.UUID
 	var curSlug string
+	var publishedAt sql.NullInt64
 	err = s.DB.QueryRowContext(r.Context(),
-		`SELECT author_id, slug FROM notes WHERE id = $1`, noteID,
-	).Scan(&authorID, &curSlug)
+		`SELECT author_id, slug, published_at FROM notes WHERE id = $1`, noteID,
+	).Scan(&authorID, &curSlug, &publishedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
@@ -693,7 +585,8 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 
 	title, body := splitTitleBody(r.PostFormValue("document"))
 	slug := curSlug
-	if title != "" {
+	// Only regenerate slug for drafts; a published note's slug is its permanent URL.
+	if title != "" && !publishedAt.Valid {
 		if sl := kebabSlug(title); sl != "" {
 			slug = sl
 		}
@@ -752,16 +645,32 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad id", http.StatusNotFound)
 		return
 	}
-	var slug string
+	var slug, title string
 	err = s.DB.QueryRowContext(r.Context(), `
-		UPDATE notes SET published_at = COALESCE(published_at, $1)
-		WHERE id = $2 AND author_id = $3 RETURNING slug`,
-		nowUnix(), noteID, u.ID,
-	).Scan(&slug)
+		SELECT slug, title FROM notes WHERE id = $1 AND author_id = $2`,
+		noteID, u.ID,
+	).Scan(&slug, &title)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if strings.TrimSpace(title) == "" {
+		http.Error(w, "Title is required before publishing.", http.StatusUnprocessableEntity)
+		return
+	}
+	if strings.HasPrefix(slug, "draft-") {
+		http.Error(w, "Save a title before publishing.", http.StatusUnprocessableEntity)
+		return
+	}
+	_, err = s.DB.ExecContext(r.Context(), `
+		UPDATE notes SET published_at = COALESCE(published_at, $1)
+		WHERE id = $2 AND author_id = $3`,
+		nowUnix(), noteID, u.ID,
+	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

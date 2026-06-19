@@ -42,6 +42,7 @@
   });
   window.cmEditor = easymde;
   var cm = easymde.codemirror;
+  cm.setOption("viewportMargin", Infinity);
 
   // First line is the title — style it large, Medium-style.
   function markTitle() {
@@ -52,14 +53,22 @@
   cm.on("change", markTitle);
 
   // ---------- autosave ----------
-  var timer, inflight = false, again = false;
+  var timer, inflight = false, again = false, loaded = false;
   function setStatus(t) { if (statusEl) statusEl.textContent = t; }
 
+  // Returns a Promise that resolves once the in-flight save (if any) completes.
   function save() {
-    if (inflight) { again = true; return; }
+    clearTimeout(timer);
+    if (inflight) {
+      again = true;
+      return new Promise(function (res) {
+        var orig = arguments.callee;
+        var poll = setInterval(function () { if (!inflight) { clearInterval(poll); res(); } }, 50);
+      });
+    }
     inflight = true; again = false;
     setStatus("Saving…");
-    fetch("/api/notes/" + noteId, {
+    return fetch("/api/notes/" + noteId, {
       method: "PATCH",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "document=" + encodeURIComponent(easymde.value()),
@@ -70,7 +79,9 @@
       if (again) save();
     }).catch(function () { inflight = false; setStatus("Save failed"); });
   }
+  // Skip the first change event that fires as EasyMDE loads existing content.
   cm.on("change", function () {
+    if (!loaded) { loaded = true; return; }
     setStatus("…");
     clearTimeout(timer);
     timer = setTimeout(save, 800);
@@ -80,11 +91,15 @@
   var pub = document.getElementById("publish-btn");
   if (pub) {
     pub.addEventListener("click", function () {
-      save();
-      fetch("/api/notes/" + noteId + "/publish", { method: "POST" })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-        .then(function (d) { window.location = d.url; })
-        .catch(function () { setStatus("Publish failed"); });
+      save().then(function () {
+        fetch("/api/notes/" + noteId + "/publish", { method: "POST" })
+          .then(function (r) {
+            if (r.ok) return r.json();
+            return r.text().then(function (t) { return Promise.reject(t || "Publish failed"); });
+          })
+          .then(function (d) { window.location = d.url; })
+          .catch(function (msg) { setStatus(typeof msg === "string" ? msg : "Publish failed"); });
+      });
     });
   }
 
@@ -100,9 +115,11 @@
     var c = ed.codemirror;
     var sel = c.getSelection();
     c.replaceSelection("[[" + sel + "]]");
-    // place caret inside the brackets so autocomplete kicks in
-    var cur = c.getCursor();
-    c.setCursor({ line: cur.line, ch: cur.ch - 2 });
+    if (!sel) {
+      // no selection: place caret inside [[ ]] so autocomplete kicks in
+      var cur = c.getCursor();
+      c.setCursor({ line: cur.line, ch: cur.ch - 2 });
+    }
     c.focus();
   }
 
@@ -165,8 +182,8 @@
   }
 
   function positionPopup() {
-    var coords = cm.cursorCoords(true, "page");
-    popup.style.position = "absolute";
+    var coords = cm.cursorCoords(true, "window");
+    popup.style.position = "fixed";
     popup.style.left = coords.left + "px";
     popup.style.top = coords.bottom + 4 + "px";
   }

@@ -1212,8 +1212,6 @@ html[data-theme="dark"] .masonry-card:hover {
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  max-height: 16em;
-  overflow-y: auto;
 }
 html[data-theme="dark"] .ac-popup {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
@@ -2219,6 +2217,17 @@ html[data-theme="dark"] .login-wrap {
   font-family: var(--font-serif); /* prose feel, not a code box */
   font-size: 1.05rem;
   line-height: 1.7;
+  min-height: calc(100vh - 160px);
+  height: auto;
+}
+.EasyMDEContainer .CodeMirror-scroll {
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  /* hide ugly scrollbars */
+}
+.EasyMDEContainer .CodeMirror-hscrollbar,
+.EasyMDEContainer .CodeMirror-vscrollbar {
+  display: none !important;
 }
 .EasyMDEContainer .CodeMirror-cursor {
   border-color: var(--text);
@@ -2253,6 +2262,17 @@ html[data-theme="dark"] .login-wrap {
   font-size: 1.7em;
   font-weight: 700;
   line-height: 1.3;
+}
+/* Dim markdown syntax marks — visible but subordinate to content. */
+.EasyMDEContainer .cm-formatting,
+.EasyMDEContainer .cm-formatting-strong,
+.EasyMDEContainer .cm-formatting-em,
+.EasyMDEContainer .cm-formatting-strikethrough,
+.EasyMDEContainer .cm-formatting-code,
+.EasyMDEContainer .cm-formatting-quote,
+.EasyMDEContainer .cm-formatting-list,
+.EasyMDEContainer .cm-formatting-header {
+  opacity: 0.35;
 }
 /* Keep code spans/blocks monospace even though prose is serif. */
 .EasyMDEContainer .cm-comment {
