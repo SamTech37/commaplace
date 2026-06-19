@@ -43,7 +43,7 @@ watch: db-up
 ## test: run all tests (against the dedicated test DB, never dev data)
 test: db-up
 	@docker compose exec -T postgres psql -U commaplace -d commaplace -c 'CREATE DATABASE commaplace_test' >/dev/null 2>&1 || true
-	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test ./...
+	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test -p 1 ./...
 
 ## clean: remove binary
 clean:
