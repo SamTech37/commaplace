@@ -25,19 +25,21 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.sweepOrphanDrafts(r.Context(), u.ID)
 
-	// A reply prefills the body with a link; the title (first line) stays empty.
+	// Reply prefill: title "Re: {original}", body embeds the original + separator.
 	doc := ""
 	if id := r.URL.Query().Get("reply-to"); id != "" {
 		if replyID, err := uuid.Parse(id); err == nil {
-			var slug, handle string
+			var title, slug, handle string
 			if err := s.DB.QueryRowContext(r.Context(),
-				`SELECT n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id WHERE n.id = $1`,
-				replyID).Scan(&slug, &handle); err == nil {
+				`SELECT n.title, n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id WHERE n.id = $1`,
+				replyID).Scan(&title, &slug, &handle); err == nil {
+				var embed string
 				if handle == u.Handle {
-					doc = "\n[[" + slug + "]]\n\n"
+					embed = "![[" + slug + "]]"
 				} else {
-					doc = "\n[[@" + handle + "/" + slug + "]]\n\n"
+					embed = "![[@ " + handle + "/" + slug + "]]"
 				}
+				doc = "Re: " + title + "\n\n" + embed + "\n\n---\n\n"
 			}
 		}
 	}
