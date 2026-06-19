@@ -127,6 +127,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 ## Could Have
 
 - [x] 圖片支援 — note image upload (1/note, bytea, dedicated route, same pattern as avatar PNG)。
+  - [ ] consider raising limit to 1–10 images/note: cost stays O(1) per note (constant cap, not O(n) content), complexity stays manageable; schema option: `note_images` table with CHECK/trigger enforcing max 10 rows per note_id.
 - [ ] Library page: 優質公有領域文本，like Project Gutenberg
 
 ## Won't Have

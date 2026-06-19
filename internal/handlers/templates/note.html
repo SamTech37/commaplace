@@ -142,9 +142,6 @@
   </div>
 
   <h1 class="article-title">{{.Note.Title}}</h1>
-  {{if .HasImage}}
-  <img src="/api/notes/{{.Note.ID}}/image" class="note-image" alt="" />
-  {{end}}
   <div class="article-body">{{.BodyHTML}}</div>
 </article>
 
