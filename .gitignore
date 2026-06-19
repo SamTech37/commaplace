@@ -24,6 +24,7 @@ server
 !.claude/agents
 !.claude/skills
 !.claude/commands
+!.claude/htmx-rules.md
 
 .github/
 

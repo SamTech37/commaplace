@@ -38,5 +38,5 @@ See Makefile. Prefer `make watch` for hot-reload.
 ---
 
 ## Project Context
-
+See @.claude/htmx-rules.md for htmx guidelines
 See @README.md for what the project does, where things live, and how work gets done.

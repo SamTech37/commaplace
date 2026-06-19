@@ -7,8 +7,18 @@
 - [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
-- [x] minimal deployment to Render TONIGHT
-  - prep done: Dockerfile builds the Go binary as-is, `docker-compose.yml` for local Postgres, `render.yaml` for the Render Blueprint, env vars documented in `.env.example`/README — not yet actually deployed
+- [x] minimal deployment to Render — **LIVE** at https://commaplace.onrender.com
+  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres,
+    `render.yaml` Blueprint, env vars in `.env.example`/README. Deployed.
+- [ ] CI/CD pipeline (not yet established — currently manual)
+  - Render DOES auto-deploy on push to the connected branch (Vercel-style):
+    enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
+  - But Render has **no built-in test gate** like Vercel checks. Render's
+    "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for
+    migrations, weak as a test gate (a failure there blocks the deploy but burns a
+    build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push
+    (the gate); Render auto-deploys on merge to `main` (the deploy).**
+  - TODO: add `.github/workflows/ci.yml` (go test) + turn on Render Auto-Deploy.
 
 > Navigation, Exploration, Interaction.
 
@@ -20,26 +30,37 @@
   - [ ] embed
   - [ ] empty links?
   - [ ] duplicated note names?
-- [ ] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
+- [/] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
+  - **Rationale:** robustness. Natural-language names and slugs (👎) are not a
+    reliable basis for linkage; UUID is the only sound approach for dynamic
+    hypertext. Authoring is still by name (`[[@user/note]]`), but resolution stores
+    a UUID edge (`links.resolved_target_id`) — that edge is the source of truth.
+  - **Status:** believed already satisfied by the Postgres rebuild. **Task = guard
+    against regression**, not new work: confirm `recomputeLinks` stores
+    `resolved_target_id`, and that backlinks/graph/rendering read the UUID edge, not
+    handle+slug, so renames never break links.
 - [ ] address all of these: [[# some concerns]]
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
   - [ ] ctrl + O search title
   - [ ] ctrl + F search body, and those operators: line(), tag(), section()...
   - [ ] or different keymaps to avoid conflict with browser hotkeys
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
-	- [x] masonry (wall)
+	- **Launch-gating views: timeline + dora mode.** Everything else below is
+	  post-launch backlog (calendar + embed are already on a feature branch, within
+	  the next two specs to consume — not part of this gate).
+	- [x] list / grid / masonry (wall)
 	- [/] graph (sorta) → note should be like cards
 		- [x] graph 不要「點兩下」
     - [x] global graph
 		- [x] local graph
-	- [ ] timeline (linear)
+	- [ ] **timeline (linear) — LAUNCH-GATING**
     - [ ] horizontal or vertical? 
-	- [ ] canvas (like sticky notes on a bulletin board or whiteboard)
+	- [ ] **dora mode — LAUNCH-GATING.** wiki exploring but better (star-graph, spotlight on current focus node, switch focus)
+	- [ ] canvas (like sticky notes on a bulletin board or whiteboard) — backlog
     - [ ] like graph view but not shaky and dynamic, only static draggables
-	  - [ ] kanban? 
-	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight on current focus node, switch focus)
-	- [ ] [[RSVP reader]]
-	- [ ] calendar (date view)
+	  - [ ] kanban? — backlog
+	- [ ] [[RSVP reader]] — backlog
+	- [ ] calendar (date view) — already on a feature branch
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
 	- [x] ~~postgres > 100 users 再考慮~~
@@ -56,11 +77,42 @@
   - [x] or start from a markdown
   - [x] better writing UX see [[editor-medium-style-spec.md]] 
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
-- [ ] 權限與授權管控。
+- [/] 權限與授權管控 (permissions/authz)
+  - **MVP = all-public.** Only axis is draft vs published; everything published is
+    world-readable. No private notes at launch. Author-only edit/delete stays.
+  - **Not blockers, keep on the radar:** *private* (vault-only) notes and *unlisted*
+    (link-only, hidden from feed/search/graph) tiers — planned, post-launch.
 - [x] 管理後台（SQLite or postgres 都不附，要自己做）。
   - [ ] 需要實際試用看看
-- [ ] 付費牆管理。
-  - [ ] stripe or something?
+- [ ] 付費牆管理 (payment handling)
+  - **Stripe is out:** no US company + geopolitical friction blocks direct Stripe.
+  - **Does this gate launch? No.** Monetization gates revenue, not release. Launch
+    free, validate the cross-vault rabbit-hole thesis with real users, add payments
+    once there's demonstrated willingness to pay. The real blocker is demand, not
+    the integration. (Don't build the paywall before there's something worth paying
+    for.)
+  - **When needed → Merchant-of-Record (MoR).** The MoR is the legal seller of
+    record; they handle entity, global tax/VAT, and pay out to you — no US presence
+    required. This is the standard "no US company" answer.
+    - Candidates: **Paddle**, **Lemon Squeezy**, **Gumroad** (all MoR, indie-friendly).
+    - Taiwan-local alternative (needs a TW business entity): **ECPay (綠界)**,
+      **NewebPay (藍新)**, **TapPay** — native TW methods (信用卡/ATM/超商).
+    - ⚠️ VERIFY Taiwan **seller/payout eligibility** on each platform's
+      supported-countries page before committing — this changes and is unverified.
+  - **DECISION: launch free + lightweight tips/donations now; full MoR paywall later.**
+    Tips double as the willingness-to-pay signal that tells us *when* to build the
+    real paywall.
+  - **Tips/donations vendor (no company needed):** **Ko-fi** or **Buy Me a Coffee**
+    — both take one-time tips, route through their own PayPal/Stripe, payout to a TW
+    bank, zero/low platform cut, just embed a link/button. Recommended over a raw
+    PayPal.me button because [Unverified] Taiwan PayPal accounts have historically
+    had receiving/withdrawal restrictions — verify before relying on bare PayPal.
+  - Full paywall (later) = Merchant-of-Record, see candidates above.
+  - paid features and incentives: 
+    - can have private/unlisted notes (drafts are only kept 3~7 days)
+    - can have more images
+    - can recurse deeper into nested embeds
+    - can have "unlimited" playlist/collections, instead of just two, "likes" & "later"
 - [ ] Dev workflow & engineering best-practices
   - [x] KEEP CLAUDE.MD LEAN
   - [x] explore -> plan -> run 
@@ -70,6 +122,8 @@
   - [ ] `/goal` also cool
 - [ ] `/random` take people to a random node
 - [ ] share button, webshare api...
+- [ ] 面向華語用戶，所以中文UI/UX要做好
+- [ ] 服務條款、隱私政策、...
 
 
 ## Tech Stack & Frontend Direction
@@ -136,12 +190,6 @@ substrate survives feature #20 without a React rewrite."
 
 https://code.claude.com/docs/zh-TW/chrome
 
-### Running Locally
-
-```bash
-make dev          # DEBUG=1, demo seed, dev login enabled
-make dev-full     # above + SEED_DEV=1 (multi-user fake data)
-```
 
 Log in without email at `/_dev/login?as=alice` (creates user if needed).
 
@@ -217,9 +265,8 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [x] maybe no "folders"? how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders? — resolved: folders removed from product, `folder_path` column dropped entirely in the Postgres rebuild.
 - [x] what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already? — resolved: no production data existed, so the Postgres rebuild shipped as a clean rip-and-replace with no migration/rollback tooling (see `.claude/postgres-railway-rebuild-spec.md`).
 - [ ] migrations: in early dev it's fine to squash and reset the DB periodically; keep the schema clean, not precious
-- [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
+- [x] need to handle empty links (stubs) like wikipedia or obsidian does. 
 - [x] need quick reply to others note
-- [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
+- [x] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
 - [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
-> Note: the single-note page redesign (formerly B1–B7) is now tracked in `.claude/postgres-railway-rebuild-spec.md`.
