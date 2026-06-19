@@ -25,6 +25,8 @@ server
 !.claude/skills
 !.claude/commands
 
+.github/
+
 
 # local-only tooling that references personal paths
 cmd/import-vault/

@@ -7,8 +7,8 @@
 - [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
-- [ ] minimal deployment to Railway TONIGHT
-  - prep done: Dockerfile builds the Postgres binary as-is, `docker-compose.yml` for local Postgres, env vars documented in `.env.example`/README — not yet actually deployed
+- [x] minimal deployment to Render TONIGHT
+  - prep done: Dockerfile builds the Go binary as-is, `docker-compose.yml` for local Postgres, `render.yaml` for the Render Blueprint, env vars documented in `.env.example`/README — not yet actually deployed
 
 > Navigation, Exploration, Interaction.
 
@@ -43,7 +43,7 @@
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
 	- [x] ~~postgres > 100 users 再考慮~~
-- [x] new backend architecture: postgres DB service 已換完，serverless worker 評估後否決（單一 Go binary on Railway，理由見 spec 的 Design decisions），`flyio` sucks 🛫 2026-06-16 📅 2026-06-20
+- [x] new backend architecture: postgres DB service 已換完，serverless worker 評估後否決（單一 Go binary on Render，理由見 spec 的 Design decisions），`flyio` sucks 🛫 2026-06-16 📅 2026-06-20
 - [ ] 逆向 Obsidian 的殺手功能 — 
   - [x] 例如 [obsidian-flavored markdown](https://obsidian.md/help/syntax)
   - [ ] others… check [Home - Developer Documentation](https://docs.obsidian.md/Home)
@@ -139,7 +139,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 ## Scaling Issues
 
 - [x] ~~現況 — SQLite 單檔當 DB，需要一台 24/7 不掉資料的專屬機（用 [Fly.io](https://fly.io/)）。~~ 已換 Postgres，這項已成過去式。
-- [x] 計畫 — DB 換 hosted Postgres，但用 Railway 不是 Neon；Go server 維持單一 binary 部署在 Railway，不走 Vercel serverless（理由見 `.claude/postgres-railway-rebuild-spec.md` Design decisions）。
+- [x] 計畫 — DB 換 hosted Postgres，但用 Render 不是 Neon；Go server 維持單一 binary 部署在 Render，不走 Vercel serverless（理由見 `.claude/postgres-railway-rebuild-spec.md` Design decisions）。
   - [ ] or perhaps cloudflare 全家桶（未評估，仍開放）
 - [ ] DDoS issues
 - [ ] concurrent users issue
@@ -164,4 +164,3 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
 > Note: the single-note page redesign (formerly B1–B7) is now tracked in `.claude/postgres-railway-rebuild-spec.md`.
-
