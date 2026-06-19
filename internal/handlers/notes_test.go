@@ -108,7 +108,7 @@ func TestSaveResolvesAndBacklinks(t *testing.T) {
 	links := markdown.Extract(body)
 	resolver := s.buildResolver(ctx, "alice", links)
 	for _, l := range links {
-		got := resolver(l)
+		got := resolver(l) != nil
 		want := false
 		switch {
 		case l.User == "bob" && l.Slug == "foo":

@@ -33,6 +33,27 @@ func assertNotContains(t *testing.T, got string, subs ...string) {
 	}
 }
 
+// ---------- Wiki resolver (uuid-canonical href) ----------
+
+func TestWikiResolvedHrefFollowsTarget(t *testing.T) {
+	// resolver reports the target's CURRENT handle/slug — simulating a note
+	// whose slug was renamed from "old" to "renamed".
+	resolver := func(l WikiLink) *ResolvedTarget {
+		if l.Slug == "old" {
+			return &ResolvedTarget{Handle: "alice", Slug: "renamed", Title: "Renamed"}
+		}
+		return nil
+	}
+	out, err := Render("[[old]] then [[ghost]]", "alice", resolver)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	s := string(out)
+	assertContains(t, s, `href="/alice/renamed"`, "wiki-resolved")
+	// unresolved link falls back to the typed slug + unresolved class
+	assertContains(t, s, `href="/alice/ghost"`, "wiki-unresolved")
+}
+
 // ---------- Highlight ==text== ----------
 
 func TestHighlight(t *testing.T) {

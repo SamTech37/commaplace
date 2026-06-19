@@ -15,9 +15,17 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
-// Resolver returns true if a wiki link points at an existing target.
-// nil treats every link as unresolved.
-type Resolver func(WikiLink) bool
+// ResolvedTarget is a wiki link's current destination, looked up by the link's
+// stored uuid pointer so the href follows the target through slug/handle renames.
+type ResolvedTarget struct {
+	Handle string
+	Slug   string
+	Title  string
+}
+
+// Resolver returns the current target a wiki link points at, or nil if the
+// link is unresolved. nil resolver treats every link as unresolved.
+type Resolver func(WikiLink) *ResolvedTarget
 
 // Render converts md to safe HTML. Wiki links are wrapped in <a class="wiki ...">
 // with "wiki-resolved" or "wiki-unresolved" depending on resolver.
@@ -695,7 +703,11 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 		return ast.WalkContinue, nil
 	}
 	n := node.(*wikiNode)
-	resolved := r.resolve != nil && r.resolve(n.Link)
+	var rt *ResolvedTarget
+	if r.resolve != nil {
+		rt = r.resolve(n.Link)
+	}
+	resolved := rt != nil
 	crossVault := n.Link.User != "" && n.Link.User != r.currentUser
 
 	var cls string
@@ -709,7 +721,16 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 	default:
 		cls = "wiki wiki-unresolved"
 	}
+	// Resolved links build their href from the target's CURRENT handle/slug so
+	// renaming the target updates every inbound link. Unresolved links fall
+	// back to the author-typed slug.
 	url := n.Link.URL(r.currentUser)
+	if rt != nil {
+		url = "/" + rt.Handle + "/" + rt.Slug
+		if n.Link.Anchor != "" {
+			url += "#" + headingAnchor(n.Link.Anchor)
+		}
+	}
 	w.WriteString(`<a href="`)
 	w.WriteString(htmlpkg.EscapeString(url))
 	w.WriteString(`" class="`)

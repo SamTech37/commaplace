@@ -141,7 +141,7 @@
             src="/assets/comma_mascot_logo.svg"
             class="brand-logo"
             alt="comma mascot"
-          />{{.Site.Title}}</a
+          /><span>{{.Site.Title}}</span></a
         >
         <nav class="nav">
           <form method="GET" action="/search" class="search-form" role="search">
@@ -188,31 +188,60 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path
-                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-              ></path>
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </button>
+          <!-- hamburger: mobile only -->
+          <details class="action-menu nav-menu">
+            <summary class="nav-hamburger" aria-label="選單">≡</summary>
+            <div class="action-menu-list">
+              {{if .User}}
+              <a href="/write">書寫</a>
+              <a href="/feed">閱覽</a>
+              <a href="/graph">圖譜</a>
+              <div class="action-menu-sep"></div>
+              <form method="POST" action="/logout" class="inline-form" style="padding:0">
+                <button type="submit" class="link-btn" style="padding: 0.48em 0.85em; width:100%; text-align:left; font-size:0.85rem">登出</button>
+              </form>
+              {{else}}
+              <a href="/feed">閱覽</a>
+              <a href="/graph">圖譜</a>
+              <a href="/login">登入</a>
+              {{end}}
+            </div>
+          </details>
+          <!-- flat links: desktop only -->
+          <div class="nav-links">
+            {{if .User}}
+            <a href="/write">書寫</a>
+            <a href="/feed">閱覽</a>
+            <a href="/graph">圖譜</a>
+            <form method="POST" action="/logout" class="inline-form">
+              <button type="submit" class="link-btn">登出</button>
+            </form>
+            {{else}}
+            <a href="/feed">閱覽</a>
+            <a href="/graph">圖譜</a>
+            <a href="/login">登入</a>
+            {{end}}
+          </div>
           {{if .User}}
-          <a href="/write">write</a>
-          <a href="/feed">feed</a>
-          <a href="/graph">graph</a>
-          <form method="POST" action="/logout" class="inline-form">
-            <button type="submit" class="link-btn">logout</button>
-          </form>
           <a
             class="profile-dot"
             href="/{{.User.Handle}}"
             style="background-color:{{avatarColor .User.Handle}}"
             title="@{{.User.Handle}}"
           >
-            <img class="avatar-img-sm" src="{{avatarURL .User.Handle}}" alt="" onerror="this.remove()" />
-            <span class="profile-dot-initial">{{avatarInitial .User.Handle}}</span>
+            <img
+              class="avatar-img-sm"
+              src="{{avatarURL .User.Handle}}"
+              alt=""
+              onerror="this.remove()"
+            />
+            <span class="profile-dot-initial"
+              >{{avatarInitial .User.Handle}}</span
+            >
           </a>
-          {{else}}
-          <a href="/feed">feed</a>
-          <a href="/graph">graph</a>
-          <a href="/login">login</a>
           {{end}}
         </nav>
       </header>

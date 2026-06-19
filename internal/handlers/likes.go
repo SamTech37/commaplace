@@ -104,7 +104,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 		FROM likes l
 		JOIN notes n  ON n.id = l.note_id
 		JOIN users u2 ON u2.id = n.author_id
-		WHERE l.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+		WHERE l.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
 		ORDER BY l.created_at DESC
 		LIMIT 200`, u.ID)
 	if err != nil {

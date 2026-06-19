@@ -55,8 +55,8 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 		t := tick(hoursAgo)
 		var nid uuid.UUID
 		err := tx.QueryRowContext(ctx, `
-			INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
-			VALUES($1, $2, $3, $4, $5, $6, $6) RETURNING id`,
+			INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at, published_at)
+			VALUES($1, $2, $3, $4, $5, $6, $6, $6) RETURNING id`,
 			authorID, slug, strings.ToLower(slug), title, body, t,
 		).Scan(&nid)
 		if err != nil {

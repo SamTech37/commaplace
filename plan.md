@@ -16,6 +16,12 @@
 
 - [x] CRUD — 筆記的基本增刪改查。
 	- [x] progressive load (not pagination) of data
+- [ ] wikilink caveats
+  - [ ] embed
+  - [ ] empty links?
+  - [ ] duplicated note names?
+- [ ] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
+- [ ] address all of these: [[# some concerns]]
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
   - [ ] ctrl + O search title
   - [ ] ctrl + F search body, and those operators: line(), tag(), section()...
@@ -27,11 +33,12 @@
     - [x] global graph
 		- [x] local graph
 	- [ ] timeline (linear)
+    - [ ] horizontal or vertical? 
 	- [ ] canvas (like sticky notes on a bulletin board or whiteboard)
-    - [ ] like 
+    - [ ] like graph view but not shaky and dynamic, only static draggables
+	  - [ ] kanban? 
+	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight on current focus node, switch focus)
 	- [ ] [[RSVP reader]]
-	- [ ] **dora mode.** wiki exploring but better (star-graph, spotlight, switch focus)
-	- [ ] kanban?
 	- [ ] calendar (date view)
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
@@ -47,20 +54,22 @@
 - [x] 簡單的上傳與編輯。
   - [x] empty slate
   - [x] or start from a markdown
+  - [ ] better writing UX see [[editor-medium-style-spec.md]] 
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
 - [ ] 權限與授權管控。
-- [x] 管理後台（SQLite 不附，要自己做）。
+- [x] 管理後台（SQLite or postgres 都不附，要自己做）。
 - [ ] 付費牆管理。
   - [ ] stripe or something?
 - [ ] Dev workflow & engineering best-practices
   - [x] KEEP CLAUDE.MD LEAN
-  - [ ] explore -> plan -> run 
-  - [ ] `/goal` also cool
+  - [x] explore -> plan -> run 
   - [x] start using skills/commands
   - [ ] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
-- [ ] address the [[# some concerns]]
+  - [ ] `/goal` also cool
 - [ ] `/random` take people to a random node
+- [ ] share button, webshare api...
+
 
 ## Dev & Testing
 
@@ -110,14 +119,15 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - A3. 標籤 chips
   - 有小計數（e.g. 「#音樂 12」）
   - [ ] tag picker UX (deferred from postgres schema design session): autocomplete sorted by usage count desc; picking an existing tag should be the path of least resistance; creating a brand-new tag must be a deliberate, visually separate last step (not just hitting enter on free text) — goal is to stop X/FB-style tag spam (emphasis/color-coding instead of categorization) without banning new tags outright
-- [ ] mirroring with easy
+- [ ] mirroring should be easy
   - [ ] 已有經營 blog 的人如何一鍵同步過來？
-  - [ ] 又分 normal blog vs. hypertext densely linked blog
+  - [ ] 又分 normal blog vs. densely linked hypertext  blog
 - [ ] 維持個人 vault 內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
 
 ## Could Have
 
 - [x] 圖片支援 — note image upload (1/note, bytea, dedicated route, same pattern as avatar PNG)。
+  - [ ] consider raising limit to 1–10 images/note: cost stays O(1) per note (constant cap, not O(n) content), complexity stays manageable; schema option: `note_images` table with CHECK/trigger enforcing max 10 rows per note_id.
 - [ ] Library page: 優質公有領域文本，like Project Gutenberg
 
 ## Won't Have
@@ -151,7 +161,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] need to handle empty links (stubs) like wikipedia or obsidian does. 
 - [x] need quick reply to others note
 - [ ] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
-- [ ] user avatar image: use dicebear or Hank's NFT-like Weedie.
+- [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
 
 > Note: the single-note page redesign (formerly B1–B7) is now tracked in `.claude/postgres-railway-rebuild-spec.md`.
 

@@ -47,7 +47,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 				FROM notes n
 				JOIN users u ON u.id = n.author_id
 				CROSS JOIN to_tsquery('simple', $1) query
-				WHERE (n.search_tsv @@ query OR u.handle ILIKE $2) AND n.hidden_at IS NULL AND n.deleted_at IS NULL`+where+`
+				WHERE (n.search_tsv @@ query OR u.handle ILIKE $2) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`+where+`
 				ORDER BY ts_rank(n.search_tsv, query) DESC
 				LIMIT 50`, args...)
 			if err != nil {

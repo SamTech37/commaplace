@@ -32,27 +32,43 @@ someone's note, follow internal `[[wiki links]]` into the same vault or
 - Hand-written CSS, no build tooling
 - Ships as a **single static binary**
 
+## Prerequisites
+
+- [Go ≥ 1.22](https://go.dev/dl/)
+- [Docker](https://docs.docker.com/get-docker/) — runs Postgres locally via Compose
+- [air](https://github.com/air-verse/air) for live reload: `go install github.com/air-verse/air@latest`
+- **Windows users**: requires [Git Bash](https://gitforwindows.org/) or WSL — native cmd/PowerShell is not supported
+
 ## Running
 
+**Day-to-day development** (hot reload + seed data + auto-opens browser):
+
 ```sh
-# dev server — DEBUG=1, demo seed, dev login at /_dev/login?as=alice
-make dev
-
-# dev + multi-user fake data (alice, bob, carol, dave); auto-opens browser
-make dev-full
-
-# raw (no flags, uses ./commonplace.db, magic links printed to stdout)
-go run ./cmd/server
-
-# tests + checks
-go test ./...
-go vet ./...
-
-# production build
-go build -o bin/commonplace ./cmd/server
+make watch
 ```
 
-Visit <http://localhost:8080>.
+**First time or after a schema change** (one-shot, no reload):
+
+```sh
+make dev-full
+```
+
+Both commands start Postgres automatically via Docker and log in as `alice` at `/_dev/login`.
+
+**Other commands:**
+
+```sh
+make dev          # dev server, no seed data, no browser open
+make dev-oauth    # dev + Google OAuth (set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET first)
+make test         # run all tests against a separate test DB
+make db-down      # stop Postgres
+```
+
+**Production build:**
+
+```sh
+go build -o bin/commonplace ./cmd/server
+```
 
 ## Environment variables
 

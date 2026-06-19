@@ -43,9 +43,12 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("POST /write", s.PostWrite)
 	mux.HandleFunc("POST /preview", s.PostPreview)
 
+	// Editor autosave + publish (draft model)
+	mux.HandleFunc("PATCH /api/notes/{id}", s.PatchNote)
+	mux.HandleFunc("POST /api/notes/{id}/publish", s.PublishNote)
+
 	// Edit + delete
 	mux.HandleFunc("GET /edit/{id}", s.GetEdit)
-	mux.HandleFunc("POST /edit/{id}", s.PostEdit)
 	mux.HandleFunc("POST /delete/{id}", s.PostDeleteNote)
 
 	// Import
@@ -95,6 +98,7 @@ func (s *Server) Routes() *http.ServeMux {
 
 	// Note image
 	mux.HandleFunc("GET /api/notes/{id}/image", s.GetNoteImage)
+	mux.HandleFunc("POST /api/notes/{id}/image", s.PostNoteImage)
 
 	// Profile + note view + assets (last; catch-all for user routes).
 	mux.HandleFunc("GET /{path...}", s.GetCatchAll(static))

@@ -1,105 +1,19 @@
-{{define "title"}}{{if .EditNote}}編輯筆記{{else}}Write{{end}} ·
+{{define "title"}}{{if .IsEdit}}Edit{{else}}Write{{end}} ·
 {{.Site.Title}}{{end}} {{define "content"}}
-<script src="/assets/editor.js" defer></script>
-<h1>{{if .Heading}}{{.Heading}}{{else}}Write a note{{end}}</h1>
-{{if .Error}}
-<p class="error">{{.Error}}</p>
-{{end}}
-{{if not .EditNote}}
-<div class="md-upload">
-  <label for="md-file-input">⬆ 從 .md 檔案匯入</label>
-  <input type="file" id="md-file-input" accept=".md,.markdown">
-</div>
-<script>
-(function(){
-  var inp = document.getElementById('md-file-input');
-  if (!inp) return;
-  inp.addEventListener('change', function(){
-    var file = this.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e){
-      var text = e.target.result;
-      var m = text.match(/^#\s+(.+)/m);
-      var title = m ? m[1].trim() : file.name.replace(/\.(md|markdown)$/i, '');
-      var body = m ? text.replace(/^#[^\n]*\n?/, '').trimStart() : text;
-      document.querySelector('input[name="title"]').value = title;
-      var ta = document.querySelector('textarea[name="body_md"]');
-      ta.value = body;
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    reader.readAsText(file);
-  });
-})();
-</script>
-{{end}}
-<form method="POST" enctype="multipart/form-data" action="{{if .Action}}{{.Action}}{{else}}/write{{end}}">
-  <label
-    >Title
-    <input
-      type="text"
-      name="title"
-      required
-      maxlength="200"
-      value="{{.Form.Title}}"
-      autofocus
-    />
-  </label>
-  {{if .EditNote}}
-  <p style="color: var(--muted); font-size: 0.9rem; margin: 0">
-    路徑：<code>/{{.EditNote.Slug}}</code>
-    <small
-      >（slug 不可變更，避免破壞他人對這篇的 <code>[[wiki-link]]</code>）</small
-    >
-  </p>
-  {{end}}
-  <label
-    >Tags
-    <small style="font-weight: 400; color: var(--muted)"
-      >(comma-separated, e.g. <code>混音, workflow</code>)</small
-    >
-    <input type="text" name="tags" maxlength="500" value="{{.Form.Tags}}" />
-  </label>
-  <label
-    >Image
-    <small style="font-weight: 400; color: var(--muted)">(optional, png/jpeg/webp)</small>
-    {{if .EditNote.HasImage}}
-    <img src="/api/notes/{{.EditNote.ID}}/image" class="image-preview" alt="" />
-    {{end}}
-    <input type="file" name="image" accept="image/png,image/jpeg,image/webp" />
-  </label>
-  <label
-    >Markdown Body<small style="font-weight: 400; color: var(--muted)"
-      >— type <code>[[</code> to link to another note</small
-    >
-    <textarea
-      name="body_md"
-      data-autocomplete="1"
-      hx-post="/preview"
-      hx-trigger="input changed delay:400ms"
-      hx-target="#preview"
-      hx-swap="innerHTML"
-    >
-{{.Form.BodyMD}}</textarea>
-    <div id="ac-popup" class="ac-popup" hidden>
-      <ul></ul>
-    </div>
-  </label>
-  <div class="editor-actions">
-    <button type="submit">
-      {{if .SubmitLabel}}{{.SubmitLabel}}{{else}}Publish{{end}}
+<link rel="stylesheet" href="/assets/easymde.min.css" />
+<script src="/assets/easymde.min.js" defer></script>
+<script src="/assets/cmeditor.js" defer></script>
+
+<div class="editor-page" data-note-id="{{.NoteID}}">
+  <div class="editor-bar">
+    <span id="save-status" class="save-status" aria-live="polite"></span>
+    <button type="button" id="publish-btn" class="publish-btn">
+      {{if .Published}}Update{{else}}Publish{{end}}
     </button>
-    {{if .EditNote}}
-    <a
-      href="/{{.User.Handle}}/{{.EditNote.Slug}}"
-      style="margin-left: 0.75em; color: var(--muted)"
-      >取消</a
-    >
-    {{end}}
   </div>
-</form>
-<section class="preview">
-  <h2>Preview</h2>
-  <div id="preview"></div>
-</section>
+  <textarea id="doc">{{.Document}}</textarea>
+  <div id="ac-popup" class="ac-popup" hidden>
+    <ul></ul>
+  </div>
+</div>
 {{end}}

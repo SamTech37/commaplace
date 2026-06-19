@@ -20,3 +20,10 @@
     setTimeout(() => { btn.textContent = original; }, 1600);
   });
 })();
+
+// Close any open action-menu dropdowns when clicking outside them.
+document.addEventListener('click', e => {
+  document.querySelectorAll('details.action-menu[open]').forEach(d => {
+    if (!d.contains(e.target)) d.removeAttribute('open');
+  });
+});
