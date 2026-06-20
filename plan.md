@@ -253,6 +253,34 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] writing queue?
   - [ ] reading?
 
+### Benchmark findings (2026-06-20, local `benchmark` DB, 100 users × 1000 notes = 100K notes / 300K note_tags / 100K resolved links)
+
+Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod),
+`EXPLAIN ANALYZE` on the hot query paths. Numbers are local single-query (no
+concurrency); treat as relative, not absolute prod latency.
+
+| Query | @100K | Verdict |
+|-------|-------|---------|
+| Feed (recommended, `idx_notes_feed`) | **0.07 ms** | Flat vs 200 rows — partial index does index-scan-stop-at-LIMIT, never sorts 90K. Index **vindicated** at forecast scale. |
+| **Tag-chips aggregate** (`loadTopTagChips`, runs on EVERY feed load) | **~40 ms** | 🔴 **Only real bottleneck.** HashAggregate over full note_tags⋈notes join. Grows with table. |
+| Tag page (sort after join) | ~21 ms | 🟡 Slowest page, tolerable, watch. |
+| Backlinks (`idx_links_resolved`) | fast | Bitmap scan, fine. |
+| FTS | n/a | Test invalid (every seeded body matched the term); re-test with varied corpus. |
+
+- **Conclusion:** feed architecture holds at the 100K forecast. The index/N+1
+  changes from the arch review are unmeasurable at current 200-row scale but
+  correct forward — feed stays O(LIMIT) not O(N).
+- [ ] **Tag-chips fix (when it bites, not now — 40 ms is fine today):** it changes
+  slowly, so cache it (Render Key Value / in-process TTL map) or drop it off the
+  synchronous feed render. Don't optimize until it's on the measured hot path for
+  real traffic. See "speed up tags" options below.
+- [ ] **Concurrency untested** — single-query SQL ≠ concurrent load. Needs an HTTP
+  load tool (k6 / vegeta) against the running binary: connection-pool saturation,
+  write contention. Separate exercise.
+- Reproduce: `benchmark` DB lives in the local docker postgres; reseed script in
+  session notes. DBs: prod (Render), `commaplace` (dev), `benchmark` (load),
+  `commaplace_test` (tests).
+
 # Some Concerns (iterative)
 
 - [ ] liked and saved should be separated

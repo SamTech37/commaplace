@@ -8,6 +8,7 @@ bin/
 .DS_Store
 
 # local dev junk and binaries
+/tmp
 server.log
 cookies.txt
 *.txt
@@ -25,6 +26,8 @@ server
 !.claude/skills
 !.claude/commands
 !.claude/htmx-rules.md
+!.claude/budget-render.md
+
 
 .github/
 
