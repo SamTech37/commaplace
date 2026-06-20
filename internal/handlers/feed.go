@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -110,7 +111,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tagChips, _ := loadTopTagChips(r.Context(), s.DB, 8, tagFilter)
+	tagChips := s.topTagChips(r.Context(), tagFilter)
 
 	s.render(w, r, "feed", map[string]any{
 		"Cards":          cards,
@@ -338,7 +339,39 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 	return "text", markdown.Excerpt(body, 160), nil, "", nil
 }
 
-func loadTopTagChips(ctx context.Context, db *sql.DB, limit int, active string) ([]tagChip, error) {
+// topTagChips returns the top tag chips with Active set for the current filter,
+// served from a 5-min in-process cache (the underlying aggregate is ~40ms at
+// scale). On a cache miss it refills from loadTopTagChips; on error it returns
+// nil (chips are a non-critical feed adornment). See tagChipCache.
+func (s *Server) topTagChips(ctx context.Context, active string) []tagChip {
+	c := &s.tagChips
+	c.mu.RLock()
+	fresh := time.Now().Before(c.until)
+	cached := c.data
+	c.mu.RUnlock()
+
+	if !fresh {
+		chips, err := loadTopTagChips(ctx, s.DB, 8)
+		if err != nil {
+			log.Printf("topTagChips refill: %v", err)
+			return nil
+		}
+		c.mu.Lock()
+		c.data, c.until = chips, time.Now().Add(5*time.Minute)
+		cached = c.data
+		c.mu.Unlock()
+	}
+
+	// Copy + set the per-request Active flag (the cached list omits it).
+	out := make([]tagChip, len(cached))
+	for i, t := range cached {
+		t.Active = t.Tag == active
+		out[i] = t
+	}
+	return out
+}
+
+func loadTopTagChips(ctx context.Context, db *sql.DB, limit int) ([]tagChip, error) {
 	cutoff := time.Now().Add(-30 * 24 * time.Hour).Unix()
 	rows, err := db.QueryContext(ctx, `
 		SELECT nt.tag, COUNT(*) c
@@ -358,7 +391,6 @@ func loadTopTagChips(ctx context.Context, db *sql.DB, limit int, active string) 
 		if err := rows.Scan(&t.Tag, &t.Count); err != nil {
 			return nil, err
 		}
-		t.Active = t.Tag == active
 		out = append(out, t)
 	}
 	return out, rows.Err()

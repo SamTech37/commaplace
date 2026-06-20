@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"net/http"
 	"strings"
 
@@ -10,12 +11,13 @@ import (
 // Routes wires every URL pattern the server handles. Order matters where
 // patterns overlap; the Go 1.22 mux resolves "more specific" wins so this
 // is mostly informational.
-func (s *Server) Routes() *http.ServeMux {
+func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Static assets are served from the catch-all handler to avoid mux
-	// conflicts with user routes.
-	static := http.StripPrefix("/assets/", http.FileServerFS(StaticFS()))
+	// conflicts with user routes. cacheControl adds a 1-day max-age (stdlib
+	// ETag still revalidates after expiry).
+	static := http.StripPrefix("/assets/", cacheControl(http.FileServerFS(StaticFS())))
 
 	// Skip-login cookie issuer. 404s unless Debug is true or a matching
 	// PlaytestKey is supplied via ?key=, so registering unconditionally is safe.
@@ -107,7 +109,93 @@ func (s *Server) Routes() *http.ServeMux {
 	// Profile + note view + assets (last; catch-all for user routes).
 	mux.HandleFunc("GET /{path...}", s.GetCatchAll(static))
 
-	return mux
+	return gzipMiddleware(mux)
+}
+
+// cacheControl tags responses with a conservative 1-day cache. Not "immutable"/
+// far-future: assets are go:embed'd and change on redeploy, so without
+// content-hashed URLs an immutable cache would serve stale JS/CSS. The stdlib
+// FileServer's ETag handles revalidation after the day expires.
+func cacheControl(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// gzipMiddleware compresses text responses (HTML/CSS/JS/SVG/JSON) when the
+// client accepts gzip. It deliberately skips already-compressed types — woff2
+// fonts, PNGs — which gzip cannot shrink (and would only waste CPU). The
+// compressible decision is made at WriteHeader time from the Content-Type.
+func gzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Always advertise that the response varies on Accept-Encoding, even when
+		// this client didn't send it — otherwise a shared cache can store an
+		// uncompressed (no-Vary) copy and serve it ambiguously.
+		w.Header().Add("Vary", "Accept-Encoding")
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		gw := &gzipResponseWriter{ResponseWriter: w}
+		defer gw.Close()
+		next.ServeHTTP(gw, r)
+	})
+}
+
+func gzipCompressible(ct string) bool {
+	ct = strings.ToLower(ct)
+	for _, p := range []string{"text/", "application/json", "application/javascript", "application/xml", "image/svg+xml"} {
+		if strings.HasPrefix(ct, p) {
+			return true
+		}
+	}
+	return false
+}
+
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	gz       *gzip.Writer
+	decided  bool
+	wroteHdr bool
+}
+
+func (g *gzipResponseWriter) decide() {
+	if g.decided {
+		return
+	}
+	g.decided = true
+	if gzipCompressible(g.Header().Get("Content-Type")) {
+		g.Header().Del("Content-Length") // length changes once compressed
+		g.Header().Set("Content-Encoding", "gzip")
+		g.gz = gzip.NewWriter(g.ResponseWriter)
+	}
+}
+
+func (g *gzipResponseWriter) WriteHeader(code int) {
+	g.decide()
+	g.wroteHdr = true
+	g.ResponseWriter.WriteHeader(code)
+}
+
+func (g *gzipResponseWriter) Write(b []byte) (int, error) {
+	if !g.wroteHdr {
+		if g.Header().Get("Content-Type") == "" {
+			g.Header().Set("Content-Type", http.DetectContentType(b))
+		}
+		g.WriteHeader(http.StatusOK)
+	}
+	if g.gz != nil {
+		return g.gz.Write(b)
+	}
+	return g.ResponseWriter.Write(b)
+}
+
+func (g *gzipResponseWriter) Close() error {
+	if g.gz != nil {
+		return g.gz.Close()
+	}
+	return nil
 }
 
 // GetCatchAll routes assets and user pages without conflicting mux patterns.

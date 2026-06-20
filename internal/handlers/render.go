@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -118,7 +119,7 @@ func (p *Pages) Render(w http.ResponseWriter, name string, data map[string]any) 
 		return
 	}
 	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
-	w.Header().Set("Vary", "HX-Request")
+	w.Header().Add("Vary", "HX-Request") // Add, not Set: gzip middleware also varies on Accept-Encoding
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	buf.WriteTo(w)
 }
@@ -138,12 +139,23 @@ func (p *Pages) RenderPartial(w http.ResponseWriter, name, defined string, data 
 		return
 	}
 	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
-	w.Header().Set("Vary", "HX-Request")
+	w.Header().Add("Vary", "HX-Request") // Add, not Set: gzip middleware also varies on Accept-Encoding
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	buf.WriteTo(w)
 }
 
 // ---------- Server ----------
+
+// tagChipCache memoizes the top-tag-chips aggregate (loadTopTagChips), measured
+// at ~40ms over note_tags⋈notes at 100k notes — the one hot-path DB cost on a
+// full /feed render. The cached list omits the per-request Active flag; callers
+// set it after read. ponytail: in-process, 5-min TTL, lazy expiry; move to Render
+// Key Value only if/when we run multiple web instances.
+type tagChipCache struct {
+	mu    sync.RWMutex
+	data  []tagChip
+	until time.Time
+}
 
 type Server struct {
 	DB          *sql.DB
@@ -153,6 +165,7 @@ type Server struct {
 	PlaytestKey string            // non-empty enables /_dev/login?key=... outside Debug mode
 	AdminHandle string            // empty disables admin entirely
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
+	tagChips    tagChipCache      // memoized top-tag chips; see tagChipCache
 }
 
 // render is a small wrapper that injects the current user and site config automatically.

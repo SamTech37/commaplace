@@ -1,0 +1,6 @@
+# Font chunks (cn-font-split output) + monolithic fonts: binary blobs, embedded
+# via go:embed at build. Mark binary so git skips diffing, vendored so they
+# don't skew language stats.
+*.woff2 binary linguist-vendored
+*.otf   binary linguist-vendored
+*.ttf   binary linguist-vendored

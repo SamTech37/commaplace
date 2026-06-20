@@ -1,12 +1,10 @@
 /* commaplace — 小紅書 feed × Medium reading × pure B&W × scroll animations */
 
-@font-face {
-  font-family: "Source Han Serif";
-  src: url("/static/SourceHanSerifTC-VF.otf.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 300 900;
-  font-display: swap;
-}
+/* Source Han Serif TC — unicode-range-split chunks (cn-font-split). Browser
+   fetches only chunks with glyphs on the page (~0.5–2MB/page vs the 19.7MB
+   monolith). Was previously a single @font-face pointing at /static/… which
+   404'd (assets mount at /assets/) — so the font silently fell back to system
+   serif. Loaded via <link> in _base.html so it parallelizes with this file. */
 
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 :root {
