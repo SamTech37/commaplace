@@ -184,6 +184,42 @@ substrate survives feature #20 without a React rewrite."
 - Card-type duplication (`feedItem`/`profileNote`/`searchHit` + 5 scan loops) →
   collapse to `feedCard` in the Meta-App view-substrate refactor (see spec).
 
+### Fonts / CJK delivery — current + options on the table
+
+**Now (shipped):** self-hosted, unicode-range-split Source Han Serif **TC** via
+`cn-font-split` (668 woff2 chunks + generated `@font-face` CSS in
+`static/fonts/tc/`). Browser fetches only chunks with on-page glyphs
+(~3.6MB/dense page, cached) instead of the 19.7MB monolith. Originals kept in
+`fonts-src/` (out of `go:embed`). Self-hosted = single static binary, no
+external dep, no Google. **SC not split yet** — re-run cn-font-split when
+simplified-Chinese ships (`fonts-src/README.md`).
+
+**Why chunking isn't automatic:** the browser can't subset a remote monolithic
+font; the split must be precomputed by a tool. CDNs (Google/Adobe/Fontsource) do
+it on their server — that's the convenience. Self-hosting = we own the step. The
+truly-automatic future is W3C **Incremental Font Transfer (IFT)**, not deployed yet.
+
+**The scaling ceiling:** each extra self-hosted CJK family ≈ +34MB binary, +668
+files. One reading serif is fine; a multi-font **picker** (sans + serif +
+weights + SC variants) would bloat the binary (~155MB / ~2,700 files for 4
+families). Per-page egress stays bounded (user loads one font), but repo/binary
+size doesn't.
+
+**Options when we add more fonts (don't embed family #2 — switch delivery):**
+- **jsDelivr + Fontsource** (recommended non-Google) — serves Noto Sans/Serif CJK
+  already unicode-range-chunked. jsDelivr is a neutral open-source CDN (no Google
+  tracking). Zero binary weight, cross-site browser cache, N families ~free.
+- **Google Fonts CSS API** — most automatic, best-tuned chunking, but external
+  dep + Google privacy (user finds distasteful). Fallback if jsDelivr insufficient.
+- **System sans is already free** — UI chrome uses `-apple-system…sans-serif`;
+  system CJK sans (PingFang / MS YaHei / Noto Sans) needs no download. The
+  *downloaded* font is the reading serif (the differentiator) — we may never need
+  a downloaded CJK sans.
+- **Decision rule:** keep the single self-hosted serif now; when the font picker
+  ships (Should-Have, post-launch), move CJK webfonts to jsDelivr/Fontsource
+  rather than embedding a 2nd 34MB family. Embedding family #2 is the line not to
+  cross. Swapping to the CDN is a ~10-min change.
+
 ## Dev & Testing
 
 ### Claude Code + Browser Debugger Tool
