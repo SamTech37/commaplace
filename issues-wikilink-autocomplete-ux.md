@@ -86,3 +86,11 @@ popup.style.left = caretPos.left + 'px';
 - popup 寬度：`min(320px, 90vw)`
 - 若右側超出視窗：靠右對齊（`left = window.innerWidth - popupWidth - 8px`）
 - 若下方超出視窗：顯示於游標上方（`top = caretPos.top - popupHeight`）
+
+---
+
+## 問題 3：關聯圖節點超出容器邊界
+
+Graph view 的節點受 force simulation 驅動，沒有邊界約束，座標可超出 `<svg>` 可視範圍，超出部分被 `overflow: hidden` 截掉，右側、左側的筆記標題被裁切且無法點擊。
+
+**修復方向：** 在 `tick` 回呼中對 `d.x`、`d.y` 做 `Math.max`/`Math.min` 夾算，將所有節點限制在 `[padding, width−padding] × [padding, height−padding]` 範圍內，或改用 `forceX`/`forceY` 讓節點向中心收攏。
