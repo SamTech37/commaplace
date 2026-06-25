@@ -182,9 +182,16 @@
 
   function positionPopup() {
     var coords = cm.cursorCoords(true, "window");
-    popup.style.position = "fixed";
-    popup.style.left = coords.left + "px";
-    popup.style.top = coords.bottom + 4 + "px";
+    var pw = popup.offsetWidth  || 260;
+    var ph = popup.offsetHeight || 120;
+    var top  = coords.bottom + 4;
+    var left = coords.left;
+    if (left + pw > window.innerWidth - 8)
+      left = Math.max(8, window.innerWidth - pw - 8);
+    if (top + ph > window.innerHeight - 8)
+      top = coords.top - ph - 4;
+    popup.style.top  = top  + "px";
+    popup.style.left = left + "px";
   }
 
   function fetchSuggest(q) {

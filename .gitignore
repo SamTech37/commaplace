@@ -27,6 +27,7 @@ server
 !.claude/commands
 !.claude/htmx-rules.md
 !.claude/budget-render.md
+!.claude/specs
 
 
 .github/

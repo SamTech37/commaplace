@@ -2,95 +2,53 @@
 
 ## 問題 1：輸入 `[[` 後不立即顯示推薦
 
-### 現狀
+**狀態：✅ 已修復（2026-06-25）**
+
+### 現狀（修復前）
 
 後端 `GetWikiSuggest`（`internal/handlers/wiki.go:23`）在 `q == ""` 時直接 `return`，不返回任何候選項。使用者輸入 `[[` 後必須再輸入至少一個字元才會看到推薦列表。
 
-### 期望行為
+### 修復記錄
 
-輸入 `[[` 後（查詢字串為空字串 `""`），應立即顯示推薦列表，不需再輸入任何字元。
-
-### 修改規格
-
-**`internal/handlers/wiki.go`**
-
-移除 `q == ""` 的提前返回：
-
-```go
-// 現有（刪除）
-if q == "" {
-    return
-}
-
-// 改為讓空查詢繼續走 suggestNotes，pattern 自然為 "%%"
-```
-
-`suggestNotes` 中 `pattern` 的生成邏輯不需額外修改：`"%" + "" + "%" = "%"`，即 `LIKE '%'`，匹配所有筆記。
-
-查詢優先順序（同現有，q 為空時自動列出最近筆記）：
-1. 自己的筆記，依 `updated_at DESC`，最多 10 筆
-2. 追蹤對象的筆記，補到 10 筆
-3. 全域筆記（未登入亦可），去重後取到 10 筆
+**`internal/handlers/wiki.go`**：刪除 `if q == "" { return }` 三行。空查詢現在走 `suggestNotes`，`pattern = "%%"` 匹配所有筆記，依 `updated_at DESC` 回傳最近 10 篇。副作用：工具列 `[[ ]]` 按鈕點擊後也立即顯示推薦（先前因同樣原因無效）。
 
 ---
 
 ## 問題 2：推薦列表出現在 textarea 底部而非游標下方
 
-### 現狀
+**狀態：✅ 已修復（2026-06-25）**
 
-`.ac-popup` 為文檔流中的元素（`position: static`），位於 `<textarea>` 之後，加上 `margin-top: 0.4em`。無論游標在哪一行，popup 永遠出現在整個 textarea 正下方。textarea 較長時，popup 與游標距離甚遠。
+### 現狀（修復前）
 
-### 期望行為
+`.ac-popup` 帶 `margin-top: 0.4em`，在 `position: fixed` 定位下產生多餘偏移；且 popup 超出視窗右側或底部時沒有夾算，會跑出螢幕。
 
-popup 應錨定於 `[[` 觸發字元的視覺位置正下方（游標下一行），隨游標位置動態出現。
+> 注意：原始規格描述的是純 textarea + mirror div 方案。實際上編輯器使用 EasyMDE（CodeMirror 5），`cmeditor.js` 已有 `positionPopup()` 使用 `cm.cursorCoords(true, "window")`，游標追蹤本身已正確；問題只在 CSS 多餘 margin 和缺少 viewport 夾算。
 
-### 修改規格
+### 修復記錄
 
-**`internal/handlers/static/style.css`**
+**`internal/handlers/static/style.css`**：`.ac-popup` 移除 `margin-top: 0.4em`，改為 `position: fixed; z-index: 200; min-width: 200px; max-width: min(320px, 90vw)`。
 
-```css
-.ac-popup {
-  position: absolute;
-  z-index: 200;
-  /* 移除 margin-top: 0.4em */
-  /* 其餘樣式不變 */
-}
-```
-
-`<textarea>` 的外層容器（`<label>` 或新增的包裝 div）需有 `position: relative`。
-
-**`internal/handlers/static/editor.js`**
-
-新增 `getCaretPixelPos(textarea, index)` 函式，回傳游標相對於 textarea 左上角的像素座標，採 mirror div 技術：
-
-```
-1. 建立不可見 div（mirror），複製 textarea 的 font、padding、border、
-   line-height、white-space: pre-wrap、word-wrap: break-word 等 computed style
-2. 將 textarea.value.slice(0, index) 填入 mirror，末尾附加 <span id="caret">
-3. 短暫插入 DOM（visibility: hidden、position: absolute）
-4. 讀取 span.offsetTop / offsetLeft
-5. 從 DOM 移除 mirror
-6. 回傳 { top: spanTop - textarea.scrollTop, left: spanLeft }
-```
-
-在 `fetchAndRender` 成功後顯示 popup 前執行定位：
-
-```js
-const caretPos = getCaretPixelPos(ta, queryStart - 2); // [[ 起始位置
-const lineH = parseFloat(getComputedStyle(ta).lineHeight);
-popup.style.top  = (caretPos.top + lineH) + 'px';
-popup.style.left = caretPos.left + 'px';
-```
-
-邊界條件：
-- popup 寬度：`min(320px, 90vw)`
-- 若右側超出視窗：靠右對齊（`left = window.innerWidth - popupWidth - 8px`）
-- 若下方超出視窗：顯示於游標上方（`top = caretPos.top - popupHeight`）
+**`internal/handlers/static/cmeditor.js`**：`positionPopup()` 移除 inline `popup.style.position = "fixed"`（已移至 CSS），加入右側與底部 viewport 夾算：右側超出靠右貼齊，底部超出則顯示於游標上方。
 
 ---
 
 ## 問題 3：關聯圖節點超出容器邊界
 
-Graph view 的節點受 force simulation 驅動，沒有邊界約束，座標可超出 `<svg>` 可視範圍，超出部分被 `overflow: hidden` 截掉，右側、左側的筆記標題被裁切且無法點擊。
+**狀態：✅ 已修復（2026-06-25，方式與原規格不同）**
 
-**修復方向：** 在 `tick` 回呼中對 `d.x`、`d.y` 做 `Math.max`/`Math.min` 夾算，將所有節點限制在 `[padding, width−padding] × [padding, height−padding]` 範圍內，或改用 `forceX`/`forceY` 讓節點向中心收攏。
+### 現狀（修復前）
+
+Graph view 的節點受 force simulation 驅動，沒有邊界約束，座標可超出 canvas 可視範圍，超出部分被截掉且無法點擊。
+
+### 修復記錄
+
+原規格建議對節點座標做 `Math.max`/`Math.min` 夾算（硬邊界）。實際採用更完整的方案：
+
+**`internal/handlers/static/graph.js`**：
+
+- 加入 viewport transform（`panX, panY, zoom`），所有 draw call 包在 `ctx.save() / translate / scale / restore()`，節點座標在 world space 運算，不再受 canvas 大小限制。
+- 新增 `screenToWorld()` 做滑鼠座標反轉，`nodeAt()` 改收 world coords。
+- 拖空白處平移（`PAN_FRICTION = 0.80`，高摩擦力）；滾輪縮放（`MIN_ZOOM=0.10, MAX_ZOOM=4.0`），以游標為中心縮放。
+- 右上角 `fit` 按鈕（screen space overlay）：計算所有節點 bounding box，自動設 zoom/pan 讓全圖顯示於畫面內；模擬首次收斂後也自動觸發一次。
+
+**`internal/handlers/templates/graph.html`**：說明文字更新，加入平移／縮放操作說明。
