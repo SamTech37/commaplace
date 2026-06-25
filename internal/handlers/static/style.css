@@ -140,6 +140,28 @@ body {
   margin: 0 auto;
   padding: 0 1.25rem 5rem;
 }
+.page.page-wide {
+  max-width: 1400px;
+}
+.page-wide .topbar {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  grid-template-rows: 60px;
+  align-items: center;
+  gap: 2.5rem;
+}
+.page-wide .topbar .brand {
+  justify-self: start;
+}
+.page-wide .topbar .search-form {
+  max-width: 26rem;
+  flex: none;
+  justify-self: start;
+  width: 100%;
+}
+.page-wide .topbar .nav {
+  justify-self: end;
+}
 
 /* ── Scroll reveal — horizontal clip-path sweep (逐行排版 feel) ─────────── */
 [data-reveal] {
@@ -807,7 +829,15 @@ button.secondary:hover {
 /* ── 小紅書 Feed Cards ──────────────────────────────────────────────────── */
 .masonry {
   column-count: 2;
-  column-gap: 12px;
+  column-gap: 14px;
+}
+.feed-shell .masonry {
+  column-count: 3;
+}
+@media (max-width: 800px) {
+  .feed-shell .masonry {
+    column-count: 2;
+  }
 }
 .masonry-card {
   display: block;
@@ -872,7 +902,7 @@ html[data-theme="dark"] .masonry-card:hover {
   margin: 0 0 0.7em;
   white-space: pre-wrap;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 7;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1136,27 +1166,53 @@ html[data-theme="dark"] .masonry-card:hover {
   font-family: var(--font-sans);
 }
 
-/* ── Feed tabs ──────────────────────────────────────────────────────────── */
+/* ── Feed shell (sidebar + main) ────────────────────────────────────────── */
+.feed-shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+.feed-sidebar {
+  position: sticky;
+  top: 80px;
+  align-self: start;
+}
+.feed-main {
+  min-width: 0;
+}
+@media (max-width: 800px) {
+  .feed-shell {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .feed-sidebar {
+    position: static;
+  }
+}
+
+/* ── Feed tabs (vertical inside sidebar, horizontal as fallback) ────────── */
 .feed-tabs {
   display: flex;
+  flex-direction: column;
   gap: 0;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 .feed-tab {
-  padding: 0.75em 1.1em;
-  font-size: 0.875rem;
+  padding: 0.55em 0.9em;
+  font-size: 0.95rem;
   color: var(--text-3);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  border-left: 2px solid transparent;
   font-family: var(--font-sans);
   font-weight: 500;
-  transition: color var(--dur-fast) ease;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
 }
 .feed-tab.active {
   color: var(--text);
-  border-bottom-color: var(--text);
+  border-left-color: var(--text);
 }
 .feed-tab:hover {
   color: var(--text-2);
@@ -1171,9 +1227,10 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .filter-chips {
   display: flex;
-  gap: 0.5em;
-  flex-wrap: wrap;
-  margin: 0.75em 0 1.1em;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4em;
+  margin: 0;
 }
 .filter-chip {
   display: inline-flex;

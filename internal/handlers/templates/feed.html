@@ -1,40 +1,46 @@
 {{define "title"}}Feed · {{.Site.Title}}{{end}}
 {{define "content"}}
-  <nav class="feed-tabs">
-    <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
-    <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
-    {{if .User}}<a href="/{{.User.Handle}}" class="feed-tab">我的</a>{{end}}
-  </nav>
+  <div class="feed-shell">
+    <aside class="feed-sidebar">
+      <nav class="feed-tabs">
+        <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
+        <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
+        {{if .User}}<a href="/{{.User.Handle}}" class="feed-tab">我的</a>{{end}}
+      </nav>
 
-  {{if .TagChips}}
-    <div class="filter-chips">
-      <a class="filter-chip{{if not .TagFilter}} active{{end}}" href="/feed{{if eq .Tab "following"}}?tab=following{{end}}">全部</a>
-      {{range .TagChips}}
-        <a class="filter-chip{{if .Active}} active{{end}}" href="/feed?tag={{.Tag}}{{if eq $.Tab "following"}}&tab=following{{end}}">#{{.Tag}} <span class="chip-count">{{.Count}}</span></a>
+      {{if .TagChips}}
+        <div class="filter-chips">
+          <a class="filter-chip{{if not .TagFilter}} active{{end}}" href="/feed{{if eq .Tab "following"}}?tab=following{{end}}">全部</a>
+          {{range .TagChips}}
+            <a class="filter-chip{{if .Active}} active{{end}}" href="/feed?tag={{.Tag}}{{if eq $.Tab "following"}}&tab=following{{end}}">#{{.Tag}} <span class="chip-count">{{.Count}}</span></a>
+          {{end}}
+        </div>
       {{end}}
-    </div>
-  {{end}}
+    </aside>
 
-  <div class="feed-container">
-    {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
-      <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
-    {{else if .Cards}}
-      <div class="masonry feed-items">
-        {{range .Cards}}{{template "masonry_card" .}}{{end}}
+    <section class="feed-main">
+      <div class="feed-container">
+        {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
+          <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
+        {{else if .Cards}}
+          <div class="masonry feed-items">
+            {{range .Cards}}{{template "masonry_card" .}}{{end}}
+          </div>
+          {{if .OlderURL}}
+            <div id="feed-sentinel"
+                 class="feed-sentinel" aria-label="載入中"
+                 hx-get="{{.OlderURL}}"
+                 hx-trigger="revealed"
+                 hx-target=".feed-items"
+                 hx-swap="beforeend"><span></span><span></span><span></span></div>
+          {{else}}
+            <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
+          {{end}}
+        {{else}}
+          <p class="note-meta">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
+        {{end}}
       </div>
-      {{if .OlderURL}}
-        <div id="feed-sentinel"
-             class="feed-sentinel" aria-label="載入中"
-             hx-get="{{.OlderURL}}"
-             hx-trigger="revealed"
-             hx-target=".feed-items"
-             hx-swap="beforeend"><span></span><span></span><span></span></div>
-      {{else}}
-        <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
-      {{end}}
-    {{else}}
-      <p class="note-meta">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
-    {{end}}
+    </section>
   </div>
 {{end}}
 
@@ -42,9 +48,7 @@
 <a class="masonry-card variant-{{.Variant}}" href="{{.URL}}" data-reveal>
   <div class="card-title">{{.Title}}</div>
   {{if .ImageURL}}<img class="card-image" src="{{.ImageURL}}" alt="" loading="lazy">{{end}}
-  {{if eq .Variant "text"}}
-    {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
-  {{else if eq .Variant "list"}}
+  {{if eq .Variant "list"}}
     <ul class="card-list">
       {{range .ListItems}}<li>{{.}}</li>{{end}}
     </ul>
@@ -60,6 +64,7 @@
       {{end}}
     </div>
   {{end}}
+  {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
   {{if .Tags}}
     <div class="card-tags">
       {{range .Tags}}<span class="card-tag">#{{.}}</span>{{end}}

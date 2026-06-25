@@ -114,6 +114,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		"TagChips":       tagChips,
 		"ViewerLoggedIn": viewer != nil,
 		"OlderURL":       olderURL,
+		"PageClass":      "page-wide",
 	})
 }
 
@@ -274,7 +275,7 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 		if runes := []rune(q); len(runes) > 200 {
 			q = string(runes[:200]) + "…"
 		}
-		return "quote", "", nil, q, nil
+		return "quote", markdown.Excerpt(body, 160), nil, q, nil
 	}
 
 	links := markdown.Extract(body)
