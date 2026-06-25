@@ -1,5 +1,7 @@
 # Issue: Masonry card 顯示原始 markdown inline 語法
 
+**狀態：⏳ 待修復**
+
 ## 問題描述
 
 Masonry layout 的 card 上看得到 `**text**`（raw markdown），其他兩種 layout 因顯示內容較少而不明顯，但同樣有此 bug。
