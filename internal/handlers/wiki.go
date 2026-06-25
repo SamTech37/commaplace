@@ -22,9 +22,6 @@ import (
 func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	if q == "" {
-		return
-	}
 	if strings.HasPrefix(q, "@") {
 		rest := q[1:]
 		if idx := strings.Index(rest, "/"); idx >= 0 {

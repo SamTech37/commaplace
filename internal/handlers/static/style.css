@@ -1417,7 +1417,10 @@ html[data-theme="dark"] .masonry-card:hover {
 
 /* ── Autocomplete popup ─────────────────────────────────────────────────── */
 .ac-popup {
-  margin-top: 0.4em;
+  position: fixed;
+  z-index: 200;
+  min-width: 200px;
+  max-width: min(320px, 90vw);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
