@@ -143,27 +143,41 @@
   <body>
     <div class="page">
       <header class="topbar">
-        <a class="brand" href="/"
-          ><img
-            src="/assets/comma_mascot_logo.svg"
-            class="brand-logo"
-            alt="comma mascot"
-          /><span>{{.Site.Title}}</span></a
-        >
+        <a class="brand" href="/">
+          <img src="/assets/comma_mascot_logo.svg" class="brand-logo" alt="" />
+          <span class="brand-name">{{.Site.Title}}</span>
+        </a>
+
+        <form class="search-form" method="GET" action="/search" role="search">
+          <input
+            type="search"
+            name="q"
+            placeholder="搜尋…"
+            value="{{.SearchQuery}}"
+            aria-label="search"
+          />
+        </form>
+
         <nav class="nav">
-          <form method="GET" action="/search" class="search-form" role="search">
-            <input
-              type="search"
-              name="q"
-              placeholder="搜尋…"
-              value="{{.SearchQuery}}"
-              aria-label="search"
-            />
-          </form>
+          <div class="nav-links">
+            {{if .User}}
+            <a href="/write">書寫</a>
+            <a href="/feed">閱覽</a>
+            <a href="/graph">圖譜</a>
+            <form method="POST" action="/logout" class="inline-form">
+              <button type="submit" class="link-btn">登出</button>
+            </form>
+            {{else}}
+            <a href="/feed">閱覽</a>
+            <a href="/graph">圖譜</a>
+            <a href="/login">登入</a>
+            {{end}}
+          </div>
+
           <button
             type="button"
             id="theme-toggle"
-            class="theme-toggle"
+            class="icon-btn"
             aria-label="切換主題"
           >
             <svg
@@ -195,36 +209,37 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              <path d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998z"></path>
             </svg>
           </button>
-          <!-- hamburger: mobile only -->
-          <details class="action-menu nav-menu">
-            <summary class="nav-hamburger" aria-label="選單">≡</summary>
-            <div class="action-menu-list">
+
+          {{if .User}}
+          <a
+            class="avatar"
+            href="/{{.User.Handle}}"
+            style="background-color:{{avatarColor .User.Handle}}"
+            title="@{{.User.Handle}}"
+          >
+            <img
+              class="avatar-img"
+              src="{{avatarURL .User.Handle}}"
+              alt=""
+              onerror="this.remove()"
+            />
+            <span class="avatar-initial">{{avatarInitial .User.Handle}}</span>
+          </a>
+          {{end}}
+
+          <details class="action-menu mobile-menu">
+            <summary aria-label="選單">≡</summary>
+            <div class="mobile-menu-list action-menu-list">
               {{if .User}}
               <a href="/write">書寫</a>
               <a href="/feed">閱覽</a>
               <a href="/graph">圖譜</a>
-              <div class="action-menu-sep"></div>
-              <form
-                method="POST"
-                action="/logout"
-                class="inline-form"
-                style="padding: 0"
-              >
-                <button
-                  type="submit"
-                  class="link-btn"
-                  style="
-                    padding: 0.48em 0.85em;
-                    width: 100%;
-                    text-align: left;
-                    font-size: 0.85rem;
-                  "
-                >
-                  登出
-                </button>
+              <div class="mobile-menu-sep"></div>
+              <form method="POST" action="/logout" class="inline-form">
+                <button type="submit" class="link-btn">登出</button>
               </form>
               {{else}}
               <a href="/feed">閱覽</a>
@@ -233,39 +248,6 @@
               {{end}}
             </div>
           </details>
-          <!-- flat links: desktop only -->
-          <div class="nav-links">
-            {{if .User}}
-            <a href="/write">書寫</a>
-            <a href="/feed">閱覽</a>
-            <a href="/graph">圖譜</a>
-            <form method="POST" action="/logout" class="inline-form">
-              <button type="submit" class="link-btn">登出</button>
-            </form>
-            {{else}}
-            <a href="/feed">閱覽</a>
-            <a href="/graph">圖譜</a>
-            <a href="/login">登入</a>
-            {{end}}
-          </div>
-          {{if .User}}
-          <a
-            class="profile-dot"
-            href="/{{.User.Handle}}"
-            style="background-color:{{avatarColor .User.Handle}}"
-            title="@{{.User.Handle}}"
-          >
-            <img
-              class="avatar-img-sm"
-              src="{{avatarURL .User.Handle}}"
-              alt=""
-              onerror="this.remove()"
-            />
-            <span class="profile-dot-initial"
-              >{{avatarInitial .User.Handle}}</span
-            >
-          </a>
-          {{end}}
         </nav>
       </header>
       <main class="content">{{block "content" .}}{{end}}</main>
