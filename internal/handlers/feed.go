@@ -61,10 +61,6 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		tab = "recommended"
 	}
 	tagFilter := normalizeTag(q.Get("tag"))
-	layout := q.Get("layout")
-	if layout != "list" && layout != "masonry" && layout != "grid" {
-		layout = "grid"
-	}
 	var older int64
 	if v := q.Get("older"); v != "" {
 		older, _ = strconv.ParseInt(v, 10, 64)
@@ -97,7 +93,6 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
-		v.Set("layout", layout)
 		olderURL = "/feed?" + v.Encode()
 	}
 
@@ -106,7 +101,6 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		s.Pages.RenderPartial(w, "feed_partial", "feed_partial", map[string]any{
 			"Cards":    cards,
 			"OlderURL": olderURL,
-			"Layout":   layout,
 		})
 		return
 	}
@@ -120,7 +114,6 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		"TagChips":       tagChips,
 		"ViewerLoggedIn": viewer != nil,
 		"OlderURL":       olderURL,
-		"Layout":         layout,
 	})
 }
 

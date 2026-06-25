@@ -1,9 +1,5 @@
 {{define "feed_partial"}}
-{{range .Cards}}
-  {{if eq $.Layout "list"}}{{template "card_row" .}}
-  {{else if eq $.Layout "masonry"}}{{template "masonry_card" .}}
-  {{else}}{{template "card" .}}{{end}}
-{{end}}
+{{range .Cards}}{{template "masonry_card" .}}{{end}}
 {{if .OlderURL -}}
 <div id="feed-sentinel" hx-swap-oob="outerHTML"
      class="feed-sentinel"

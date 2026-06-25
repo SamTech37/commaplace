@@ -17,7 +17,7 @@ func (s *Server) Routes() http.Handler {
 	// Static assets are served from the catch-all handler to avoid mux
 	// conflicts with user routes. cacheControl adds a 1-day max-age (stdlib
 	// ETag still revalidates after expiry).
-	static := http.StripPrefix("/assets/", cacheControl(http.FileServerFS(StaticFS())))
+	static := http.StripPrefix("/assets/", cacheControl(http.FileServerFS(StaticFS()), s.Debug))
 
 	// Skip-login cookie issuer. 404s unless Debug is true or a matching
 	// PlaytestKey is supplied via ?key=, so registering unconditionally is safe.
@@ -116,9 +116,14 @@ func (s *Server) Routes() http.Handler {
 // far-future: assets are go:embed'd and change on redeploy, so without
 // content-hashed URLs an immutable cache would serve stale JS/CSS. The stdlib
 // FileServer's ETag handles revalidation after the day expires.
-func cacheControl(next http.Handler) http.Handler {
+// In debug mode, disable caching so air-rebuilt assets show up immediately.
+func cacheControl(next http.Handler, debug bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=86400")
+		if debug {
+			w.Header().Set("Cache-Control", "no-store")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+		}
 		next.ServeHTTP(w, r)
 	})
 }
