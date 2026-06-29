@@ -181,15 +181,19 @@
   }
 
   function positionPopup() {
-    var coords = cm.cursorCoords(true, "window");
-    var pw = popup.offsetWidth  || 260;
-    var ph = popup.offsetHeight || 120;
-    var top  = coords.bottom + 4;
-    var left = coords.left;
+    // cm.cursorCoords("window") miscalculates with viewportMargin:Infinity;
+    // read the actual cursor DOM element instead.
+    var cursorEl = cm.getWrapperElement().querySelector(".CodeMirror-cursor");
+    if (!cursorEl) return;
+    var r   = cursorEl.getBoundingClientRect();
+    var pw  = 320;
+    var ph  = popup.offsetHeight || 160;
+    var top  = r.bottom + 4;
+    var left = r.left;
     if (left + pw > window.innerWidth - 8)
       left = Math.max(8, window.innerWidth - pw - 8);
     if (top + ph > window.innerHeight - 8)
-      top = coords.top - ph - 4;
+      top = r.top - ph - 4;
     popup.style.top  = top  + "px";
     popup.style.left = left + "px";
   }
