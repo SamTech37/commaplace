@@ -135,11 +135,7 @@ func Excerpt(md string, n int) string {
 	}
 	// drop markdown images entirely, reduce markdown links to their text
 	s = StripMDLinks(s)
-	rep := strings.NewReplacer(
-		"**", "", "__", "", "*", "", "_", "",
-		"`", "", "\r", "",
-	)
-	s = rep.Replace(s)
+	s = StripInline(s)
 	// per-line cleanup: trim, drop leading bullet/heading/number/quote markers
 	{
 		raw := strings.Split(s, "\n")
@@ -165,6 +161,18 @@ func Excerpt(md string, n int) string {
 	}
 	r := []rune(s)
 	return strings.TrimSpace(string(r[:n])) + "…"
+}
+
+// inlineReplacer strips markdown inline emphasis/code markers (**, __, *, _, `)
+// and stray carriage returns, leaving plain text. Shared by Excerpt and the
+// feed card variants so previews never show raw markdown markup.
+var inlineReplacer = strings.NewReplacer(
+	"**", "", "__", "", "*", "", "_", "", "`", "", "\r", "",
+)
+
+// StripInline removes inline markdown markers (bold/italic/code) from s.
+func StripInline(s string) string {
+	return inlineReplacer.Replace(s)
 }
 
 // StripMDLinks removes markdown image syntax (![alt](url)) entirely and reduces

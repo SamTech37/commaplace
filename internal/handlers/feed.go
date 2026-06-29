@@ -271,7 +271,7 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 				break
 			}
 		}
-		q := strings.TrimSpace(markdown.StripMDLinks(qb.String()))
+		q := strings.TrimSpace(markdown.StripInline(markdown.StripMDLinks(qb.String())))
 		if runes := []rune(q); len(runes) > 200 {
 			q = string(runes[:200]) + "…"
 		}
@@ -321,7 +321,7 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 			continue
 		}
 		started = true
-		bullets = append(bullets, markdown.StripMDLinks(item))
+		bullets = append(bullets, markdown.StripInline(markdown.StripMDLinks(item)))
 		if len(bullets) >= 5 {
 			break
 		}
