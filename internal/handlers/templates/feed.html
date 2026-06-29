@@ -1,106 +1,54 @@
 {{define "title"}}Feed · {{.Site.Title}}{{end}}
 {{define "content"}}
-  <nav class="feed-tabs">
-    <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
-    <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
-    {{if .User}}<a href="/{{.User.Handle}}" class="feed-tab">我的</a>{{end}}
-  </nav>
+  <div class="feed-shell">
+    <aside class="feed-sidebar">
+      <nav class="feed-tabs">
+        <a href="/feed{{if .TagFilter}}?tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "recommended"}} active{{end}}">推薦</a>
+        <a href="/feed?tab=following{{if .TagFilter}}&tag={{.TagFilter}}{{end}}" class="feed-tab{{if eq .Tab "following"}} active{{end}}">追蹤中</a>
+        {{if .User}}<a href="/{{.User.Handle}}" class="feed-tab">我的</a>{{end}}
+      </nav>
 
-  {{if .TagChips}}
-    <div class="filter-chips">
-      <a class="filter-chip{{if not .TagFilter}} active{{end}}" href="/feed{{if eq .Tab "following"}}?tab=following{{end}}">全部</a>
-      {{range .TagChips}}
-        <a class="filter-chip{{if .Active}} active{{end}}" href="/feed?tag={{.Tag}}{{if eq $.Tab "following"}}&tab=following{{end}}">#{{.Tag}} <span class="chip-count">{{.Count}}</span></a>
-      {{end}}
-    </div>
-  {{end}}
-
-  <div class="feed-container" data-layout="{{.Layout}}">
-    <div class="layout-toggle">
-      <a class="layout-btn{{if eq .Layout "list"}} active{{end}}"
-         href="/feed?layout=list{{if ne .Tab "recommended"}}&tab={{.Tab}}{{end}}{{if .TagFilter}}&tag={{.TagFilter}}{{end}}">≡ List</a>
-      <a class="layout-btn{{if eq .Layout "grid"}} active{{end}}"
-         href="/feed?layout=grid{{if ne .Tab "recommended"}}&tab={{.Tab}}{{end}}{{if .TagFilter}}&tag={{.TagFilter}}{{end}}">⊞ Grid</a>
-      <a class="layout-btn{{if eq .Layout "masonry"}} active{{end}}"
-         href="/feed?layout=masonry{{if ne .Tab "recommended"}}&tab={{.Tab}}{{end}}{{if .TagFilter}}&tag={{.TagFilter}}{{end}}">⊟ Masonry</a>
-    </div>
-
-    {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
-      <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
-    {{else if .Cards}}
-      {{if eq .Layout "list"}}
-        <div class="feed-list feed-items">
-          {{range .Cards}}{{template "card_row" .}}{{end}}
-        </div>
-      {{else if eq .Layout "masonry"}}
-        <div class="masonry feed-items">
-          {{range .Cards}}{{template "masonry_card" .}}{{end}}
-        </div>
-      {{else}}
-        <div class="feed-grid feed-items" data-reveal-group>
-          {{range .Cards}}{{template "card" .}}{{end}}
+      {{if .TagChips}}
+        <div class="filter-chips">
+          <a class="filter-chip{{if not .TagFilter}} active{{end}}" href="/feed{{if eq .Tab "following"}}?tab=following{{end}}">全部</a>
+          {{range .TagChips}}
+            <a class="filter-chip{{if .Active}} active{{end}}" href="/feed?tag={{.Tag}}{{if eq $.Tab "following"}}&tab=following{{end}}">#{{.Tag}} <span class="chip-count">{{.Count}}</span></a>
+          {{end}}
         </div>
       {{end}}
-      {{if .OlderURL}}
-        <div id="feed-sentinel"
-             class="feed-sentinel" aria-label="載入中"
-             hx-get="{{.OlderURL}}"
-             hx-trigger="revealed"
-             hx-target=".feed-items"
-             hx-swap="beforeend"><span></span><span></span><span></span></div>
-      {{else}}
-        <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
-      {{end}}
-    {{else}}
-      <p class="note-meta">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
-    {{end}}
+    </aside>
+
+    <section class="feed-main">
+      <div class="feed-container">
+        {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
+          <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
+        {{else if .Cards}}
+          <div class="masonry feed-items">
+            {{range .Cards}}{{template "masonry_card" .}}{{end}}
+          </div>
+          {{if .OlderURL}}
+            <div id="feed-sentinel"
+                 class="feed-sentinel" aria-label="載入中"
+                 hx-get="{{.OlderURL}}"
+                 hx-trigger="revealed"
+                 hx-target=".feed-items"
+                 hx-swap="beforeend"><span></span><span></span><span></span></div>
+          {{else}}
+            <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
+          {{end}}
+        {{else}}
+          <p class="note-meta">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
+        {{end}}
+      </div>
+    </section>
   </div>
-
-  <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    var urlLayout = new URLSearchParams(window.location.search).get('layout');
-    var container = document.querySelector('.feed-container');
-    if (!container) return;
-    if (urlLayout) {
-      localStorage.setItem('feed.layout', urlLayout);
-    } else {
-      var saved = localStorage.getItem('feed.layout');
-      if (saved && saved !== container.dataset.layout) {
-        var url = new URL(window.location.href);
-        url.searchParams.set('layout', saved);
-        window.location.replace(url.toString());
-      }
-    }
-  });
-  </script>
-{{end}}
-
-{{define "card"}}
-<a class="entry" href="{{.URL}}" data-reveal>
-  <h2 class="entry-title">{{.Title}}</h2>
-  <div class="entry-meta">@{{.AuthorHandle}}{{if .UpdatedRel}} · {{.UpdatedRel}}{{end}}</div>
-  {{if eq .Variant "quote"}}
-    <p class="entry-excerpt">{{.Quote}}</p>
-  {{else if eq .Variant "list"}}
-    <p class="entry-excerpt">{{index .ListItems 0}}{{if gt (len .ListItems) 1}} · {{index .ListItems 1}}{{end}}</p>
-  {{else if .Excerpt}}
-    <p class="entry-excerpt">{{.Excerpt}}</p>
-  {{end}}
-  {{if .Tags}}
-    <div class="entry-tags">
-      {{range .Tags}}<span class="entry-tag">#{{.}}</span>{{end}}
-    </div>
-  {{end}}
-</a>
 {{end}}
 
 {{define "masonry_card"}}
 <a class="masonry-card variant-{{.Variant}}" href="{{.URL}}" data-reveal>
   <div class="card-title">{{.Title}}</div>
   {{if .ImageURL}}<img class="card-image" src="{{.ImageURL}}" alt="" loading="lazy">{{end}}
-  {{if eq .Variant "text"}}
-    {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
-  {{else if eq .Variant "list"}}
+  {{if eq .Variant "list"}}
     <ul class="card-list">
       {{range .ListItems}}<li>{{.}}</li>{{end}}
     </ul>
@@ -116,6 +64,7 @@
       {{end}}
     </div>
   {{end}}
+  {{if .Excerpt}}<div class="card-excerpt">{{.Excerpt}}</div>{{end}}
   {{if .Tags}}
     <div class="card-tags">
       {{range .Tags}}<span class="card-tag">#{{.}}</span>{{end}}
@@ -131,16 +80,3 @@
 </a>
 {{end}}
 
-{{define "card_row"}}
-<a class="note-card" href="{{.URL}}" data-reveal>
-  <div class="note-title">{{.Title}}</div>
-  {{if eq .Variant "quote"}}
-    <div class="note-excerpt">{{.Quote}}</div>
-  {{else if eq .Variant "list"}}
-    <div class="note-excerpt">{{index .ListItems 0}}</div>
-  {{else if .Excerpt}}
-    <div class="note-excerpt">{{.Excerpt}}</div>
-  {{end}}
-  <div class="note-foot">@{{.AuthorHandle}} · {{.UpdatedRel}}</div>
-</a>
-{{end}}
