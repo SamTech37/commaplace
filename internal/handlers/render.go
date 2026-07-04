@@ -23,6 +23,7 @@ import (
 
 var (
 	siteCfg  = config.DefaultSite()
+	navCfg   = config.DefaultNav()
 	emailCfg = config.DefaultEmail(siteCfg.Title)
 )
 
@@ -176,6 +177,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 	u, _ := s.Auth.CurrentUser(r)
 	data["User"] = u
 	data["Site"] = siteCfg
+	data["Nav"] = navCfg
 	// Theme: when a logged-in user explicitly chose light/dark, render it
 	// server-side to avoid FOUC. "auto" (or visitor) defers to inline JS
 	// reading localStorage / prefers-color-scheme.

@@ -161,16 +161,16 @@
         <nav class="nav">
           <div class="nav-links">
             {{if .User}}
-            <a href="/write">書寫</a>
-            <a href="/feed">閱覽</a>
-            <a href="/graph">圖譜</a>
+            <a href="/write">{{.Nav.Write}}</a>
+            <a href="/feed">{{.Nav.Feed}}</a>
+            <a href="/graph">{{.Nav.Graph}}</a>
             <form method="POST" action="/logout" class="inline-form">
-              <button type="submit" class="link-btn">登出</button>
+              <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
             </form>
             {{else}}
-            <a href="/feed">閱覽</a>
-            <a href="/graph">圖譜</a>
-            <a href="/login">登入</a>
+            <a href="/feed">{{.Nav.Feed}}</a>
+            <a href="/graph">{{.Nav.Graph}}</a>
+            <a href="/login">{{.Nav.Login}}</a>
             {{end}}
           </div>
 
@@ -234,17 +234,17 @@
             <summary aria-label="選單">≡</summary>
             <div class="mobile-menu-list action-menu-list">
               {{if .User}}
-              <a href="/write">書寫</a>
-              <a href="/feed">閱覽</a>
-              <a href="/graph">圖譜</a>
+              <a href="/write">{{.Nav.Write}}</a>
+              <a href="/feed">{{.Nav.Feed}}</a>
+              <a href="/graph">{{.Nav.Graph}}</a>
               <div class="mobile-menu-sep"></div>
               <form method="POST" action="/logout" class="inline-form">
-                <button type="submit" class="link-btn">登出</button>
+                <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
               </form>
               {{else}}
-              <a href="/feed">閱覽</a>
-              <a href="/graph">圖譜</a>
-              <a href="/login">登入</a>
+              <a href="/feed">{{.Nav.Feed}}</a>
+              <a href="/graph">{{.Nav.Graph}}</a>
+              <a href="/login">{{.Nav.Login}}</a>
               {{end}}
             </div>
           </details>

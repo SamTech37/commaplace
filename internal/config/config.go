@@ -10,6 +10,18 @@ type Site struct {
 	SessionName string // session cookie name
 }
 
+// Nav holds user-facing display names for navigation links.
+// Changing a value here renames the label everywhere it appears,
+// without grepping templates. URL paths are deliberately not coupled.
+type Nav struct {
+	Write    string
+	Feed     string
+	Graph    string
+	Login    string
+	Logout   string
+	Calendar string
+}
+
 // Pagination contains pagination limits.
 type Pagination struct {
 	FeedPageSize      int
@@ -47,6 +59,18 @@ func DefaultSite() Site {
 		Title:       "Comma,",
 		Description: "Markdown notes that link to each other, including across other people's vaults.",
 		SessionName: "Comma_session",
+	}
+}
+
+// DefaultNav returns the canonical display names. Rename here, not in templates.
+func DefaultNav() Nav {
+	return Nav{
+		Write:    "書寫",
+		Feed:     "閱覽",
+		Graph:    "圖譜",
+		Login:    "登入",
+		Logout:   "登出",
+		Calendar: "曆",
 	}
 }
 
