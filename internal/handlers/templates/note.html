@@ -102,6 +102,12 @@
           >
             📋 複製 markdown
           </button>
+          <a
+            href="obsidian://new?name={{.Note.Slug | urlquery}}&amp;content={{.Note.BodyMD | urlquery}}"
+            title="在預設 vault 開啟（長筆記可能超出 URL 長度上限，建議改用下載 .md）"
+          >
+            🟣 用 Obsidian 開啟
+          </a>
           {{if and .ViewerLoggedIn (not .IsAuthor)}}
           <div class="action-menu-sep"></div>
           <button
