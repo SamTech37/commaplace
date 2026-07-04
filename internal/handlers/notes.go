@@ -39,7 +39,7 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 				if handle == u.Handle {
 					embed = "![[" + slug + "]]"
 				} else {
-					embed = "![[@ " + handle + "/" + slug + "]]"
+					embed = "![[@" + handle + "/" + slug + "]]"
 				}
 				doc = "Re: " + title + "\n\n" + embed + "\n\n---\n\n"
 			}

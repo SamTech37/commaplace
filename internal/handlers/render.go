@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +47,15 @@ var funcs = template.FuncMap{
 	"avatarURL":     func(handle string) string { return "/u/" + handle + "/avatar.png" },
 	"sub":           func(a, b int) int { return a - b },
 	"add":           func(a, b int) int { return a + b },
+	// obsidianURL builds an obsidian://new deep link. Params are percent-encoded
+	// with %20 for spaces (not '+') because Obsidian's URI parser decodes per
+	// RFC 3986, where '+' is a literal plus. Returning template.URL makes
+	// html/template normalize the whole URL instead of re-escaping the params
+	// (which would turn %20 into %2520).
+	"obsidianURL": func(name, content string) template.URL {
+		enc := func(s string) string { return strings.ReplaceAll(url.QueryEscape(s), "+", "%20") }
+		return template.URL("obsidian://new?name=" + enc(name) + "&content=" + enc(content))
+	},
 }
 
 // Pages is a name -> parsed template cache. Each page template is parsed

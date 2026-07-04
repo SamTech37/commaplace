@@ -93,7 +93,7 @@
           {{end}}
           <div class="action-menu-sep"></div>
           <a
-            href="obsidian://new?name={{.Note.Slug | urlquery}}&amp;content={{.Note.BodyMD | urlquery}}"
+            href="{{obsidianURL .Note.Slug .Note.BodyMD}}"
             title="在預設 Obsidian vault 建立這篇筆記（長筆記可能超出 URL 長度上限，建議改用下載 .md）"
           >
             ⬇ 匯入到我的 vault

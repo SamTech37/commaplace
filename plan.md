@@ -1,10 +1,10 @@
 # Plan
 
 ## Next Step
+- [ ] review and merge changes from `branch/killer`
 - [ ] 測試 Google OAuth 登入功能 
 	- [ ] OAuth2.0 要可以提醒使用者他用什麼管道/平台註冊的 (e.g. identify by same email)
 	- [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
-- [ ] review and merge changes from `branch/killer`
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
 - [x] minimal deployment to Render — **LIVE** at https://commaplace.onrender.com
