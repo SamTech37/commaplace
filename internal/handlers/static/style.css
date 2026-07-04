@@ -2615,3 +2615,68 @@ dialog.palette::backdrop {
   font-family: var(--font-sans);
   background: var(--bg-2);
 }
+/* ── Calendar view ─────────────────────────────────────────────────────── */
+.calendar-page { max-width: 64rem; margin: 0 auto; }
+.calendar-head { display: flex; align-items: baseline; gap: 1rem; margin: 0 0 1rem; }
+.calendar-month { margin: 0; font-size: 1.4rem; letter-spacing: 0.04em; }
+.calendar-nav { font-size: 1.4rem; text-decoration: none; color: var(--text-2); padding: 0 0.4rem; }
+.calendar-nav:hover { color: var(--text); }
+.calendar-today { margin-left: auto; font-size: 0.85rem; color: var(--text-3); text-decoration: none; }
+.calendar-today:hover { color: var(--text); }
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.calendar-dayname {
+  background: var(--bg-2);
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-3);
+  text-align: center;
+  font-family: var(--font-sans);
+}
+.calendar-cell {
+  background: var(--bg);
+  min-height: 6rem;
+  padding: 0.35rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.calendar-cell-out { background: var(--bg-2); }
+.calendar-cell-out .calendar-cell-day { color: var(--text-3); opacity: 0.45; }
+.calendar-cell-today .calendar-cell-day {
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 50%;
+  width: 1.4em;
+  height: 1.4em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.calendar-cell-day { font-size: 0.78rem; color: var(--text-2); font-family: var(--font-sans); }
+.calendar-cell-notes { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.calendar-cell-notes li { font-size: 0.78rem; line-height: 1.25; }
+.calendar-cell-notes a {
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+  background: var(--bg-2);
+}
+.calendar-cell-out .calendar-cell-notes a { background: transparent; opacity: 0.55; }
+.calendar-cell-notes a:hover { background: var(--text); color: var(--bg); }
+@media (max-width: 720px) {
+  .calendar-cell { min-height: 4rem; padding: 0.25rem 0.3rem; }
+  .calendar-cell-notes a { font-size: 0.7rem; }
+}

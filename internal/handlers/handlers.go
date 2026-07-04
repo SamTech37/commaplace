@@ -40,6 +40,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /auth/google/callback", s.GetOAuthGoogleCallback)
 	mux.HandleFunc("POST /logout", s.PostLogout)
 	mux.HandleFunc("GET /me", s.GetMe)
+	mux.HandleFunc("GET /me/calendar", s.GetCalendar)
 
 	// Write + preview
 	mux.HandleFunc("GET /write", s.GetWrite)

@@ -60,7 +60,7 @@ func LoadPages() (*Pages, error) {
 	pageNames := []string{
 		"login", "write", "note", "note_stub", "profile", "feed", "error",
 		"tag", "saved", "search", "onboarding", "admin_dashboard", "admin_reports", "graph",
-		"avatar_builder", "import",
+		"avatar_builder", "import", "calendar",
 	}
 	// Partials are standalone fragments (no _base.html wrapper) used for
 	// HTMX swap responses — e.g. infinite-scroll feed batches.

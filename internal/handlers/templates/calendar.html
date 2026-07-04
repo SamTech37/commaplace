@@ -1,0 +1,29 @@
+{{define "title"}}{{.Nav.Calendar}} · {{.Site.Title}}{{end}}
+{{define "content"}}
+<div class="calendar-page">
+  <header class="calendar-head">
+    <a class="calendar-nav" href="?m={{.PrevMonth}}" aria-label="前一個月">‹</a>
+    <h1 class="calendar-month">{{.MonthLabel}}</h1>
+    <a class="calendar-nav" href="?m={{.NextMonth}}" aria-label="下一個月">›</a>
+    {{if ne .ThisMonth .PrevMonth}}{{if ne .ThisMonth .NextMonth}}
+    <a class="calendar-today" href="/me/calendar">今天</a>
+    {{end}}{{end}}
+  </header>
+
+  <div class="calendar-grid">
+    {{range .DayNames}}<div class="calendar-dayname">{{.}}</div>{{end}}
+    {{range .Days}}
+    <div class="calendar-cell{{if not .InMonth}} calendar-cell-out{{end}}{{if .IsToday}} calendar-cell-today{{end}}">
+      <div class="calendar-cell-day">{{.Day}}</div>
+      {{if .Notes}}
+      <ul class="calendar-cell-notes">
+        {{range .Notes}}
+        <li><a href="{{.URL}}" title="{{.Title}}">{{.Title}}</a></li>
+        {{end}}
+      </ul>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}
