@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -124,6 +125,36 @@ func TestSearchFindsNote(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "<mark>zzzqux</mark>") {
 		t.Fatalf("expected <mark>zzzqux</mark> in body, got: %s", w.Body.String())
+	}
+}
+
+// TestSearchCrossScript: a query in Simplified Chinese must match Traditional
+// content and vice versa (OpenCC query expansion in buildTSQueryVariants).
+func TestSearchCrossScript(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	alice := mkUser(t, s, "alice")
+	if _, err := s.saveNote(ctx, alice, "alice", "n1", "數論", "數論是研究整數性質的學問", nil); err != nil {
+		t.Fatalf("saveNote: %v", err)
+	}
+	if _, err := s.saveNote(ctx, alice, "alice", "n2", "机器学习", "机器学习是人工智能的分支", nil); err != nil {
+		t.Fatalf("saveNote: %v", err)
+	}
+
+	for _, tc := range []struct{ query, wantTitle string }{
+		{"数论", "數論"},       // Simplified query → Traditional note
+		{"數論", "數論"},       // same-script still works
+		{"機器學習", "机器学习"}, // Traditional query → Simplified note
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/search?q="+url.QueryEscape(tc.query), nil)
+		w := httptest.NewRecorder()
+		s.GetSearch(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("search %q: status %d", tc.query, w.Code)
+		}
+		if !strings.Contains(w.Body.String(), tc.wantTitle) {
+			t.Errorf("search %q: expected result titled %q, got: %s", tc.query, tc.wantTitle, w.Body.String())
+		}
 	}
 }
 

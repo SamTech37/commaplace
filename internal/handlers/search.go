@@ -5,7 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"unicode"
+
+	"github.com/longbridgeapp/opencc"
 )
 
 type searchHit struct {
@@ -23,7 +26,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 
 	var hits []searchHit
 	if q != "" {
-		tsq := buildTSQuery(q)
+		tsq := buildTSQueryVariants(q)
 		if tsq != "" {
 			args := []any{tsq, "%" + q + "%"}
 			where := ""
@@ -79,6 +82,54 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 		"ViewerLoggedIn": viewer != nil,
 		"SearchQuery":    q,
 	})
+}
+
+var (
+	ccOnce sync.Once
+	ccS2T  *opencc.OpenCC
+	ccT2S  *opencc.OpenCC
+)
+
+// searchVariants returns the query plus its Simplified↔Traditional Chinese
+// conversions, deduplicated, so a query in either script matches content in
+// the other. Queries without Han characters are returned as-is.
+func searchVariants(q string) []string {
+	if !strings.ContainsFunc(q, func(r rune) bool { return unicode.Is(unicode.Han, r) }) {
+		return []string{q}
+	}
+	ccOnce.Do(func() {
+		var err error
+		if ccS2T, err = opencc.New("s2t"); err != nil {
+			log.Printf("opencc s2t init: %v", err)
+		}
+		if ccT2S, err = opencc.New("t2s"); err != nil {
+			log.Printf("opencc t2s init: %v", err)
+		}
+	})
+	variants := []string{q}
+	for _, cc := range []*opencc.OpenCC{ccS2T, ccT2S} {
+		if cc == nil {
+			continue
+		}
+		v, err := cc.Convert(q)
+		if err != nil || v == q || v == variants[len(variants)-1] {
+			continue
+		}
+		variants = append(variants, v)
+	}
+	return variants
+}
+
+// buildTSQueryVariants builds a tsquery that ORs the script variants of q:
+// "数论" -> "(数论:*) | (數論:*)".
+func buildTSQueryVariants(q string) string {
+	var exprs []string
+	for _, v := range searchVariants(q) {
+		if e := buildTSQuery(v); e != "" {
+			exprs = append(exprs, "("+e+")")
+		}
+	}
+	return strings.Join(exprs, " | ")
 }
 
 // buildTSQuery turns a free-text query into a Postgres tsquery expression.
