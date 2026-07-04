@@ -2680,3 +2680,95 @@ dialog.palette::backdrop {
   .calendar-cell { min-height: 4rem; padding: 0.25rem 0.3rem; }
   .calendar-cell-notes a { font-size: 0.7rem; }
 }
+
+/* ── Batch import editor ───────────────────────────────────────────────── */
+.batch-head { margin-bottom: 1.5rem; }
+.batch-head h1 { display: flex; align-items: baseline; gap: 0.7rem; margin: 0 0 0.4em; }
+.batch-count {
+  font-size: 0.78rem;
+  font-weight: normal;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+}
+.batch-hint { font-size: 0.86rem; }
+.batch-toolbar { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.8rem; }
+.batch-list { display: flex; flex-direction: column; gap: 0; }
+.batch-item {
+  padding: 1.4rem 0;
+  border-top: 1px solid var(--border);
+}
+.batch-item:first-child { border-top: 0; padding-top: 0.4rem; }
+.batch-item-form { display: flex; flex-direction: column; gap: 0.7rem; }
+.batch-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.batch-field-label { font-size: 0.78rem; color: var(--text-3); font-family: var(--font-sans); letter-spacing: 0.04em; }
+.batch-field input,
+.batch-body {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-input);
+  background: var(--bg-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+.batch-field input { font-family: var(--font-sans); }
+.batch-body { font-family: var(--font-mono); min-height: 14rem; resize: vertical; line-height: 1.55; }
+.batch-body-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+.batch-preview {
+  padding: 0.6rem 0.85rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-input);
+  background: var(--bg);
+  min-height: 14rem;
+  max-height: 36rem;
+  overflow-y: auto;
+  font-size: 0.92rem;
+}
+.batch-preview:empty::before {
+  content: '預覽會顯示在這裡';
+  color: var(--text-3);
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+}
+.batch-preview > :first-child { margin-top: 0; }
+.batch-preview > :last-child { margin-bottom: 0; }
+@media (max-width: 720px) {
+  .batch-body-row { grid-template-columns: 1fr; }
+  .batch-preview { min-height: 6rem; max-height: 16rem; }
+}
+.batch-item-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.batch-item-status { font-size: 0.78rem; color: var(--text-3); font-family: var(--font-sans); }
+.batch-item-error {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.7rem;
+  background: rgba(185, 28, 28, 0.08);
+  border-left: 3px solid #b91c1c;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.batch-item-saved {
+  padding: 1rem 1.2rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-2);
+  border-radius: var(--r-card);
+  margin: 0.8rem 0;
+}
+.batch-saved-row { display: flex; align-items: center; gap: 0.7rem; }
+.batch-saved-mark { font-size: 1.1rem; color: var(--text-2); }
+.batch-saved-title { flex: 1; color: var(--text); }
+.batch-saved-link { font-size: 0.85rem; color: var(--text-2); text-decoration: none; }
+.batch-saved-link:hover { color: var(--text); text-decoration: underline; }
+.batch-foot { margin: 2rem 0 4rem; display: flex; gap: 0.6rem; }

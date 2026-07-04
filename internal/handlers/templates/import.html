@@ -1,9 +1,9 @@
-{{define "title"}}Import note · {{.Site.Title}}{{end}} {{define "content"}}
-<h1>Import a note</h1>
-<p style="color: var(--fg-muted); font-size: 0.9rem">
-  Upload a <code>.md</code> file. Title is read from frontmatter
-  <code>title:</code>, a leading <code>#</code> heading, or the filename. Tags
-  are read from frontmatter <code>tags:</code>.
+{{define "title"}}匯入筆記 · {{.Site.Title}}{{end}} {{define "content"}}
+<h1>匯入筆記</h1>
+<p class="note-meta">
+  上傳 <code>.md</code> 檔。一篇直接存進 vault，2–10 篇會打開批次編輯器讓你逐篇審稿。
+  標題抓自 frontmatter <code>title:</code>、第一個 <code>#</code> 標題，或檔名。
+  標籤抓自 frontmatter <code>tags:</code> 與內文 <code>#tag</code>。
 </p>
 
 {{if .Error}}
@@ -12,14 +12,18 @@
 
 <form method="post" action="/import" enctype="multipart/form-data">
   <label
-    >Markdown file
-    <input type="file" name="file" accept=".md,text/markdown" required />
+    >Markdown 檔（可多選，最多 10 個）
+    <input
+      type="file"
+      name="files"
+      accept=".md,text/markdown"
+      multiple
+      required
+    />
   </label>
   <div style="display: flex; gap: 1em; align-items: center; margin-top: 0.5em">
-    <button type="submit">Import</button>
-    <a href="/write" style="color: var(--fg-muted); font-size: 0.9rem"
-      >Write from scratch instead</a
-    >
+    <button type="submit" class="action-btn primary">匯入</button>
+    <a href="/write" class="note-meta">直接寫一篇新的 →</a>
   </div>
 </form>
 {{end}}
