@@ -2,7 +2,7 @@
 {{define "content"}}
   <h1 style="margin:0 0 0.4em">{{if .GraphTitle}}{{.GraphTitle}}{{else}}graph{{end}}</h1>
   <p class="note-meta" style="margin:0 0 1em">
-    每個點是一篇筆記，線是 <code>[[wiki link]]</code> 連結。拖拉節點重新排版，點一下打開筆記；拖拉空白處平移，滾輪縮放，右上角 <code>fit</code> 顯示全圖。
+    每個點是一篇筆記，線是 <code>[[wiki link]]</code> 連結。拖拉節點重新排版，點一下打開筆記；拖拉空白處平移，滾輪或雙指縮放（放大會展開成卡片），右上角 <code>fit</code> 顯示全圖。
   </p>
   <div id="graph-wrap" data-graph-source="{{if .GraphSource}}{{.GraphSource}}{{else}}/api/graph{{end}}">
     <canvas id="graph-canvas"></canvas>
