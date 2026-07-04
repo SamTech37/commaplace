@@ -89,6 +89,19 @@
 
 ---
 
+## 06-30
+commaplace-fixes.css — drop-in patch, merge into style.css or load last. Headline values (all WCAG-verified on the cream bg): --text-3 #9c9080 → #6f6450 (2.5:1 → 4.6:1), --text-2 → #5f5544, dark --text-3 → #968a72, .masonry-card fill --bg → --bg-2, plus --ink/--paper aliases, an --fs-* scale, and one unified note-title rule.
+
+claude-code-fix-prompt.md — paste straight into Claude Code. Bounded to a token/consistency pass with explicit acceptance criteria (zero AA failures, no px font-sizes, no --black/--white consumers, identical-looking note titles, minimal visual diff).
+
+One-line rule for CLAUDE.md:
+
+    Tokens are the source of truth: every text/background pair must pass WCAG AA (4.5:1, or 3:1 for text ≥24px), every font-size uses a --fs-* token (never literal px), every radius uses a --r-* token, and token names describe role not value (--ink/--paper, never --black/--white).
+
+(Merged into style.css 2026-07-05 — tokens live in :root; --black/--white/--teal/--info/--warning aliases deleted outright since nothing consumed them.)
+
+---
+
 ## 不做
 
 - 無彩色（accent blue、teal、red 全移除）

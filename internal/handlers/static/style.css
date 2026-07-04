@@ -13,19 +13,20 @@
   --bg-2: #fdf8e0;
   --bg-3: #f5eedd;
 
-  /* Text */
+  /* Text — WCAG AA (≥4.5:1) on --bg.
+     --text-4 is sub-AA: decoration / disabled / placeholder ONLY. */
   --text: #1a1a1a;
-  --text-2: #6b6050;
-  --text-3: #9c9080;
-  --text-4: #beb4a4;
+  --text-2: #5f5544; /* ~5.9:1 */
+  --text-3: #6f6450; /* ~4.6:1 */
+  --text-4: #b0a48f;
 
   /* Borders */
   --border: #d8cebc;
   --border-2: #c4b8a4;
 
-  /* B&W only */
-  --black: #000000;
-  --white: #ffffff;
+  /* Role tokens — names describe role, not value; they invert in dark mode */
+  --ink: #1a1a1a;
+  --paper: #ffffff;
 
   /* Danger (only for destructive actions) */
   --danger: #cc0000;
@@ -69,19 +70,15 @@
   --font-mono:
     "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Compat aliases (for existing templates) */
-  --fg: var(--text);
-  --muted: var(--text-2);
-  --muted-2: var(--text-3);
-  --card: var(--bg-2);
-  --surface-2: var(--bg-3);
-  --border-2-old: var(--border-2);
-  --code-bg: var(--bg-3);
-  --accent: var(--black);
-  --info: var(--text-2);
-  --warning: var(--text-2);
-  --teal: var(--text-2);
-  --teal-soft: var(--bg-3);
+  /* Type scale — every font-size maps to one of these; never literal px */
+  --fs-2xs: 0.6875rem; /* 11px — mono micro-labels */
+  --fs-xs: 0.75rem; /*   12px — tags, counts       */
+  --fs-sm: 0.8125rem; /* 13px — meta, captions     */
+  --fs-base: 0.9375rem; /* 15px — UI / small body  */
+  --fs-md: 1.0625rem; /* 17px — card / note titles */
+  --fs-lg: 1.1875rem; /* 19px — h3, entry titles   */
+  --fs-xl: 1.5rem; /*    24px — h2                 */
+  --fs-2xl: 2rem; /*     32px — h1                 */
 }
 
 /* ── Dark mode ──────────────────────────────────────────────────────────── */
@@ -91,26 +88,18 @@ html[data-theme="dark"] {
   --bg-3: #323232;
   --text: #efe6cc;
   --text-2: #a89e8e;
-  --text-3: #7d7060;
+  --text-3: #968a72; /* ~5.1:1 on dark --bg */
   --text-4: #5a5040;
   --border: #2c2822;
   --border-2: #3a342c;
-  --black: #efe6cc;
-  --white: #1a1a1a;
+  --ink: #efe6cc;
+  --paper: #1a1a1a;
   --danger: #ff6b6b;
   --danger-bg: #1a0a0a;
   --danger-border: #4a1515;
   --success: #4ade80;
   --success-border: #1a3a2a;
   --success-bg: #0a1f14;
-
-  --fg: var(--text);
-  --muted: var(--text-2);
-  --muted-2: var(--text-3);
-  --card: var(--bg-2);
-  --surface-2: var(--bg-3);
-  --code-bg: var(--bg-3);
-  --accent: var(--text);
 }
 
 /* ── Reset ──────────────────────────────────────────────────────────────── */
@@ -127,7 +116,7 @@ body {
 
 body {
   font-family: var(--font-serif);
-  font-size: 15px;
+  font-size: var(--fs-base);
   line-height: 1.6;
   color: var(--text);
   background: var(--bg);
@@ -235,7 +224,7 @@ body {
   color: var(--text);
   font-family: var(--font-serif);
   font-weight: 600;
-  font-size: 1.15rem;
+  font-size: var(--fs-lg);
   letter-spacing: -0.02em;
 }
 .brand-logo {
@@ -256,7 +245,7 @@ body {
   width: 100%;
   height: 32px;
   padding: 0 0.85rem;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   background: var(--bg-2);
@@ -302,7 +291,7 @@ mark {
   height: 32px;
   color: var(--text-3);
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
   transition: color var(--dur-fast) ease;
 }
@@ -352,7 +341,7 @@ mark {
   border: 1px solid var(--border-2);
   background: var(--bg-3);
   color: var(--text);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   text-transform: uppercase;
   text-decoration: none;
@@ -385,7 +374,7 @@ mark {
   justify-content: center;
   width: 32px;
   height: 32px;
-  font-size: 1.25rem;
+  font-size: var(--fs-lg);
   line-height: 1;
   color: var(--text-2);
   background: none;
@@ -427,7 +416,7 @@ mark {
   padding: 0;
   color: var(--text-3);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: color var(--dur-fast) ease;
 }
@@ -437,7 +426,7 @@ mark {
 
 /* ── Typography ─────────────────────────────────────────────────────────── */
 h1 {
-  font-size: 2rem;
+  font-size: var(--fs-2xl);
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -445,14 +434,14 @@ h1 {
   font-family: var(--font-serif);
 }
 h2 {
-  font-size: 1.4rem;
+  font-size: var(--fs-xl);
   line-height: 1.25;
   font-weight: 600;
   letter-spacing: -0.015em;
   margin: 1.5em 0 0.5em;
 }
 h3 {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   line-height: 1.3;
   font-weight: 600;
   margin: 1.25em 0 0.4em;
@@ -573,7 +562,7 @@ img {
 .local-graph-toggle summary {
   cursor: pointer;
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   padding: 0.4em 0;
   list-style: none;
   user-select: none;
@@ -596,7 +585,7 @@ img {
 /* Note metadata */
 .note-meta {
   color: var(--text-3);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   margin: -0.4em 0 1.25em;
 }
 .note-meta a {
@@ -618,7 +607,7 @@ label {
   gap: 0.35rem;
   font-weight: 500;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
 }
 
 input[type="text"],
@@ -643,7 +632,7 @@ input[type="search"]::-webkit-search-cancel-button {
 
 input[type="file"] {
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   width: 100%;
 }
@@ -694,7 +683,7 @@ button {
   transition:
     opacity var(--dur-fast) ease,
     transform var(--dur-fast) ease;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
 }
 button:hover {
   opacity: 0.85;
@@ -723,7 +712,7 @@ button.secondary:hover {
   color: var(--bg);
   text-decoration: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   transition: opacity var(--dur-fast) ease;
 }
 .btn-primary:hover {
@@ -743,7 +732,7 @@ button.secondary:hover {
   color: var(--text);
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
   transition:
     border-color var(--dur-fast) ease,
@@ -759,13 +748,13 @@ button.secondary:hover {
   text-align: center;
   color: var(--text-3);
   margin: 0.5em 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
 }
 
 .field-error {
   color: var(--danger);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   margin-top: 0.25rem;
   font-family: var(--font-sans);
 }
@@ -778,7 +767,7 @@ button.secondary:hover {
   border-radius: var(--r-btn);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 .error {
   background: var(--danger-bg);
@@ -788,7 +777,7 @@ button.secondary:hover {
   border-radius: var(--r-btn);
   color: var(--danger);
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 
 /* ── Vault masthead ─────────────────────────────────────────────────────── */
@@ -802,7 +791,7 @@ button.secondary:hover {
 }
 .vault-name {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -812,12 +801,12 @@ button.secondary:hover {
 }
 .vault-meta {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
 }
 .profile-notes-heading {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -845,8 +834,8 @@ button.secondary:hover {
   -webkit-column-break-inside: avoid;
   margin: 0 0 12px;
   padding: 1.1em 1.15em 0.9em;
-  background: #fffdf2;
-  border: 0.5px solid rgba(0, 0, 0, 0.04);
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
   border-radius: var(--r-card);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.04),
@@ -860,8 +849,6 @@ button.secondary:hover {
   overflow: hidden;
 }
 html[data-theme="dark"] .masonry-card {
-  background: #2c2c2c;
-  border-color: rgba(255, 255, 255, 0.04);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.5),
     0 2px 6px rgba(0, 0, 0, 0.4);
@@ -879,13 +866,19 @@ html[data-theme="dark"] .masonry-card:hover {
     0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
-.card-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color: var(--text);
-  margin: 0 0 0.5em;
+/* One note-title voice: every list/card surface renders the same object
+   the same way (serif / 600 / --fs-md / upright). */
+.card-title,
+.note-card .note-title {
   font-family: var(--font-serif);
+  font-weight: 600;
+  font-style: normal;
+  font-size: var(--fs-md);
+  line-height: 1.3;
+  color: var(--text);
+}
+.card-title {
+  margin: 0 0 0.5em;
 }
 .card-image {
   display: block;
@@ -897,7 +890,7 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .card-excerpt {
   color: var(--text-2);
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   margin: 0 0 0.7em;
   white-space: pre-wrap;
@@ -911,7 +904,7 @@ html[data-theme="dark"] .masonry-card:hover {
   margin: 0 0 0.7em;
   padding-left: 1.1em;
   color: var(--text-2);
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   line-height: 1.65;
 }
 .card-list li {
@@ -923,7 +916,7 @@ html[data-theme="dark"] .masonry-card:hover {
   padding: 0 0 0 0.75em;
   border-left: 2.5px solid var(--border-2);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   line-height: 1.6;
   font-style: italic;
 }
@@ -935,7 +928,7 @@ html[data-theme="dark"] .masonry-card:hover {
   padding: 0.6em 0.8em;
   background: var(--bg-3);
   border-radius: var(--r-btn);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 .connection {
@@ -955,7 +948,7 @@ html[data-theme="dark"] .masonry-card:hover {
   margin-top: 0.5em;
   padding-top: 0.6em;
   border-top: 1px solid var(--border);
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   flex-wrap: wrap;
   font-family: var(--font-sans);
@@ -992,7 +985,7 @@ html[data-theme="dark"] .masonry-card:hover {
   background: var(--bg-3);
   padding: 1px 7px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-family: var(--font-sans);
 }
 
@@ -1025,19 +1018,14 @@ html[data-theme="dark"] .masonry-card:hover {
   text-decoration: underline;
   text-decoration-color: var(--border-2);
 }
-.note-card .note-title {
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--text);
-}
 .note-card .note-excerpt {
   color: var(--text-2);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   margin-top: 0.25em;
 }
 .note-card .note-foot {
   color: var(--text-3);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   margin-top: 0.4em;
   font-family: var(--font-sans);
 }
@@ -1050,7 +1038,7 @@ html[data-theme="dark"] .masonry-card:hover {
   text-decoration: none;
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
   transition:
     border-color var(--dur-fast) ease,
@@ -1076,7 +1064,7 @@ html[data-theme="dark"] .masonry-card:hover {
   color: var(--text-2);
   text-decoration: none;
   border-radius: var(--r-pill);
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   border: 1px solid var(--border);
   font-family: var(--font-sans);
   transition:
@@ -1098,7 +1086,7 @@ html[data-theme="dark"] .masonry-card:hover {
   color: var(--text-3);
   padding: 0.3em 0.85em;
   border-radius: var(--r-pill);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1127,7 +1115,7 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .heart-static {
   color: var(--text-3);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 
 /* ── Follow button ──────────────────────────────────────────────────────── */
@@ -1142,7 +1130,7 @@ html[data-theme="dark"] .masonry-card:hover {
   border: 1.5px solid var(--text);
   padding: 0.42em 1.2em;
   border-radius: var(--r-pill);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
   cursor: pointer;
   align-self: auto;
@@ -1162,7 +1150,7 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .follower-count {
   color: var(--text-3);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
 }
 
@@ -1200,7 +1188,7 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .feed-tab {
   padding: 0.55em 0.9em;
-  font-size: 0.95rem;
+  font-size: var(--fs-base);
   color: var(--text-3);
   text-decoration: none;
   border-left: 2px solid transparent;
@@ -1222,7 +1210,7 @@ html[data-theme="dark"] .masonry-card:hover {
 /* ── Filter chips ───────────────────────────────────────────────────────── */
 .chip-count {
   opacity: 0.5;
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   margin-left: 0.1em;
 }
 .filter-chips {
@@ -1242,7 +1230,7 @@ html[data-theme="dark"] .masonry-card:hover {
   border: 1px solid var(--border);
   color: var(--text-3);
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
   white-space: nowrap;
   transition:
@@ -1268,7 +1256,7 @@ html[data-theme="dark"] .masonry-card:hover {
   border-top: 1px dashed var(--border);
 }
 .backlinks h2 {
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   margin: 0 0 0.6em;
   font-weight: 500;
@@ -1282,7 +1270,7 @@ html[data-theme="dark"] .masonry-card:hover {
 .md-upload label {
   cursor: pointer;
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
   transition: color var(--dur-fast) ease;
 }
@@ -1300,10 +1288,10 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .editor-actions .download-link {
   color: var(--text-3);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
 }
 .editor-actions .copy-md {
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
 }
 
 /* Live preview pane */
@@ -1328,7 +1316,7 @@ html[data-theme="dark"] .masonry-card:hover {
   margin: 0;
   padding: 0 0.5em;
   background: var(--bg-2);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   color: var(--text-3);
   letter-spacing: 0.08em;
@@ -1345,15 +1333,15 @@ html[data-theme="dark"] .masonry-card:hover {
   margin-bottom: 0;
 }
 #preview h1 {
-  font-size: 1.55rem;
+  font-size: var(--fs-xl);
   margin: 0 0 0.7em;
 }
 #preview h2 {
-  font-size: 1.22rem;
+  font-size: var(--fs-lg);
   margin: 1.6em 0 0.5em;
 }
 #preview h3 {
-  font-size: 1.05rem;
+  font-size: var(--fs-md);
   margin: 1.3em 0 0.4em;
 }
 #preview p {
@@ -1377,7 +1365,7 @@ html[data-theme="dark"] .masonry-card:hover {
   display: block;
   color: var(--text-3);
   font-style: italic;
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
 }
 
 /* ── Pinned card ────────────────────────────────────────────────────────── */
@@ -1392,7 +1380,7 @@ html[data-theme="dark"] .masonry-card:hover {
   border-radius: var(--r-card);
 }
 .pinned-label {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   font-family: var(--font-sans);
 }
@@ -1411,7 +1399,7 @@ html[data-theme="dark"] .masonry-card:hover {
 }
 .report-thanks {
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 /* ── Autocomplete popup ─────────────────────────────────────────────────── */
@@ -1441,7 +1429,7 @@ html[data-theme="dark"] .ac-popup {
   gap: 0.6em;
   padding: 0.5em 0.85em;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   border-radius: var(--r-sm);
 }
 .ac-item.active,
@@ -1454,7 +1442,7 @@ html[data-theme="dark"] .ac-popup {
 }
 .ac-item .ac-secondary {
   color: var(--text-3);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-mono);
 }
 
@@ -1480,7 +1468,7 @@ html[data-theme="dark"] .ac-popup {
   justify-content: center;
   background: var(--bg-3);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: var(--fs-base);
   font-weight: 600;
   text-transform: uppercase;
   text-decoration: none;
@@ -1494,7 +1482,7 @@ html[data-theme="dark"] .ac-popup {
   display: flex;
   align-items: center;
   gap: 0.5em;
-  font-size: 0.95rem;
+  font-size: var(--fs-base);
   flex-wrap: wrap;
 }
 .author-bar .author-name {
@@ -1512,7 +1500,7 @@ html[data-theme="dark"] .ac-popup {
 }
 .author-bar .author-stats {
   color: var(--text-3);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   margin-top: 0.2em;
   font-family: var(--font-sans);
 }
@@ -1527,7 +1515,7 @@ html[data-theme="dark"] .ac-popup {
   flex-wrap: wrap;
 }
 .article-info {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   display: flex;
   align-items: center;
@@ -1554,7 +1542,7 @@ html[data-theme="dark"] .ac-popup {
   background: var(--bg);
   color: var(--text-2);
   border-radius: var(--r-btn);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1632,7 +1620,7 @@ html[data-theme="dark"] .action-menu-list {
   align-items: center;
   gap: 0.4em;
   padding: 0.48em 0.85em;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   background: none;
   border: none;
@@ -1656,7 +1644,7 @@ html[data-theme="dark"] .action-menu-list {
   align-items: center;
   gap: 0.4em;
   padding: 0.48em 0.85em;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--danger);
   background: none;
   border: none;
@@ -1675,7 +1663,7 @@ html[data-theme="dark"] .action-menu-list {
   align-items: center;
   gap: 0.4em;
   padding: 0.48em 0.85em;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-4);
   background: none;
   border: none;
@@ -1694,7 +1682,7 @@ html[data-theme="dark"] .action-menu-list {
   padding: 1.6rem 1.8rem 2rem;
 }
 .article-title {
-  font-size: 1.85rem;
+  font-size: var(--fs-2xl);
   font-weight: 700;
   margin: 0 0 0.3em;
   line-height: 1.2;
@@ -1704,17 +1692,17 @@ html[data-theme="dark"] .action-menu-list {
 .note-image {
   display: block;
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: var(--r-btn);
   margin-top: 0.75em;
 }
 .image-preview {
   display: block;
   max-width: 200px;
-  border-radius: 8px;
+  border-radius: var(--r-btn);
   margin: 0.4em 0;
 }
 .article-body {
-  font-size: 1rem;
+  font-size: var(--fs-md);
   line-height: 1.82;
   margin-top: 0.75em;
   color: var(--text-2);
@@ -1723,12 +1711,12 @@ html[data-theme="dark"] .action-menu-list {
   margin-top: 0;
 }
 .article-body h2 {
-  font-size: 1.15rem;
+  font-size: var(--fs-lg);
   margin: 1.8em 0 0.55em;
   color: var(--text);
 }
 .article-body h3 {
-  font-size: 1.02rem;
+  font-size: var(--fs-md);
   margin: 1.5em 0 0.4em;
   color: var(--text);
 }
@@ -1763,7 +1751,7 @@ html[data-theme="dark"] .action-menu-list {
   display: flex;
   align-items: center;
   gap: 0.4em;
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   margin-bottom: 0.75em;
   color: var(--text);
@@ -1772,14 +1760,14 @@ html[data-theme="dark"] .action-menu-list {
 .section-header .section-count {
   color: var(--text-3);
   font-weight: 400;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   margin-left: 0.2em;
 }
 .subsection-label {
   display: flex;
   align-items: center;
   gap: 0.45em;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   margin: 0.9em 0 0.5em;
   letter-spacing: 0.01em;
@@ -1822,7 +1810,7 @@ html[data-theme="dark"] .action-menu-list {
   text-decoration: none;
 }
 .mini-card .mini-card-title {
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   line-height: 1.35;
   color: var(--text);
@@ -1832,7 +1820,7 @@ html[data-theme="dark"] .action-menu-list {
   flex-wrap: wrap;
 }
 .mini-card .mini-card-meta {
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   display: flex;
   align-items: center;
@@ -1885,7 +1873,7 @@ html[data-theme="dark"] .action-menu-list {
   gap: 0.7em;
   padding: 0.75em 0;
   border-bottom: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   text-decoration: none;
   color: inherit;
   transition: background var(--dur-fast) ease;
@@ -1898,7 +1886,7 @@ html[data-theme="dark"] .action-menu-list {
 }
 .backlink-icon {
   color: var(--text-3);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   flex-shrink: 0;
 }
 .backlink-title {
@@ -1907,7 +1895,7 @@ html[data-theme="dark"] .action-menu-list {
   color: var(--text);
 }
 .backlink-author {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   display: inline-flex;
   align-items: center;
@@ -1947,7 +1935,7 @@ html[data-theme="dark"] .local-graph-wrap {
   color: var(--bg);
   padding: 0.28rem 0.55rem;
   border-radius: var(--r-sm);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   white-space: nowrap;
   max-width: 22rem;
   overflow: hidden;
@@ -1963,7 +1951,7 @@ html[data-theme="dark"] .graph-tooltip {
   margin-top: 2rem;
 }
 .local-graph-heading {
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   margin: 1.5rem 0 0.3rem;
   letter-spacing: 0.04em;
@@ -1973,7 +1961,7 @@ html[data-theme="dark"] .graph-tooltip {
 /* ── External ───────────────────────────────────────────────────────────── */
 .external-badge {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   padding: 0.06em 0.55em;
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
@@ -1996,7 +1984,7 @@ html[data-theme="dark"] .graph-tooltip {
   border: 1px solid var(--border);
   background: var(--bg-2);
   color: var(--text);
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
   transition: border-color var(--dur-fast) ease;
 }
 .add-vault-form input[type="url"]:focus {
@@ -2015,7 +2003,7 @@ html[data-theme="dark"] .graph-tooltip {
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
 }
 .admin-table th,
 .admin-table td {
@@ -2028,7 +2016,7 @@ html[data-theme="dark"] .graph-tooltip {
   font-weight: 600;
   color: var(--text-2);
   font-family: var(--font-sans);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -2036,14 +2024,14 @@ html[data-theme="dark"] .graph-tooltip {
   white-space: nowrap;
 }
 .row-actions .link-btn {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .row-actions .link-btn.danger:hover {
   color: var(--danger);
 }
 
 .status {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   padding: 0.12em 0.65em;
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
@@ -2077,7 +2065,7 @@ html[data-theme="dark"] .graph-tooltip {
 }
 .callout-title {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   margin-bottom: 0.4em;
   opacity: 0.9;
   font-family: var(--font-sans);
@@ -2151,7 +2139,7 @@ pre.mermaid {
   text-align: center;
   padding: 2rem 0;
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
 }
 .feed-sentinel span {
@@ -2224,7 +2212,8 @@ pre.mermaid {
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (min-width: 640px) {
   body {
-    font-size: 15.5px;
+    /* Root type ramp (15 -> 15.5 -> 16px), deliberately off the --fs-* scale. */
+    font-size: 0.96875rem;
   }
   .page {
     padding: 0 1.5rem 5rem;
@@ -2232,7 +2221,7 @@ pre.mermaid {
 }
 @media (min-width: 900px) {
   body {
-    font-size: 16px;
+    font-size: 1rem;
   }
   .masonry {
     column-count: 3;
@@ -2245,10 +2234,10 @@ pre.mermaid {
     padding: 2rem 2.4rem 2.5rem;
   }
   .article-title {
-    font-size: 2.2rem;
+    font-size: var(--fs-2xl);
   }
   .article-body {
-    font-size: 1.05rem;
+    font-size: var(--fs-md);
   }
 }
 
@@ -2291,7 +2280,7 @@ html[data-theme="dark"] .login-wrap {
   width: 256px;
   height: 256px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--r-card);
   background: var(--bg-2);
   overflow: hidden;
 }
@@ -2307,9 +2296,9 @@ html[data-theme="dark"] .login-wrap {
   margin-top: 1em;
   width: 100%;
   padding: 0.65em 1em;
-  font-size: 1rem;
+  font-size: var(--fs-md);
   font-family: var(--font-sans);
-  border-radius: 10px;
+  border-radius: var(--r-input);
   border: 1px solid var(--border-2);
   background: var(--text);
   color: var(--bg);
@@ -2319,7 +2308,7 @@ html[data-theme="dark"] .login-wrap {
   margin-bottom: 1.4em;
 }
 .picker-label {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-3);
@@ -2339,7 +2328,7 @@ html[data-theme="dark"] .login-wrap {
   height: 64px;
   padding: 0;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-input);
   background: var(--bg-2);
   cursor: pointer;
   overflow: hidden;
@@ -2424,8 +2413,8 @@ html[data-theme="dark"] .login-wrap {
   margin-bottom: 0.75rem;
 }
 .save-status {
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--text-3);
+  font-size: var(--fs-sm);
 }
 
 /* Match the editor to the site theme (EasyMDE ships a light-only skin). */
@@ -2435,7 +2424,7 @@ html[data-theme="dark"] .login-wrap {
   border: 1px solid var(--border);
   border-radius: var(--r-input);
   font-family: var(--font-serif); /* prose feel, not a code box */
-  font-size: 1.05rem;
+  font-size: var(--fs-md);
   line-height: 1.7;
   min-height: calc(100vh - 160px);
   height: auto;
@@ -2518,7 +2507,7 @@ blockquote.embed .embed-header {
   padding: 0.4em 0.85em;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   font-family: var(--font-sans);
 }
@@ -2536,7 +2525,7 @@ blockquote.embed.embed-missing {
   border-left-color: #b91c1c;
   background: rgba(185, 28, 28, 0.08);
   padding: 0.5em 0.85em;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 /* ── Command palette (Cmd/Ctrl+K) ──────────────────────────────────────── */
@@ -2563,7 +2552,7 @@ dialog.palette::backdrop {
   border-bottom: 1px solid var(--border);
   background: transparent;
   color: var(--text);
-  font-size: 1rem;
+  font-size: var(--fs-md);
   outline: none;
 }
 .palette-list {
@@ -2595,7 +2584,7 @@ dialog.palette::backdrop {
   flex: 1;
 }
 .palette-item-handle {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   font-family: var(--font-sans);
   flex-shrink: 0;
@@ -2604,12 +2593,12 @@ dialog.palette::backdrop {
   padding: 1.2rem 1rem;
   color: var(--text-3);
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
 }
 .palette-hint {
   padding: 0.45rem 1rem;
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   border-top: 1px solid var(--border);
   font-family: var(--font-sans);
@@ -2618,10 +2607,10 @@ dialog.palette::backdrop {
 /* ── Calendar view ─────────────────────────────────────────────────────── */
 .calendar-page { max-width: 64rem; margin: 0 auto; }
 .calendar-head { display: flex; align-items: baseline; gap: 1rem; margin: 0 0 1rem; }
-.calendar-month { margin: 0; font-size: 1.4rem; letter-spacing: 0.04em; }
-.calendar-nav { font-size: 1.4rem; text-decoration: none; color: var(--text-2); padding: 0 0.4rem; }
+.calendar-month { margin: 0; font-size: var(--fs-xl); letter-spacing: 0.04em; }
+.calendar-nav { font-size: var(--fs-xl); text-decoration: none; color: var(--text-2); padding: 0 0.4rem; }
 .calendar-nav:hover { color: var(--text); }
-.calendar-today { margin-left: auto; font-size: 0.85rem; color: var(--text-3); text-decoration: none; }
+.calendar-today { margin-left: auto; font-size: var(--fs-sm); color: var(--text-3); text-decoration: none; }
 .calendar-today:hover { color: var(--text); }
 .calendar-grid {
   display: grid;
@@ -2635,7 +2624,7 @@ dialog.palette::backdrop {
 .calendar-dayname {
   background: var(--bg-2);
   padding: 0.4rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   text-align: center;
   font-family: var(--font-sans);
@@ -2660,9 +2649,9 @@ dialog.palette::backdrop {
   align-items: center;
   justify-content: center;
 }
-.calendar-cell-day { font-size: 0.78rem; color: var(--text-2); font-family: var(--font-sans); }
+.calendar-cell-day { font-size: var(--fs-sm); color: var(--text-2); font-family: var(--font-sans); }
 .calendar-cell-notes { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.15rem; }
-.calendar-cell-notes li { font-size: 0.78rem; line-height: 1.25; }
+.calendar-cell-notes li { font-size: var(--fs-sm); line-height: 1.25; }
 .calendar-cell-notes a {
   display: block;
   text-decoration: none;
@@ -2678,20 +2667,20 @@ dialog.palette::backdrop {
 .calendar-cell-notes a:hover { background: var(--text); color: var(--bg); }
 @media (max-width: 720px) {
   .calendar-cell { min-height: 4rem; padding: 0.25rem 0.3rem; }
-  .calendar-cell-notes a { font-size: 0.7rem; }
+  .calendar-cell-notes a { font-size: var(--fs-2xs); }
 }
 
 /* ── Batch import editor ───────────────────────────────────────────────── */
 .batch-head { margin-bottom: 1.5rem; }
 .batch-head h1 { display: flex; align-items: baseline; gap: 0.7rem; margin: 0 0 0.4em; }
 .batch-count {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: normal;
   color: var(--text-3);
   font-family: var(--font-sans);
   letter-spacing: 0.04em;
 }
-.batch-hint { font-size: 0.86rem; }
+.batch-hint { font-size: var(--fs-sm); }
 .batch-toolbar { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.8rem; }
 .batch-list { display: flex; flex-direction: column; gap: 0; }
 .batch-item {
@@ -2701,7 +2690,7 @@ dialog.palette::backdrop {
 .batch-item:first-child { border-top: 0; padding-top: 0.4rem; }
 .batch-item-form { display: flex; flex-direction: column; gap: 0.7rem; }
 .batch-field { display: flex; flex-direction: column; gap: 0.25rem; }
-.batch-field-label { font-size: 0.78rem; color: var(--text-3); font-family: var(--font-sans); letter-spacing: 0.04em; }
+.batch-field-label { font-size: var(--fs-sm); color: var(--text-3); font-family: var(--font-sans); letter-spacing: 0.04em; }
 .batch-field input,
 .batch-body {
   width: 100%;
@@ -2712,7 +2701,7 @@ dialog.palette::backdrop {
   background: var(--bg-2);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
 }
 .batch-field input { font-family: var(--font-sans); }
 .batch-body { font-family: var(--font-mono); min-height: 14rem; resize: vertical; line-height: 1.55; }
@@ -2729,12 +2718,12 @@ dialog.palette::backdrop {
   min-height: 14rem;
   max-height: 36rem;
   overflow-y: auto;
-  font-size: 0.92rem;
+  font-size: var(--fs-base);
 }
 .batch-preview:empty::before {
   content: '預覽會顯示在這裡';
   color: var(--text-3);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-family: var(--font-sans);
 }
 .batch-preview > :first-child { margin-top: 0; }
@@ -2748,7 +2737,7 @@ dialog.palette::backdrop {
   gap: 0.6rem;
   align-items: center;
 }
-.batch-item-status { font-size: 0.78rem; color: var(--text-3); font-family: var(--font-sans); }
+.batch-item-status { font-size: var(--fs-sm); color: var(--text-3); font-family: var(--font-sans); }
 .batch-item-error {
   margin: 0.4rem 0 0;
   padding: 0.45rem 0.7rem;
@@ -2756,7 +2745,7 @@ dialog.palette::backdrop {
   border-left: 3px solid #b91c1c;
   border-radius: var(--r-sm);
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .batch-item-saved {
   padding: 1rem 1.2rem;
@@ -2767,8 +2756,8 @@ dialog.palette::backdrop {
   margin: 0.8rem 0;
 }
 .batch-saved-row { display: flex; align-items: center; gap: 0.7rem; }
-.batch-saved-mark { font-size: 1.1rem; color: var(--text-2); }
+.batch-saved-mark { font-size: var(--fs-lg); color: var(--text-2); }
 .batch-saved-title { flex: 1; color: var(--text); }
-.batch-saved-link { font-size: 0.85rem; color: var(--text-2); text-decoration: none; }
+.batch-saved-link { font-size: var(--fs-sm); color: var(--text-2); text-decoration: none; }
 .batch-saved-link:hover { color: var(--text); text-decoration: underline; }
 .batch-foot { margin: 2rem 0 4rem; display: flex; gap: 0.6rem; }

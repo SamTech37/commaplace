@@ -35,6 +35,10 @@ See Makefile. Prefer `make watch` for hot-reload.
 
 ## 6. Adding Features Should Not Cause Regression in Existing Ones
 
+## 7. Design Tokens Are the Source of Truth
+
+Every text/background pair must pass WCAG AA (4.5:1, or 3:1 for text ≥24px), every font-size uses a `--fs-*` token (never literal px), every radius uses a `--r-*` token, and token names describe role not value (`--ink`/`--paper`, never `--black`/`--white`).
+
 ---
 
 ## Project Context
