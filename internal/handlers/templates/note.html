@@ -92,8 +92,12 @@
           </form>
           {{end}}
           <div class="action-menu-sep"></div>
-          {{/* TODO: vault import not yet implemented */}}
-          <button type="button" class="action-menu-disabled" disabled title="即將推出">⬇ 匯入到我的 vault</button>
+          <a
+            href="obsidian://new?name={{.Note.Slug | urlquery}}&amp;content={{.Note.BodyMD | urlquery}}"
+            title="在預設 Obsidian vault 建立這篇筆記（長筆記可能超出 URL 長度上限，建議改用下載 .md）"
+          >
+            ⬇ 匯入到我的 vault
+          </a>
           <a href="/api/notes/{{.Note.ID}}/raw" download>⬇ 下載 .md</a>
           <button
             type="button"
@@ -102,12 +106,6 @@
           >
             📋 複製 markdown
           </button>
-          <a
-            href="obsidian://new?name={{.Note.Slug | urlquery}}&amp;content={{.Note.BodyMD | urlquery}}"
-            title="在預設 vault 開啟（長筆記可能超出 URL 長度上限，建議改用下載 .md）"
-          >
-            🟣 用 Obsidian 開啟
-          </a>
           {{if and .ViewerLoggedIn (not .IsAuthor)}}
           <div class="action-menu-sep"></div>
           <button
