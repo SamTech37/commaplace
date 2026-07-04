@@ -48,7 +48,7 @@ func TestRenameFollowsInboundLink(t *testing.T) {
 	}
 
 	// And the rendered href follows.
-	html, err := markdown.Render("see [[target]]", "alice", resolver)
+	html, err := markdown.Render("see [[target]]", "alice", resolver, nil)
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}

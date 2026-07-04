@@ -2503,3 +2503,39 @@ html[data-theme="dark"] .login-wrap {
 .publish-btn {
   white-space: nowrap;
 }
+
+/* ── Markdown embeds ![[note]] ──────────────────────────────────────────── */
+blockquote.embed {
+  margin: 1.2em 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-3);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  overflow: hidden;
+}
+blockquote.embed .embed-header {
+  padding: 0.4em 0.85em;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+}
+blockquote.embed .embed-header a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+blockquote.embed .embed-header a:hover { color: var(--text); text-decoration: underline; }
+blockquote.embed .embed-body {
+  padding: 0.6em 0.85em;
+}
+blockquote.embed .embed-body > :first-child { margin-top: 0; }
+blockquote.embed .embed-body > :last-child { margin-bottom: 0; }
+blockquote.embed.embed-missing {
+  border-left-color: #b91c1c;
+  background: rgba(185, 28, 28, 0.08);
+  padding: 0.5em 0.85em;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}

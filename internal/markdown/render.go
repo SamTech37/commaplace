@@ -40,12 +40,20 @@ var staticExts = []goldmark.Extender{
 	&codeBlockExt{},
 }
 
+// EmbedResolver looks up the target of an ![[embed]] and returns its title
+// plus its pre-rendered HTML body. Returning ok=false renders a "missing"
+// placeholder. A nil EmbedResolver renders all embeds as missing, which is
+// also how callers cap recursion depth (return nil when too deep).
+type EmbedResolver func(WikiLink) (title string, body template.HTML, ok bool)
+
 // Render converts md to safe HTML. Wiki links are wrapped in <a class="wiki ...">
-// with "wiki-resolved" or "wiki-unresolved" depending on resolver.
-func Render(md, currentUser string, resolve Resolver) (template.HTML, error) {
+// with "wiki-resolved" or "wiki-unresolved" depending on resolver. ![[embed]]
+// blocks are expanded via embed (or rendered as missing if embed is nil).
+func Render(md, currentUser string, resolve Resolver, embed EmbedResolver) (template.HTML, error) {
 	md = stripComments(md)
-	exts := make([]goldmark.Extender, 0, len(staticExts)+1)
+	exts := make([]goldmark.Extender, 0, len(staticExts)+2)
 	exts = append(exts, &wikiExt{currentUser: currentUser, resolve: resolve})
+	exts = append(exts, &embedExt{embed: embed})
 	exts = append(exts, staticExts...)
 	g := goldmark.New(goldmark.WithExtensions(exts...))
 	var buf bytes.Buffer
@@ -825,5 +833,115 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 		w.WriteString(htmlpkg.EscapeString(n.Link.Label()))
 		w.WriteString(`</a>`)
 	}
+	return ast.WalkSkipChildren, nil
+}
+
+// ---------- markdown embed extension ![[...]] ----------
+
+type embedExt struct {
+	embed EmbedResolver
+}
+
+func (e *embedExt) Extend(m goldmark.Markdown) {
+	m.Parser().AddOptions(parser.WithInlineParsers(
+		// Priority below goldmark's image parser (200) so we claim ![[...]]
+		// before image syntax ![alt](url) gets a chance.
+		util.Prioritized(&embedInlineParser{}, 100),
+	))
+	m.Renderer().AddOptions(renderer.WithNodeRenderers(
+		util.Prioritized(&embedRenderer{embed: e.embed}, 100),
+	))
+}
+
+var kindEmbed = ast.NewNodeKind("Embed")
+
+type embedNode struct {
+	ast.BaseInline
+	Link WikiLink
+}
+
+func (n *embedNode) Kind() ast.NodeKind            { return kindEmbed }
+func (n *embedNode) Dump(source []byte, level int) { ast.DumpHelper(n, source, level, nil, nil) }
+
+type embedInlineParser struct{}
+
+func (p *embedInlineParser) Trigger() []byte { return []byte{'!'} }
+
+func (p *embedInlineParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
+	line, _ := block.PeekLine()
+	if len(line) < 6 || line[0] != '!' || line[1] != '[' || line[2] != '[' {
+		return nil
+	}
+	end := -1
+	for i := 3; i+1 < len(line); i++ {
+		if line[i] == '\n' {
+			return nil
+		}
+		if line[i] == '[' && i+1 < len(line) && line[i+1] == '[' {
+			return nil
+		}
+		if line[i] == ']' && line[i+1] == ']' {
+			end = i
+			break
+		}
+	}
+	if end < 0 {
+		return nil
+	}
+	inner := string(line[3:end])
+	link, ok := ParseLink(inner)
+	if !ok || link.Slug == "" {
+		return nil
+	}
+	block.Advance(end + 2)
+	return &embedNode{Link: link}
+}
+
+type embedRenderer struct {
+	embed EmbedResolver
+}
+
+func (r *embedRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(kindEmbed, r.render)
+}
+
+func (r *embedRenderer) render(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkContinue, nil
+	}
+	n := node.(*embedNode)
+	if r.embed == nil {
+		w.WriteString(`<blockquote class="embed embed-missing">嵌入過深或關閉：<code>![[`)
+		w.WriteString(htmlpkg.EscapeString(n.Link.Raw))
+		w.WriteString(`]]</code></blockquote>`)
+		return ast.WalkSkipChildren, nil
+	}
+	title, body, ok := r.embed(n.Link)
+	if !ok {
+		w.WriteString(`<blockquote class="embed embed-missing">找不到 <code>![[`)
+		w.WriteString(htmlpkg.EscapeString(n.Link.Raw))
+		w.WriteString(`]]</code></blockquote>`)
+		return ast.WalkSkipChildren, nil
+	}
+	url := n.Link.URL("")
+	if n.Link.User == "" {
+		url = "" // can't link without a user context; embed header is plain text
+	}
+	w.WriteString(`<blockquote class="embed">`)
+	w.WriteString(`<div class="embed-header">↳ `)
+	if url != "" {
+		w.WriteString(`<a href="`)
+		w.WriteString(htmlpkg.EscapeString(url))
+		w.WriteString(`">`)
+		w.WriteString(htmlpkg.EscapeString(title))
+		w.WriteString(`</a>`)
+	} else {
+		w.WriteString(htmlpkg.EscapeString(title))
+	}
+	w.WriteString(`</div>`)
+	w.WriteString(`<div class="embed-body">`)
+	w.WriteString(string(body))
+	w.WriteString(`</div>`)
+	w.WriteString(`</blockquote>`)
 	return ast.WalkSkipChildren, nil
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -128,7 +129,8 @@ func (s *Server) PostPreview(w http.ResponseWriter, r *http.Request) {
 	body := r.PostFormValue("body_md")
 	links := markdown.Extract(body)
 	resolver := s.buildResolver(r.Context(), u.Handle, links)
-	html, err := markdown.Render(body, u.Handle, resolver)
+	embed := s.buildEmbedResolver(r.Context(), u.Handle, 2)
+	html, err := markdown.Render(body, u.Handle, resolver, embed)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -274,7 +276,8 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resolver := s.buildResolverForNote(r.Context(), handle, n.ID)
-	bodyHTML, err := markdown.Render(n.BodyMD, handle, resolver)
+	embed := s.buildEmbedResolver(r.Context(), handle, 2)
+	bodyHTML, err := markdown.Render(n.BodyMD, handle, resolver, embed)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -787,6 +790,45 @@ func (s *Server) buildResolverForNote(ctx context.Context, vaultHandle string, s
 		}
 		return nil
 	}
+}
+
+// buildEmbedResolver returns an EmbedResolver that looks up ![[note]] targets
+// and renders their bodies inline, capped at maxDepth levels of nesting.
+// Beyond the cap, the inner Render gets a nil EmbedResolver so further embeds
+// render as "too deep" placeholders rather than crashing the server.
+func (s *Server) buildEmbedResolver(ctx context.Context, vaultHandle string, maxDepth int) markdown.EmbedResolver {
+	var build func(depth int) markdown.EmbedResolver
+	build = func(depth int) markdown.EmbedResolver {
+		if depth >= maxDepth {
+			return nil
+		}
+		return func(link markdown.WikiLink) (string, template.HTML, bool) {
+			handle := link.User
+			if handle == "" {
+				handle = vaultHandle
+			}
+			var title, body string
+			err := s.DB.QueryRowContext(ctx, `
+				SELECT n.title, n.body_md FROM notes n
+				JOIN users u ON u.id = n.author_id
+				WHERE u.handle = $1 AND n.slug = $2
+				  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+				  AND n.published_at IS NOT NULL`,
+				handle, link.Slug,
+			).Scan(&title, &body)
+			if err != nil {
+				return "", "", false
+			}
+			subLinks := markdown.Extract(body)
+			subResolver := s.buildResolver(ctx, handle, subLinks)
+			rendered, err := markdown.Render(body, handle, subResolver, build(depth+1))
+			if err != nil {
+				return title, "", true
+			}
+			return title, rendered, true
+		}
+	}
+	return build(0)
 }
 
 // ---------- delete ----------

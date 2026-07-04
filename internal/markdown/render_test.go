@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"html/template"
 	"strings"
 	"testing"
 )
@@ -8,7 +9,7 @@ import (
 // renderMust renders md as testuser and returns HTML string.
 func renderMust(t *testing.T, md string) string {
 	t.Helper()
-	html, err := Render(md, "testuser", nil)
+	html, err := Render(md, "testuser", nil, nil)
 	if err != nil {
 		t.Fatalf("Render error: %v", err)
 	}
@@ -44,7 +45,7 @@ func TestWikiResolvedHrefFollowsTarget(t *testing.T) {
 		}
 		return nil
 	}
-	out, err := Render("[[old]] then [[ghost]]", "alice", resolver)
+	out, err := Render("[[old]] then [[ghost]]", "alice", resolver, nil)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -206,4 +207,57 @@ func TestFirstImageURL(t *testing.T) {
 			t.Errorf("FirstImageURL(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
+}
+
+// ---------- Embeds ![[note]] ----------
+
+func TestEmbedNilResolverShowsMissing(t *testing.T) {
+	out := renderMust(t, "before ![[some-note]] after")
+	assertContains(t, out, "embed", "embed-missing", "some-note")
+}
+
+func TestEmbedResolvedRendersBody(t *testing.T) {
+	resolver := func(l WikiLink) (string, template.HTML, bool) {
+		return "Some Title", template.HTML("<p>embedded body</p>"), true
+	}
+	html, err := Render("see ![[some-note]] here", "testuser", nil, resolver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(html)
+	assertContains(t, got, "embed-header", "Some Title", "embedded body")
+	assertNotContains(t, got, "embed-missing")
+}
+
+func TestEmbedNotFoundResolverShowsMissing(t *testing.T) {
+	resolver := func(l WikiLink) (string, template.HTML, bool) {
+		return "", "", false
+	}
+	html, err := Render("![[missing]]", "testuser", nil, resolver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContains(t, string(html), "embed-missing", "missing")
+}
+
+func TestEmbedDoesNotBreakImageSyntax(t *testing.T) {
+	// Standard markdown image must still render — embed parser only claims ![[.
+	out := renderMust(t, "![alt text](https://example.com/x.png)")
+	assertContains(t, out, "<img", "x.png", "alt text")
+	assertNotContains(t, out, "embed-missing")
+}
+
+func TestEmbedCrossVault(t *testing.T) {
+	resolver := func(l WikiLink) (string, template.HTML, bool) {
+		if l.User != "alice" || l.Slug != "note" {
+			return "", "", false
+		}
+		return "Alice's Note", template.HTML("<p>alice body</p>"), true
+	}
+	html, err := Render("![[@alice/note]]", "testuser", nil, resolver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(html)
+	assertContains(t, got, "embed-header", "Alice", "alice body", "/alice/note")
 }
