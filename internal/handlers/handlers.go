@@ -77,6 +77,7 @@ func (s *Server) Routes() http.Handler {
 
 	// Search
 	mux.HandleFunc("GET /search", s.GetSearch)
+	mux.HandleFunc("GET /api/search/palette", s.GetPalette)
 
 	// Settings
 	mux.HandleFunc("POST /settings/theme", s.PostThemeSetting)

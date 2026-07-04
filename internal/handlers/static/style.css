@@ -2539,3 +2539,79 @@ blockquote.embed.embed-missing {
   font-size: 0.85rem;
   color: var(--text-2);
 }
+/* ── Command palette (Cmd/Ctrl+K) ──────────────────────────────────────── */
+dialog.palette {
+  margin: 8vh auto 0;
+  width: min(40rem, 92vw);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+dialog.palette::backdrop {
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+}
+.palette-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+  outline: none;
+}
+.palette-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.palette-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+}
+.palette-item.active {
+  background: var(--bg-2);
+  border-left-color: var(--text);
+}
+.palette-item:hover { background: var(--bg-2); }
+.palette-item-title {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.palette-item-handle {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  flex-shrink: 0;
+}
+.palette-empty {
+  padding: 1.2rem 1rem;
+  color: var(--text-3);
+  text-align: center;
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+}
+.palette-hint {
+  padding: 0.45rem 1rem;
+  font-size: 0.72rem;
+  color: var(--text-3);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-sans);
+  background: var(--bg-2);
+}
