@@ -1420,6 +1420,8 @@ html[data-theme="dark"] .masonry-card:hover {
   z-index: 200;
   min-width: 200px;
   max-width: min(320px, 90vw);
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--r-card);

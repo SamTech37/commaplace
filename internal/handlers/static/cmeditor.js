@@ -149,6 +149,11 @@
 
   // ---------- [[ wiki-link autocomplete ----------
   if (!popup || !list) return;
+  // The popup is position:fixed, but .content keeps a persistent transform from
+  // its page-fade animation, which would make .content (not the viewport) the
+  // containing block and throw the popup off toward the page corner. Reparent to
+  // <body> so fixed coordinates resolve against the viewport as intended.
+  document.body.appendChild(popup);
   var activeIdx = -1, queryStart = null, fetchTimer;
 
   function closePopup() {
@@ -185,16 +190,28 @@
     // read the actual cursor DOM element instead.
     var cursorEl = cm.getWrapperElement().querySelector(".CodeMirror-cursor");
     if (!cursorEl) return;
-    var r   = cursorEl.getBoundingClientRect();
-    var pw  = 320;
-    var ph  = popup.offsetHeight || 160;
-    var top  = r.bottom + 4;
+    var r = cursorEl.getBoundingClientRect();
+    var m = 8; // viewport margin
+    var pw = popup.offsetWidth || 320;
     var left = r.left;
-    if (left + pw > window.innerWidth - 8)
-      left = Math.max(8, window.innerWidth - pw - 8);
-    if (top + ph > window.innerHeight - 8)
-      top = r.top - ph - 4;
-    popup.style.top  = top  + "px";
+    if (left + pw > window.innerWidth - m)
+      left = Math.max(m, window.innerWidth - pw - m);
+
+    // Prefer dropping below the cursor; flip above only when there's more room
+    // there. Cap the height to the chosen side so a long list scrolls in place
+    // instead of running off-screen.
+    var below = window.innerHeight - m - (r.bottom + 4);
+    var above = r.top - 4 - m;
+    var ph = popup.scrollHeight;
+    var top;
+    if (ph <= below || below >= above) {
+      top = r.bottom + 4;
+      popup.style.maxHeight = below + "px";
+    } else {
+      popup.style.maxHeight = above + "px";
+      top = r.top - Math.min(ph, above) - 4;
+    }
+    popup.style.top = top + "px";
     popup.style.left = left + "px";
   }
 
