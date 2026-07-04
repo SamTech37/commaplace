@@ -8,15 +8,15 @@
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
 - [x] minimal deployment to Render — **LIVE** at https://commaplace.onrender.com
-  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres,
+  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres,  
     `render.yaml` Blueprint, env vars in `.env.example`/README. Deployed.
 - [ ] CI/CD pipeline (not yet established — currently manual)
-  - Render DOES auto-deploy on push to the connected branch (Vercel-style):
+  - Render DOES auto-deploy on push to the connected branch (Vercel-style):  
     enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
-  - But Render has **no built-in test gate** like Vercel checks. Render's
-    "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for
-    migrations, weak as a test gate (a failure there blocks the deploy but burns a
-    build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push
+  - But Render has **no built-in test gate** like Vercel checks. Render's  
+    "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for  
+    migrations, weak as a test gate (a failure there blocks the deploy but burns a  
+    build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push  
     (the gate); Render auto-deploys on merge to `main` (the deploy).**
   - TODO: add `.github/workflows/ci.yml` (go test) + turn on Render Auto-Deploy.
 
@@ -31,22 +31,16 @@
   - [ ] empty links?
   - [ ] duplicated note names?
 - [/] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
-  - **Rationale:** robustness. Natural-language names and slugs (👎) are not a
-    reliable basis for linkage; UUID is the only sound approach for dynamic
-    hypertext. Authoring is still by name (`[[@user/note]]`), but resolution stores
-    a UUID edge (`links.resolved_target_id`) — that edge is the source of truth.
-  - **Status:** believed already satisfied by the Postgres rebuild. **Task = guard
-    against regression**, not new work: confirm `recomputeLinks` stores
-    `resolved_target_id`, and that backlinks/graph/rendering read the UUID edge, not
-    handle+slug, so renames never break links.
+  - **Rationale:** robustness. Natural-language names and slugs (👎) are not a reliable basis for linkage; UUID is the only sound approach for dynamic hypertext. Authoring is still by name (`[[@user/note]]`), but resolution stores a UUID edge (`links.resolved_target_id`) — that edge is the source of truth.
+  - **Status:** believed already satisfied by the Postgres rebuild. **Task = guard against regression**, not new work: confirm `recomputeLinks` stores `resolved_target_id`, and that backlinks/graph/rendering read the UUID edge, not handle+slug, so renames never break links.
 - [ ] address all of these: [[# some concerns]]
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
   - [ ] ctrl + O search title
-  - [ ] ctrl + F search body, and those operators: line(), tag(), section()...
+  - [ ] ctrl + F search body, and those operators: line(), tag(), section()…
   - [ ] or different keymaps to avoid conflict with browser hotkeys
 - [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
-	- **Launch-gating views: timeline + dora mode.** Everything else below is
-	  post-launch backlog (calendar + embed are already on a feature branch, within
+	- **Launch-gating views: timeline + dora mode.** Everything else below is  
+	  post-launch backlog (calendar + embed are already on a feature branch, within  
 	  the next two specs to consume — not part of this gate).
 	- [x] list / grid / masonry (wall)
 	- [/] graph (sorta) → note should be like cards
@@ -62,6 +56,8 @@
 	- [ ] [[RSVP reader]] — backlog
 	- [ ] calendar (date view) — already on a feature branch
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
+- [ ] Tag page 文字雲功能 (on/off of course), based on how many times the tag is used
+- [ ] add Small Caps to our design
 - [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
 	- [x] ~~postgres > 100 users 再考慮~~
 - [x] new backend architecture: postgres DB service 已換完，serverless worker 評估後否決（單一 Go binary on Render，理由見 spec 的 Design decisions），`flyio` sucks 🛫 2026-06-16 📅 2026-06-20
@@ -78,35 +74,25 @@
   - [x] better writing UX see [[editor-medium-style-spec.md]] 
   - [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
 - [/] 權限與授權管控 (permissions/authz)
-  - **MVP = all-public.** Only axis is draft vs published; everything published is
+  - **MVP = all-public.** Only axis is draft vs published; everything published is  
     world-readable. No private notes at launch. Author-only edit/delete stays.
-  - **Not blockers, keep on the radar:** *private* (vault-only) notes and *unlisted*
+  - **Not blockers, keep on the radar:** *private* (vault-only) notes and *unlisted*  
     (link-only, hidden from feed/search/graph) tiers — planned, post-launch.
 - [x] 管理後台（SQLite or postgres 都不附，要自己做）。
   - [ ] 需要實際試用看看
 - [ ] 付費牆管理 (payment handling)
   - **Stripe is out:** no US company + geopolitical friction blocks direct Stripe.
-  - **Does this gate launch? No.** Monetization gates revenue, not release. Launch
-    free, validate the cross-vault rabbit-hole thesis with real users, add payments
-    once there's demonstrated willingness to pay. The real blocker is demand, not
-    the integration. (Don't build the paywall before there's something worth paying
+  - **Does this gate launch? No.** Monetization gates revenue, not release. Launch  
+    free, validate the cross-vault rabbit-hole thesis with real users, add payments  
+    once there's demonstrated willingness to pay. The real blocker is demand, not  
+    the integration. (Don't build the paywall before there's something worth paying  
     for.)
-  - **When needed → Merchant-of-Record (MoR).** The MoR is the legal seller of
-    record; they handle entity, global tax/VAT, and pay out to you — no US presence
-    required. This is the standard "no US company" answer.
+  - **When needed → Merchant-of-Record (MoR).** The MoR is the legal seller of record; they handle entity, global tax/VAT, and pay out to you — no US presence required. This is the standard "no US company" answer.
     - Candidates: **Paddle**, **Lemon Squeezy**, **Gumroad** (all MoR, indie-friendly).
-    - Taiwan-local alternative (needs a TW business entity): **ECPay (綠界)**,
-      **NewebPay (藍新)**, **TapPay** — native TW methods (信用卡/ATM/超商).
-    - ⚠️ VERIFY Taiwan **seller/payout eligibility** on each platform's
-      supported-countries page before committing — this changes and is unverified.
-  - **DECISION: launch free + lightweight tips/donations now; full MoR paywall later.**
-    Tips double as the willingness-to-pay signal that tells us *when* to build the
-    real paywall.
-  - **Tips/donations vendor (no company needed):** **Ko-fi** or **Buy Me a Coffee**
-    — both take one-time tips, route through their own PayPal/Stripe, payout to a TW
-    bank, zero/low platform cut, just embed a link/button. Recommended over a raw
-    PayPal.me button because [Unverified] Taiwan PayPal accounts have historically
-    had receiving/withdrawal restrictions — verify before relying on bare PayPal.
+    - Taiwan-local alternative (needs a TW business entity): **ECPay (綠界)**, **NewebPay (藍新)**, **TapPay** — native TW methods (信用卡/ATM/超商).
+    - ⚠️ VERIFY Taiwan **seller/payout eligibility** on each platform's supported-countries page before committing — this changes and is unverified.
+  - **DECISION: launch free + lightweight tips/donations now; full MoR paywall later.** Tips double as the willingness-to-pay signal that tells us *when* to build the real paywall.
+  - **Tips/donations vendor (no company needed):** **Ko-fi** or **Buy Me a Coffee** — both take one-time tips, route through their own PayPal/Stripe, payout to a TW bank, zero/low platform cut, just embed a link/button. Recommended over a raw PayPal.me button because [Unverified] Taiwan PayPal accounts have historically had receiving/withdrawal restrictions — verify before relying on bare PayPal.
   - Full paywall (later) = Merchant-of-Record, see candidates above.
   - paid features and incentives: 
     - can have private/unlisted notes (drafts are only kept 3~7 days)
@@ -121,103 +107,103 @@
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
   - [ ] `/goal` also cool
 - [ ] `/random` take people to a random node
-- [ ] share button, webshare api...
-- [ ] 面向華語用戶，所以中文UI/UX要做好
-- [ ] 服務條款、隱私政策、...
+- [ ] share button, webshare api…
+- [ ] 面向華語用戶，所以中文 UI/UX 要做好
+- [ ] 服務條款、隱私政策、…
 
 
 ## Tech Stack & Frontend Direction
 
-Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations).
-Context: 3-founder team — one backend/ponytail, two design/product who *will* push
-richer UI/UX over the product cycle. So the call is not "least JS now" but "what
+Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations).  
+Context: 3-founder team — one backend/ponytail, two design/product who *will* push  
+richer UI/UX over the product cycle. So the call is not "least JS now" but "what  
 substrate survives feature #20 without a React rewrite."
 
-### Server / rendering — keep as-is
-- Go `net/http` (1.22 patterns) + stdlib `html/template` + `//go:embed` → **single
+### Server / Rendering — Keep As-is
+- Go `net/http` (1.22 patterns) + stdlib `html/template` + `//go:embed` → **single  
   static binary, no build tooling.** This is the right shape; not changing it.
 - Postgres via `pgx/v5` (README was stale, said SQLite — fixed). FTS = `tsvector`+GIN.
 
-### htmx — keep, adopt the best practices we're missing
+### Htmx — Keep, Adopt the Best Practices We're Missing
 - Vendored `htmx.min.js` + hand-written `hx-*` attributes **is** the best practice.
-- **Reject** `htmgo` (full framework rewrite off stdlib, max lock-in) and
+- **Reject** `htmgo` (full framework rewrite off stdlib, max lock-in) and  
   `donseba/go-htmx` (wraps ~10 lines of header reads we already do — negative ROI).
-- **Fix the one wheel we reinvented:** replace the `?partial=1` query param with the
+- **Fix the one wheel we reinvented:** replace the `?partial=1` query param with the  
   native `HX-Request` header (`r.Header.Get("HX-Request")`).
-- **Adopt incrementally as features need them** (all native, zero deps):
-  OOB swaps (`hx-swap-oob`), `HX-Trigger` response header (decoupled toasts/events),
+- **Adopt incrementally as features need them** (all native, zero deps):  
+  OOB swaps (`hx-swap-oob`), `HX-Trigger` response header (decoupled toasts/events),  
   `hx-indicator`+view-transitions (FOUC fix), `hx-boost`.
 
-### Alpine.js — ADOPT (vendored, no build step)
-- The forward bet for client-side state the design/product founders will want
+### Alpine.js — ADOPT (Vendored, no bUild sTep)
+- The forward bet for client-side state the design/product founders will want  
   (popovers, multi-step UI, optimistic toggles, persisted prefs via `$persist`).
 - htmx for server-driven 90%, Alpine for the stateful 10% — the proven pairing.
 - One vendored `alpine.min.js` + `defer` in `_base.html`. Single binary intact.
-- **Roll in incrementally, not big-bang:** first the feed layout-restore script,
-  then the wiki-autocomplete popup state (the worst hand-rolled state machine,
-  cmeditor.js). Leave EasyMDE (editor core) and the canvas graph alone — Alpine
+- **Roll in incrementally, not big-bang:** first the feed layout-restore script,  
+  then the wiki-autocomplete popup state (the worst hand-rolled state machine,  
+  cmeditor.js). Leave EasyMDE (editor core) and the canvas graph alone — Alpine  
   doesn't help either.
 
-### templ — DEFER (adopt later, not now)
-- Type-safe Go templates (JSX-like, compiles `.templ`→`.go`). Genuinely attractive
-  for a JS/TS-primary team and would catch the silent `map[string]any` template-bag
+### Templ — DEFER (Adopt lAter, not nOw)
+- Type-safe Go templates (JSX-like, compiles `.templ`→`.go`). Genuinely attractive  
+  for a JS/TS-primary team and would catch the silent `map[string]any` template-bag  
   typos at compile time.
-- **Cost blocks it today:** adds a `templ generate` codegen step → breaks the
-  "no build tooling" property and complicates `go:embed` (embed generated Go, not
+- **Cost blocks it today:** adds a `templ generate` codegen step → breaks the  
+  "no build tooling" property and complicates `go:embed` (embed generated Go, not  
   `.html`). Both Go reviewers said no *at current size* (18 templates).
-- **Sequencing rule (important):** do NOT migrate to templ *before* the Meta-App
-  view-substrate refactor — that's a double migration. Refactor in stdlib first,
-  let the shared component boundary (`NoteListView`) stabilize, *then* templ is a
+- **Sequencing rule (important):** do NOT migrate to templ *before* the Meta-App  
+  view-substrate refactor — that's a double migration. Refactor in stdlib first,  
+  let the shared component boundary (`NoteListView`) stabilize, *then* templ is a  
   mechanical port of one clean component instead of 18 ad-hoc templates.
-- **Adopt trigger:** when templates exceed ~25, OR a second founder starts writing
-  templates regularly, OR the view-substrate refactor has landed and we want the
+- **Adopt trigger:** when templates exceed ~25, OR a second founder starts writing  
+  templates regularly, OR the view-substrate refactor has landed and we want the  
   shared card components type-checked. Revisit then.
 
-### Cheap win — get the partial benefit free now
-- Replace the loose `map[string]any` template data bags with typed structs per page
+### Cheap Win — Get the Partial Benefit Free now
+- Replace the loose `map[string]any` template data bags with typed structs per page  
   — most of templ's type-safety, zero toolchain cost.
 
-### Code-organization debt (not a framework problem)
-- `notes.go` is an 800-line god file (CRUD + link resolution + backlinks + stats).
-  Split into `notes.go` / `links.go` / `notestats.go` — tidy within existing
+### Code-organization Debt (Not a fRamework pRoblem)
+- `notes.go` is an 800-line god file (CRUD + link resolution + backlinks + stats).  
+  Split into `notes.go` / `links.go` / `notestats.go` — tidy within existing  
   structure. This is why "which file is the main logic" is unanswerable today.
-- Card-type duplication (`feedItem`/`profileNote`/`searchHit` + 5 scan loops) →
+- Card-type duplication (`feedItem`/`profileNote`/`searchHit` + 5 scan loops) →  
   collapse to `feedCard` in the Meta-App view-substrate refactor (see spec).
 
-### Fonts / CJK delivery — current + options on the table
+### Fonts / CJK Delivery — Current + Options on the Table
 
-**Now (shipped):** self-hosted, unicode-range-split Source Han Serif **TC** via
-`cn-font-split` (668 woff2 chunks + generated `@font-face` CSS in
-`static/fonts/tc/`). Browser fetches only chunks with on-page glyphs
-(~3.6MB/dense page, cached) instead of the 19.7MB monolith. Originals kept in
-`fonts-src/` (out of `go:embed`). Self-hosted = single static binary, no
-external dep, no Google. **SC not split yet** — re-run cn-font-split when
+**Now (shipped):** self-hosted, unicode-range-split Source Han Serif **TC** via  
+`cn-font-split` (668 woff2 chunks + generated `@font-face` CSS in  
+`static/fonts/tc/`). Browser fetches only chunks with on-page glyphs  
+(~3.6MB/dense page, cached) instead of the 19.7MB monolith. Originals kept in  
+`fonts-src/` (out of `go:embed`). Self-hosted = single static binary, no  
+external dep, no Google. **SC not split yet** — re-run cn-font-split when  
 simplified-Chinese ships (`fonts-src/README.md`).
 
-**Why chunking isn't automatic:** the browser can't subset a remote monolithic
-font; the split must be precomputed by a tool. CDNs (Google/Adobe/Fontsource) do
-it on their server — that's the convenience. Self-hosting = we own the step. The
+**Why chunking isn't automatic:** the browser can't subset a remote monolithic  
+font; the split must be precomputed by a tool. CDNs (Google/Adobe/Fontsource) do  
+it on their server — that's the convenience. Self-hosting = we own the step. The  
 truly-automatic future is W3C **Incremental Font Transfer (IFT)**, not deployed yet.
 
-**The scaling ceiling:** each extra self-hosted CJK family ≈ +34MB binary, +668
-files. One reading serif is fine; a multi-font **picker** (sans + serif +
-weights + SC variants) would bloat the binary (~155MB / ~2,700 files for 4
-families). Per-page egress stays bounded (user loads one font), but repo/binary
+**The scaling ceiling:** each extra self-hosted CJK family ≈ +34MB binary, +668  
+files. One reading serif is fine; a multi-font **picker** (sans + serif +  
+weights + SC variants) would bloat the binary (~155MB / ~2,700 files for 4  
+families). Per-page egress stays bounded (user loads one font), but repo/binary  
 size doesn't.
 
 **Options when we add more fonts (don't embed family #2 — switch delivery):**
-- **jsDelivr + Fontsource** (recommended non-Google) — serves Noto Sans/Serif CJK
-  already unicode-range-chunked. jsDelivr is a neutral open-source CDN (no Google
+- **jsDelivr + Fontsource** (recommended non-Google) — serves Noto Sans/Serif CJK  
+  already unicode-range-chunked. jsDelivr is a neutral open-source CDN (no Google  
   tracking). Zero binary weight, cross-site browser cache, N families ~free.
-- **Google Fonts CSS API** — most automatic, best-tuned chunking, but external
+- **Google Fonts CSS API** — most automatic, best-tuned chunking, but external  
   dep + Google privacy (user finds distasteful). Fallback if jsDelivr insufficient.
-- **System sans is already free** — UI chrome uses `-apple-system…sans-serif`;
-  system CJK sans (PingFang / MS YaHei / Noto Sans) needs no download. The
-  *downloaded* font is the reading serif (the differentiator) — we may never need
+- **System sans is already free** — UI chrome uses `-apple-system…sans-serif`;  
+  system CJK sans (PingFang / MS YaHei / Noto Sans) needs no download. The  
+  *downloaded* font is the reading serif (the differentiator) — we may never need  
   a downloaded CJK sans.
-- **Decision rule:** keep the single self-hosted serif now; when the font picker
-  ships (Should-Have, post-launch), move CJK webfonts to jsDelivr/Fontsource
-  rather than embedding a 2nd 34MB family. Embedding family #2 is the line not to
+- **Decision rule:** keep the single self-hosted serif now; when the font picker  
+  ships (Should-Have, post-launch), move CJK webfonts to jsDelivr/Fontsource  
+  rather than embedding a 2nd 34MB family. Embedding family #2 is the line not to  
   cross. Swapping to the CDN is a ~10-min change.
 
 ## Dev & Testing
@@ -251,20 +237,89 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 ## Should Have
 
 - [x] 明暗主題
-- [ ] 繁簡轉換。
-  - [ ] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
+- [/] 繁簡轉換。
+  - [x] 後端搜尋互通：opencc s2t/t2s，已接入 `/search`、wiki-link 與 tag 的 autocomplete（`searchVariants`/`likeAnyVariant`，見 `internal/handlers/search.go`）。
+  - [ ] 前端顯示切換：讀者看到的內容仍是作者原字體，尚未實作 topbar 三態切換（原文/简/繁）— 規劃見 `.claude/frontend-opencc-plan.md`，尚未動工。
+  - [x] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
 - [ ] 思源宋體（or 源漾明體、源流明體）
   - [x] https://github.com/adobe-fonts/source-han-serif
   - [ ] https://github.com/ButTaiwan/genyo-font
   - [ ] that's serif, for sans serif go with 思源 or 源流黑體
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
-- [ ] tag merging issue? 應該多用大家在用的 tag 吧 (based on number of usages of that tag, show that when picking tag, easy)
+- [ ] 減少動畫設定 (reduce-motion toggle) — pure frontend, no DB/route needed;
+  split out from the autocomplete/tag-picker plan to keep that scope tight.
+  See design below.
+
+### Reduce Motion — Design (pure frontend, no backend)
+
+Covers the `.content` `pageFadeIn` CSS keyframe (style.css ~198-210) and the
+`[data-reveal]` scroll-reveal system (`reveal.js` + style.css ~166-195),
+including the htmx afterSwap/beforeSwap inline opacity fade in `reveal.js`
+~79-90. Single on/off toggle, `localStorage` only — no `users` DB column, no
+new route/handler. (Original draft mirrored the `users.theme` DB-column
+pattern; unnecessary here — this preference has no reason to sync across
+devices, unlike dark/light mode, and a one-time flash of full motion on
+first load elsewhere is low-stakes.)
+
+- **`style.css`** (append near the existing `pageFadeIn`/`[data-reveal]`
+  rules, ~line 210):
+
+  ```css
+  @media (prefers-reduced-motion: reduce) {
+    .content { animation: none; }
+    [data-reveal] { transition-duration: 0.001ms; }
+  }
+  html[data-motion="reduced"] .content {
+    animation: none;
+    transition-duration: 0.001ms !important; /* beats reveal.js's inline
+      transition set on every htmx swap (content.style.transition = "opacity
+      0.15s ease") — without !important the htmx page-fade ignores this toggle */
+  }
+  html[data-motion="reduced"] [data-reveal] {
+    transition-duration: 0.001ms; /* near-zero, not none/0 — reveal.js listens
+      for transitionend on clip-path to clean up inline styles after the
+      reveal; a transition that never actually transitions never fires it */
+  }
+  ```
+
+  `.content`'s keyframe animation has no completion listener, so
+  `animation: none` is fine there; `[data-reveal]`'s transition does have one
+  (the clip-path cleanup in `reveal.js`), so it needs a non-zero-but-tiny
+  duration instead, or the cleanup never fires and leaves elements clipped.
+
+- **`_base.html`**: inline script near the top (same place the existing
+  theme FOUC-avoidance IIFE lives):
+  ```js
+  (function () {
+    var v = null;
+    try { v = localStorage.getItem("motion"); } catch (e) {}
+    if (v === "reduced") document.documentElement.setAttribute("data-motion", "reduced");
+  })();
+  ```
+  Add a checkbox reachable from the nav (simplest: next to `#theme-toggle`,
+  or a small `<details>` popover — no new page/route needed). On change:
+  ```js
+  var reduced = checkbox.checked;
+  var html = document.documentElement;
+  if (reduced) html.setAttribute("data-motion", "reduced");
+  else html.removeAttribute("data-motion");
+  try { localStorage.setItem("motion", reduced ? "reduced" : "normal"); } catch (e) {}
+  ```
+
+Verification: DevTools Rendering tab → emulate `prefers-reduced-motion:
+reduce` with no explicit toggle set → page fade + feed reveal instant, no
+stuck-clipped elements, no console errors. Check the toggle → animations off
+immediately, persists across reload (attribute re-applied pre-paint by the
+inline script). htmx nav (feed → note) → `.content` opacity flip instant,
+not a visible 0.15s fade. Uncheck → animations return.
+- [x] tag merging issue? 應該多用大家在用的 tag 吧 (based on number of usages of that tag, show that when picking tag, easy) — `#` autocomplete (editor) 與 feed 的標籤搜尋都已改成依使用次數排序並顯示計數
   - A3. 標籤 chips
-  - 有小計數（e.g. 「#音樂 12」）
-  - [ ] tag picker UX (deferred from postgres schema design session): autocomplete sorted by usage count desc; picking an existing tag should be the path of least resistance; creating a brand-new tag must be a deliberate, visually separate last step (not just hitting enter on free text) — goal is to stop X/FB-style tag spam (emphasis/color-coding instead of categorization) without banning new tags outright
+  - [x] 有小計數（e.g. 「#音樂 12」）— `GetTagSuggest` 現在回傳 `#tag  N`
+  - [x] tag picker UX: autocomplete sorted by usage count desc — done (both editor `#` popup and feed tag-search picker, shared `GetTagSuggest` endpoint)
+  - [ ] tag picker UX (remaining): picking an existing tag should be the path of least resistance; creating a brand-new tag must be a deliberate, visually separate last step (not just hitting enter on free text) — goal is to stop X/FB-style tag spam (emphasis/color-coding instead of categorization) without banning new tags outright. Not implemented — current autocomplete lets Enter insert arbitrary free-typed text with no existing/new distinction.
 - [ ] mirroring should be easy
   - [ ] 已有經營 blog 的人如何一鍵同步過來？
-  - [ ] 又分 normal blog vs. densely linked hypertext  blog
+  - [ ] 又分 normal blog vs. densely linked hypertext blog
 - [ ] 維持個人 vault 內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
 
 ## Could Have
@@ -289,10 +344,10 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] writing queue?
   - [ ] reading?
 
-### Benchmark findings (2026-06-20, local `benchmark` DB, 100 users × 1000 notes = 100K notes / 300K note_tags / 100K resolved links)
+### Benchmark Findings (2026-06-20, Local `benchmark` DB, 100 Users × 1000 Notes = 100K Notes / 300K note_tags / 100K Resolved Links)
 
-Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod),
-`EXPLAIN ANALYZE` on the hot query paths. Numbers are local single-query (no
+Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod),  
+`EXPLAIN ANALYZE` on the hot query paths. Numbers are local single-query (no  
 concurrency); treat as relative, not absolute prod latency.
 
 | Query | @100K | Verdict |
@@ -303,21 +358,21 @@ concurrency); treat as relative, not absolute prod latency.
 | Backlinks (`idx_links_resolved`) | fast | Bitmap scan, fine. |
 | FTS | n/a | Test invalid (every seeded body matched the term); re-test with varied corpus. |
 
-- **Conclusion:** feed architecture holds at the 100K forecast. The index/N+1
-  changes from the arch review are unmeasurable at current 200-row scale but
+- **Conclusion:** feed architecture holds at the 100K forecast. The index/N+1  
+  changes from the arch review are unmeasurable at current 200-row scale but  
   correct forward — feed stays O(LIMIT) not O(N).
-- [ ] **Tag-chips fix (when it bites, not now — 40 ms is fine today):** it changes
-  slowly, so cache it (Render Key Value / in-process TTL map) or drop it off the
-  synchronous feed render. Don't optimize until it's on the measured hot path for
+- [ ] **Tag-chips fix (when it bites, not now — 40 ms is fine today):** it changes  
+  slowly, so cache it (Render Key Value / in-process TTL map) or drop it off the  
+  synchronous feed render. Don't optimize until it's on the measured hot path for  
   real traffic. See "speed up tags" options below.
-- [ ] **Concurrency untested** — single-query SQL ≠ concurrent load. Needs an HTTP
-  load tool (k6 / vegeta) against the running binary: connection-pool saturation,
+- [ ] **Concurrency untested** — single-query SQL ≠ concurrent load. Needs an HTTP  
+  load tool (k6 / vegeta) against the running binary: connection-pool saturation,  
   write contention. Separate exercise.
-- Reproduce: `benchmark` DB lives in the local docker postgres; reseed script in
-  session notes. DBs: prod (Render), `commaplace` (dev), `benchmark` (load),
+- Reproduce: `benchmark` DB lives in the local docker postgres; reseed script in  
+  session notes. DBs: prod (Render), `commaplace` (dev), `benchmark` (load),  
   `commaplace_test` (tests).
 
-# Some Concerns (iterative)
+# Some Concerns (Iterative)
 
 - [ ] liked and saved should be separated
   - [ ] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.

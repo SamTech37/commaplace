@@ -155,8 +155,10 @@
   // <body> so fixed coordinates resolve against the viewport as intended.
   document.body.appendChild(popup);
   var activeIdx = -1, queryStart = null, fetchTimer;
+  var acMode = "wiki"; // "wiki" | "tag"
 
   function closePopup() {
+    clearTimeout(fetchTimer);
     popup.hidden = true;
     activeIdx = -1;
     queryStart = null;
@@ -173,6 +175,23 @@
       if (line[i] === "[" && line[i - 1] === "[") return { line: cur.line, ch: i + 1 };
     }
     return null;
+  }
+
+  // Mirrors markdown.ExtractInlineTags: a tag-char run right before the
+  // cursor, immediately preceded by "#" at a word boundary.
+  function isTagChar(c) {
+    return /[A-Za-z0-9_\-\/]/.test(c) || c.charCodeAt(0) > 127;
+  }
+
+  function triggerTagStart() {
+    var cur = cm.getCursor();
+    var line = cm.getLine(cur.line);
+    var i = cur.ch;
+    while (i > 0 && isTagChar(line[i - 1])) i--;
+    if (i === 0 || line[i - 1] !== "#") return null;
+    var before = line[i - 2];
+    if (before && /[A-Za-z0-9]/.test(before)) return null; // word boundary
+    return { line: cur.line, ch: i };
   }
 
   function setActive(i) {
@@ -216,7 +235,10 @@
   }
 
   function fetchSuggest(q) {
-    fetch("/api/wiki/suggest?q=" + encodeURIComponent(q))
+    var url = acMode === "tag"
+      ? "/api/tags/suggest?q=" + encodeURIComponent(q)
+      : "/api/wiki/suggest?q=" + encodeURIComponent(q);
+    fetch(url)
       .then(function (r) { return r.text(); })
       .then(function (html) {
         list.innerHTML = html;
@@ -232,8 +254,14 @@
     var items = list.children;
     if (!items.length || activeIdx < 0 || !queryStart) { closePopup(); return; }
     var insert = items[activeIdx].getAttribute("data-insert") || "";
-    cm.replaceRange(insert + "]]", queryStart, cm.getCursor());
-    closePopup();
+    if (acMode === "tag") {
+      cm.replaceRange(insert, queryStart, cm.getCursor());
+      closePopup();
+    } else {
+      var partial = insert.endsWith("/"); // "@bob/" — keep searching, don't close
+      cm.replaceRange(insert + (partial ? "" : "]]"), queryStart, cm.getCursor());
+      if (!partial) closePopup();
+    }
     cm.focus();
   }
 
@@ -272,7 +300,16 @@
 
   cm.on("cursorActivity", function () {
     var start = triggerStart();
+    acMode = "wiki";
+    if (!start) { start = triggerTagStart(); acMode = "tag"; }
     if (!start) { closePopup(); return; }
+    // Trigger origin changed (e.g. wiki "[[" -> tag "#", or vice versa) —
+    // the popup may still hold stale items from the other mode's in-flight
+    // fetch; clear it so insertActive() can't apply the new mode's insert
+    // rules to an old mode's suggestion.
+    if (queryStart && (start.line !== queryStart.line || start.ch !== queryStart.ch)) {
+      closePopup();
+    }
     queryStart = start;
     var q = cm.getRange(start, cm.getCursor());
     clearTimeout(fetchTimer);

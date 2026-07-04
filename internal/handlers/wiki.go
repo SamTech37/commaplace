@@ -48,8 +48,10 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix string) {
+	// handle_ci, not handle: handle preserves signup casing, handle_ci is
+	// the canonical lowercase form the rest of the app resolves against.
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT handle FROM users WHERE handle LIKE $1 ORDER BY handle LIMIT 6`,
+		`SELECT handle FROM users WHERE handle_ci LIKE $1 ORDER BY handle LIMIT 6`,
 		strings.ToLower(prefix)+"%")
 	if err != nil {
 		return
@@ -67,9 +69,12 @@ func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix
 }
 
 func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter, handle, q, viewerHandle string) {
+	// handle_ci, not handle: a hand-typed "[[@Bob/..." (bypassing the
+	// autocomplete dropdown) should still resolve regardless of casing.
+	handleCI := strings.ToLower(handle)
 	// Drafts surface only in the author's own vault.
 	pub := " AND n.published_at IS NOT NULL"
-	if handle == viewerHandle {
+	if handleCI == strings.ToLower(viewerHandle) {
 		pub = ""
 	}
 	var (
@@ -81,17 +86,18 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
+			WHERE u.handle_ci = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
 			ORDER BY n.updated_at DESC LIMIT 6`
-		args = []any{handle}
+		args = []any{handleCI}
 	} else {
+		clause, vargs := likeAnyVariant("n.title", q, 2)
 		query = `
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
+			WHERE u.handle_ci = $1 AND ` + clause + ` AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
 			ORDER BY n.updated_at DESC LIMIT 6`
-		args = []any{handle, "%" + strings.ToLower(q) + "%"}
+		args = append([]any{handleCI}, vargs...)
 	}
 	rows, err := s.DB.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -118,7 +124,6 @@ type wikiSuggestion struct {
 }
 
 func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID uuid.UUID, myHandle, q string) {
-	pattern := "%" + strings.ToLower(q) + "%"
 	seen := map[uuid.UUID]bool{}
 	var results []wikiSuggestion
 
@@ -148,30 +153,33 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 	}
 
 	if myID != uuid.Nil {
+		clause, vargs := likeAnyVariant("n.title", q, 3)
 		collect(`
 			SELECT n.id, n.title, n.slug, $1::text AS handle
 			FROM notes n
-			WHERE n.author_id = $2 AND lower(n.title) LIKE $3 AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+			WHERE n.author_id = $2 AND `+clause+` AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 			ORDER BY n.updated_at DESC LIMIT 6`,
-			myHandle, myID, pattern)
+			append([]any{myHandle, myID}, vargs...)...)
 
+		clause2, vargs2 := likeAnyVariant("n.title", q, 2)
 		collect(`
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
-			WHERE f.follower_id = $1 AND lower(n.title) LIKE $2 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			WHERE f.follower_id = $1 AND `+clause2+` AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
 			ORDER BY n.updated_at DESC LIMIT 6`,
-			myID, pattern)
+			append([]any{myID}, vargs2...)...)
 	}
 
+	clause3, vargs3 := likeAnyVariant("n.title", q, 1)
 	collect(`
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE lower(n.title) LIKE $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+		WHERE `+clause3+` AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
 		ORDER BY n.updated_at DESC LIMIT 6`,
-		pattern)
+		vargs3...)
 
 	for _, sg := range results {
 		insert := buildWikiInsert(sg, myHandle)

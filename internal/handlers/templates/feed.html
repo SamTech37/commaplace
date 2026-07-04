@@ -9,12 +9,17 @@
       </nav>
 
       {{if .TagChips}}
+        <div class="tag-search-wrap">
+          <input type="search" id="tag-search" placeholder="搜尋標籤…" autocomplete="off">
+          <div id="tag-search-popup" class="ac-popup" hidden><ul></ul></div>
+        </div>
         <div class="filter-chips">
           <a class="filter-chip{{if not .TagFilter}} active{{end}}" href="/feed{{if eq .Tab "following"}}?tab=following{{end}}">全部</a>
           {{range .TagChips}}
             <a class="filter-chip{{if .Active}} active{{end}}" href="/feed?tag={{.Tag}}{{if eq $.Tab "following"}}&tab=following{{end}}">#{{.Tag}} <span class="chip-count">{{.Count}}</span></a>
           {{end}}
         </div>
+        <script src="/assets/tagsearch.js" defer></script>
       {{end}}
     </aside>
 

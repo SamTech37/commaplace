@@ -73,6 +73,7 @@ func (s *Server) Routes() http.Handler {
 
 	// Wiki autocomplete
 	mux.HandleFunc("GET /api/wiki/suggest", s.GetWikiSuggest)
+	mux.HandleFunc("GET /api/tags/suggest", s.GetTagSuggest)
 
 	// Search
 	mux.HandleFunc("GET /search", s.GetSearch)

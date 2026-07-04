@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -118,6 +119,21 @@ func searchVariants(q string) []string {
 		variants = append(variants, v)
 	}
 	return variants
+}
+
+// likeAnyVariant builds a SQL clause ORing "lower(col) LIKE $n" for each
+// script variant of q (Simplified/Traditional Chinese conversions), with
+// placeholders starting at argOffset. Returns the clause and the args to
+// append in order (each wrapped in "%...%").
+func likeAnyVariant(col, q string, argOffset int) (string, []any) {
+	variants := searchVariants(strings.ToLower(q))
+	clauses := make([]string, len(variants))
+	args := make([]any, len(variants))
+	for i, v := range variants {
+		clauses[i] = fmt.Sprintf("lower(%s) LIKE $%d", col, argOffset+i)
+		args[i] = "%" + v + "%"
+	}
+	return "(" + strings.Join(clauses, " OR ") + ")", args
 }
 
 // buildTSQueryVariants builds a tsquery that ORs the script variants of q:
