@@ -1,6 +1,15 @@
-> **Status: NOT STARTED.** Verified 2026-07-05: no `opencc.min.js` or
-> `opencc-toggle.js` in `internal/handlers/static/`. Backend 繁簡 search
-> (opencc s2t/t2s in `search.go`) shipped separately and is unaffected.
+> **Status: DONE.** Shipped 2026-07-05: `opencc.min.js` (vendored, lazy-loaded)
+> + `opencc-toggle.js` in `internal/handlers/static/`, `#script-toggle` button
+> in `_base.html`. One bug fixed post-implementation: `OpenCC.HTMLConverter`
+> only walks subtrees whose root already carries `lang === fromLang`, so the
+> root passed to it needs `root.lang = from` set explicitly first — without
+> it, `.convert()` runs but silently touches nothing. Verified end-to-end in
+> Chrome: 原→简→繁→原 cycle, editor-textarea exclusion, lazy-load (network
+> panel confirms `opencc.min.js` only fetches on first real toggle), retry
+> after a simulated load failure, and a rapid-double-click race (fixed by
+> committing mode/button/localStorage synchronously at click time instead of
+> inside the async load callback). Backend 繁簡 search (opencc s2t/t2s in
+> `search.go`) shipped separately earlier and is unaffected/unrelated.
 
 # 前端繁簡顯示切換（像深淺色切換一樣的 topbar 按鈕）
 

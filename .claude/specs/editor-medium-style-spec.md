@@ -1,17 +1,17 @@
-> **Status: MOSTLY DONE.** Core (v1–v3) shipped and merged — EasyMDE surface,
+> **Status: DONE.** Core (v1–v3) shipped and merged — EasyMDE surface,
 > draft model, autosave/publish, uuid-canonical wikilink renderer, tag/reply
-> prefill, profile 公開/草稿 tabs. Verified 2026-07-05, resolved since the v3
-> "Remaining deferred" list below:
+> prefill, profile 公開/草稿 tabs. All items from the v3 "Remaining deferred"
+> list are now resolved (2026-07-05):
 > - `![[...]]` embed renderer — done (`internal/markdown/render.go` `EmbedResolver`)
 > - `![[@handle/slug]]` cross-vault embed — done (`buildEmbedResolver`, `notes.go:799`,
 >   falls back to `vaultHandle` only when `link.User == ""`)
 > - Vault-import menu slot — repurposed, not built as originally scoped: now an
 >   `obsidian://` deep-link ("開啟於 Obsidian"), not an actual import-from-vault feature
->
-> Still open (verified missing in code):
-> - Discard/back button on `/write` (no matching markup in `write.html`)
-> - Delete button inside the editor (still only on the note-view page)
-> - Slug-history redirect table for renamed/bookmarked URLs
+> - Discard/back button on `/write` — done (`write.html` editor-bar, `notes.go` `GetEdit`)
+> - Delete button inside the editor — done (`write.html`, dedicated `.editor-delete-btn`)
+> - Slug-history redirect table — ruled out, not needed: `PatchNote` (notes.go:620-624)
+>   only regenerates slug while unpublished; once published, slug is permanent by
+>   construction, so there's nothing that could ever go stale to redirect.
 
 # SPEC — Medium-style markdown editor ("一體成形" writing experience)
 
