@@ -52,17 +52,25 @@
 {{else}}
 <div class="profile-notes-heading" style="margin-top:1.5em">最近的筆記</div>
 {{end}}
+{{$bulkDelete := and .IsSelf (eq .Tab "drafts")}}
+{{if $bulkDelete}}
+<form method="post" action="/api/notes/bulk-delete" id="bulk-delete-drafts-form"
+      onsubmit="return confirm('刪除所選的草稿？');">
+{{end}}
 <div id="notes-list" data-reveal-group>
   {{block "profile-notes" .}}
   {{if .Recent}}
     {{range .Recent}}
-    <a class="note-card" href="{{.URL}}" data-reveal>
-      <div class="note-title">{{.Title}}</div>
-      {{if .Excerpt}}
-      <div class="note-excerpt">{{.Excerpt}}</div>
-      {{end}}
-      <div class="note-foot">{{.UpdatedRel}}</div>
-    </a>
+    <div class="note-card-row">
+      {{if .IsDraft}}<input type="checkbox" name="ids" value="{{.ID}}" aria-label="選取這篇草稿" />{{end}}
+      <a class="note-card" href="{{.URL}}" data-reveal>
+        <div class="note-title">{{.Title}}</div>
+        {{if .Excerpt}}
+        <div class="note-excerpt">{{.Excerpt}}</div>
+        {{end}}
+        <div class="note-foot">{{.UpdatedRel}}</div>
+      </a>
+    </div>
     {{end}}
     {{if .NextCursor}}
     <div
@@ -74,8 +82,12 @@
     ></div>
     {{end}}
   {{else}}
-  <p class="note-meta">還沒有筆記。</p>
+  <p class="note-meta">{{if eq .Tab "drafts"}}還沒有草稿。{{else}}還沒有筆記。{{end}}</p>
   {{end}}
   {{end}}
 </div>
+{{if $bulkDelete}}
+  <button type="submit" class="bulk-delete-btn" style="margin-top: 1em">刪除所選</button>
+</form>
+{{end}}
 {{end}}

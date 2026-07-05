@@ -15,6 +15,7 @@ import (
 )
 
 type profileNote struct {
+	ID         uuid.UUID
 	Title      string
 	URL        string
 	Excerpt    string
@@ -117,7 +118,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 // loadRecentNotes lists a user's notes. Unpublished drafts are included only
 // when the viewer is the author themselves.
 func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]profileNote, int64, error) {
-	query := `SELECT title, slug, body_md, updated_at, published_at
+	query := `SELECT id, title, slug, body_md, updated_at, published_at
 		FROM notes
 		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`
 	args := []any{authorID}
@@ -142,13 +143,15 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 
 	var out []profileNote
 	for rows.Next() {
+		var id uuid.UUID
 		var title, slug, body string
 		var updated int64
 		var publishedAt sql.NullInt64
-		if err := rows.Scan(&title, &slug, &body, &updated, &publishedAt); err != nil {
+		if err := rows.Scan(&id, &title, &slug, &body, &updated, &publishedAt); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, profileNote{
+			ID:         id,
 			Title:      title,
 			URL:        noteURL(handle, slug),
 			Excerpt:    markdown.Excerpt(body, 150),

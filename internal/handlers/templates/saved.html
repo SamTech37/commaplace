@@ -1,6 +1,6 @@
-{{define "title"}}Saved · {{.Site.Title}}{{end}} {{define "content"}}
-<h1>Saved</h1>
-<p class="note-meta">Notes you've hearted, newest first.</p>
+{{define "title"}}收藏 · {{.Site.Title}}{{end}} {{define "content"}}
+<h1>收藏</h1>
+<p class="note-meta">你按過愛心的筆記，最新的在前面。</p>
 {{if .Items}} {{range .Items}}
 <a class="note-card" href="{{.URL}}">
   <div class="note-title">{{.Title}}</div>
@@ -10,5 +10,5 @@
   <div class="note-foot">@{{.AuthorHandle}} · {{.UpdatedRel}}</div>
 </a>
 {{end}} {{else}}
-<p class="note-meta">Nothing here yet. Heart a note to save it.</p>
+<p class="note-meta">還沒有收藏。按愛心即可收藏一篇筆記。</p>
 {{end}} {{end}}

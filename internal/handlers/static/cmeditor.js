@@ -53,30 +53,45 @@
   cm.on("change", markTitle);
 
   // ---------- autosave ----------
-  var timer, inflight = false, again = false, loaded = false;
+  var timer, inflight = false, again = false, loaded = false, lastError = null;
   function setStatus(t) { if (statusEl) statusEl.textContent = t; }
 
-  // Returns a Promise that resolves once the in-flight save (if any) completes.
+  // Returns a Promise that resolves once the in-flight save (if any) completes,
+  // and rejects if that save failed — callers (e.g. publish) must not proceed
+  // past a failed autosave with stale server-side content.
   function save() {
     clearTimeout(timer);
     if (inflight) {
       again = true;
-      return new Promise(function (res) {
-        var poll = setInterval(function () { if (!inflight) { clearInterval(poll); res(); } }, 50);
+      return new Promise(function (res, rej) {
+        var poll = setInterval(function () {
+          if (!inflight) { clearInterval(poll); if (lastError) rej(lastError); else res(); }
+        }, 50);
       });
     }
-    inflight = true; again = false;
-    setStatus("Saving…");
+    inflight = true; again = false; lastError = null;
+    setStatus("儲存中…");
     return fetch("/api/notes/" + noteId, {
       method: "PATCH",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "document=" + encodeURIComponent(easymde.value()),
     }).then(function (r) {
       inflight = false;
-      if (!r.ok) { r.text().then(function (t) { setStatus(t || "Save failed"); }); return; }
-      setStatus("Saved");
+      if (!r.ok) {
+        return r.text().then(function (t) {
+          lastError = t || "儲存失敗";
+          setStatus(lastError);
+          return Promise.reject(lastError);
+        });
+      }
+      setStatus("已儲存");
       if (again) save();
-    }).catch(function () { inflight = false; setStatus("Save failed"); });
+    }).catch(function (err) {
+      inflight = false;
+      lastError = typeof err === "string" ? err : "儲存失敗";
+      setStatus(lastError);
+      return Promise.reject(lastError);
+    });
   }
   // Skip the first change event that fires as EasyMDE loads existing content.
   cm.on("change", function () {
@@ -94,11 +109,11 @@
         fetch("/api/notes/" + noteId + "/publish", { method: "POST" })
           .then(function (r) {
             if (r.ok) return r.json();
-            return r.text().then(function (t) { return Promise.reject(t || "Publish failed"); });
+            return r.text().then(function (t) { return Promise.reject(t || "發布失敗"); });
           })
           .then(function (d) { window.location = d.url; })
-          .catch(function (msg) { setStatus(typeof msg === "string" ? msg : "Publish failed"); });
-      });
+          .catch(function (msg) { setStatus(typeof msg === "string" ? msg : "發布失敗"); });
+      }).catch(function () { /* save() already surfaced the error via setStatus */ });
     });
   }
 
@@ -134,17 +149,17 @@
     var f = fileInput.files[0];
     fileInput.value = "";
     if (!f) return;
-    setStatus("Uploading image…");
+    setStatus("上傳圖片中…");
     var fd = new FormData();
     fd.append("image", f);
     fetch("/api/notes/" + noteId + "/image", { method: "POST", body: fd })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (d) {
         cm.replaceSelection("![](" + d.url + ")");
-        setStatus("Image added");
+        setStatus("圖片已加入");
         cm.focus();
       })
-      .catch(function () { setStatus("Image upload failed"); });
+      .catch(function () { setStatus("圖片上傳失敗"); });
   });
 
   // ---------- [[ wiki-link autocomplete ----------

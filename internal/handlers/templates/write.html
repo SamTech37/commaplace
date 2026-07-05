@@ -7,23 +7,30 @@
 <div class="editor-page" data-note-id="{{.NoteID}}">
   <div class="editor-bar">
     {{if .Published}}
-    <a href="{{.NoteURL}}" class="link-btn editor-back-btn">← Back</a>
+    <a href="{{.NoteURL}}" class="link-btn editor-back-btn">← 返回</a>
     {{else}}
-    <form class="inline-form editor-back-btn" method="post" action="/delete/{{.NoteID}}"
-          onsubmit="return confirm('放棄這篇草稿？尚未發布的內容將被刪除。');">
-      <button type="submit" class="link-btn">Discard</button>
+    <form
+      class="inline-form editor-back-btn"
+      method="post"
+      action="/delete/{{.NoteID}}"
+      onsubmit="return confirm('放棄這篇草稿？尚未發布的內容將被刪除。');"
+    >
+      <button type="submit" class="link-btn">捨棄</button>
     </form>
     {{end}}
     <span id="save-status" class="save-status" aria-live="polite"></span>
-    <button type="button">Upload(todo)</button>
     {{if and .IsEdit .Published}}
-    <form class="inline-form" method="post" action="/delete/{{.NoteID}}"
-          onsubmit="return confirm('確定刪除這篇筆記？');">
+    <form
+      class="inline-form"
+      method="post"
+      action="/delete/{{.NoteID}}"
+      onsubmit="return confirm('確定刪除這篇筆記？');"
+    >
       <button type="submit" class="editor-delete-btn">🗑 刪除</button>
     </form>
     {{end}}
     <button type="button" id="publish-btn" class="publish-btn">
-      {{if .Published}}Update{{else}}Publish{{end}}
+      {{if .Published}}更新{{else}}發布{{end}}
     </button>
   </div>
   <textarea id="doc">{{.Document}}</textarea>

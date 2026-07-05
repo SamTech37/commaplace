@@ -199,6 +199,61 @@ func hasNoteTitle(notes []profileNote, title string) bool {
 	return false
 }
 
+// TestBulkDeleteDrafts: checkbox multi-select bulk-delete only soft-deletes
+// the caller's own unpublished drafts — a published note or another author's
+// note passed in the ids list must be left untouched.
+func TestBulkDeleteDrafts(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	alice := mkUser(t, s, "alice")
+	bob := mkUser(t, s, "bob")
+
+	draft1, err := s.createDraft(ctx, alice)
+	if err != nil {
+		t.Fatalf("createDraft: %v", err)
+	}
+	draft2, err := s.createDraft(ctx, alice)
+	if err != nil {
+		t.Fatalf("createDraft: %v", err)
+	}
+	pub, err := s.saveNote(ctx, alice, "alice", "pub", "Pub", "hello", nil)
+	if err != nil {
+		t.Fatalf("saveNote: %v", err)
+	}
+	bobDraft, err := s.createDraft(ctx, bob)
+	if err != nil {
+		t.Fatalf("createDraft: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	req := authedRequest(s, alice, http.MethodPost, "/api/notes/bulk-delete",
+		"ids="+draft1.String()+"&ids="+draft2.String()+"&ids="+pub.String()+"&ids="+bobDraft.String())
+	s.PostBulkDeleteDrafts(w, req)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("PostBulkDeleteDrafts: status %d body=%s", w.Code, w.Body)
+	}
+
+	deletedAt := func(id uuid.UUID) bool {
+		var da *int64
+		if err := s.DB.QueryRow(`SELECT deleted_at FROM notes WHERE id=$1`, id).Scan(&da); err != nil {
+			t.Fatalf("scan deleted_at: %v", err)
+		}
+		return da != nil
+	}
+	if !deletedAt(draft1) {
+		t.Error("draft1 should be soft-deleted")
+	}
+	if !deletedAt(draft2) {
+		t.Error("draft2 should be soft-deleted")
+	}
+	if deletedAt(pub) {
+		t.Error("published note must NOT be deleted even if its id is in the request")
+	}
+	if deletedAt(bobDraft) {
+		t.Error("bob's draft must NOT be deleted by alice's request")
+	}
+}
+
 func getNoteCode(s *Server, viewer uuid.UUID, handle, slug string, authed bool) int {
 	var req *http.Request
 	if authed {

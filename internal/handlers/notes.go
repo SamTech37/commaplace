@@ -495,13 +495,7 @@ func (s *Server) saveNote(ctx context.Context, authorID uuid.UUID, authorHandle,
 		return uuid.UUID{}, err
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE links SET resolved_target_id = $1
-		WHERE resolved_target_id IS NULL
-		  AND target_user_handle = $2
-		  AND target_slug = $3`,
-		noteID, authorHandle, slug,
-	); err != nil {
+	if err := backfillStubLinks(ctx, tx, noteID, authorHandle, slug); err != nil {
 		return uuid.UUID{}, err
 	}
 
@@ -547,6 +541,20 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, sourceA
 		}
 	}
 	return nil
+}
+
+// backfillStubLinks resolves any link row still waiting (resolved_target_id
+// IS NULL) for the (handle, slug) that noteID just started answering to —
+// covers both a brand-new note and a slug change on an existing one.
+func backfillStubLinks(ctx context.Context, tx *sql.Tx, noteID uuid.UUID, handle, slug string) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE links SET resolved_target_id = $1
+		WHERE resolved_target_id IS NULL
+		  AND target_user_handle = $2
+		  AND target_slug = $3`,
+		noteID, handle, slug,
+	)
+	return err
 }
 
 // ---------- draft + autosave ----------
@@ -631,6 +639,12 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 	if title != "" && !publishedAt.Valid {
 		if sl := kebabSlug(title); sl != "" {
 			slug = sl
+		} else if strings.HasPrefix(curSlug, "draft-") {
+			// Title has no letters/digits (emoji/punctuation-only) so kebabSlug
+			// can't build a slug from it. Give it a non-"draft-" slug anyway so
+			// PublishNote's "still using the auto slug" check doesn't block a
+			// note that clearly does have a title.
+			slug = "note-" + noteID.String()[:8]
 		}
 	}
 	tags := parseTags(strings.Join(markdown.ExtractInlineTags(body), ","))
@@ -671,6 +685,9 @@ func (s *Server) autosaveNote(ctx context.Context, noteID uuid.UUID, authorHandl
 		}
 	}
 	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
+		return err
+	}
+	if err := backfillStubLinks(ctx, tx, noteID, authorHandle, slug); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -865,4 +882,37 @@ func (s *Server) PostDeleteNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/"+u.Handle, http.StatusSeeOther)
+}
+
+// PostBulkDeleteDrafts soft-deletes multiple of the caller's own draft notes at
+// once (checkbox multi-select on the profile drafts tab). Scoped to
+// published_at IS NULL so this can never touch a published note even if a
+// stale/tampered id sneaks into the form.
+func (s *Server) PostBulkDeleteDrafts(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		s.renderError(w, r, http.StatusBadRequest, "bad form")
+		return
+	}
+	raw := r.Form["ids"]
+	ids := make([]string, 0, len(raw))
+	for _, idStr := range raw {
+		if id, err := uuid.Parse(idStr); err == nil {
+			ids = append(ids, id.String())
+		}
+	}
+	if len(ids) > 0 {
+		_, err := s.DB.ExecContext(r.Context(), `
+			UPDATE notes SET deleted_at = $1
+			WHERE id = ANY($2::uuid[]) AND author_id = $3 AND published_at IS NULL`,
+			nowUnix(), ids, u.ID)
+		if err != nil {
+			s.renderError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	http.Redirect(w, r, "/"+u.Handle+"?tab=drafts", http.StatusSeeOther)
 }

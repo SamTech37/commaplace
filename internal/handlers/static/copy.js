@@ -13,9 +13,9 @@
       if (!res.ok) throw new Error('fetch failed');
       const text = await res.text();
       await navigator.clipboard.writeText(text);
-      btn.textContent = '✓ copied';
+      btn.textContent = '✓ 已複製';
     } catch (err) {
-      btn.textContent = '✗ copy failed';
+      btn.textContent = '✗ 複製失敗';
     }
     setTimeout(() => { btn.textContent = original; }, 1600);
   });

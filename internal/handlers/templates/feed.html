@@ -26,7 +26,7 @@
     <section class="feed-main">
       <div class="feed-container">
         {{if and (eq .Tab "following") (not .ViewerLoggedIn)}}
-          <p class="note-meta"><a href="/login">Log in</a> to see notes from people you follow.</p>
+          <p class="note-meta"><a href="/login">登入</a>後即可看到你追蹤的人的筆記。</p>
         {{else if .Cards}}
           <div class="masonry feed-items">
             {{range .Cards}}{{template "masonry_card" .}}{{end}}
@@ -42,7 +42,7 @@
             <div id="feed-sentinel" class="feed-end">— 沒有更多了 —</div>
           {{end}}
         {{else}}
-          <p class="note-meta">{{if .TagFilter}}No notes carry #{{.TagFilter}} yet.{{else}}No notes yet. <a href="/write">Write the first one</a>.{{end}}</p>
+          <p class="note-meta">{{if .TagFilter}}還沒有筆記使用 #{{.TagFilter}}。{{else}}還沒有筆記。<a href="/write">寫第一篇</a>。{{end}}</p>
         {{end}}
       </div>
     </section>

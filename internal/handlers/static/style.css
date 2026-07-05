@@ -1034,6 +1034,15 @@ html[data-theme="dark"] .masonry-card:hover {
   margin-top: 0.4em;
   font-family: var(--font-sans);
 }
+.note-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.note-card-row .note-card {
+  flex: 1;
+  min-width: 0;
+}
 
 /* ── Older / load more ──────────────────────────────────────────────────── */
 .older-link {

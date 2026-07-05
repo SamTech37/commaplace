@@ -7,7 +7,7 @@
 <meta name="twitter:card" content="summary" />
 {{end}} {{define "content"}} {{if .IsHidden}}
 <p class="error">
-  This note is hidden by an admin. Only you (the author) and admins can see it.
+  這篇筆記已被管理員隱藏，只有作者本人和管理員看得到。
 </p>
 {{end}} {{/* ── Author bar ── */}}
 <div class="author-bar" data-reveal data-reveal-delay="1">
@@ -74,7 +74,7 @@
       >
       {{end}}
       <details class="action-menu">
-        <summary class="action-btn" aria-label="more">⋯</summary>
+        <summary class="action-btn" aria-label="更多">⋯</summary>
         <div class="action-menu-list">
           {{if .ViewerLoggedIn}}
           <a href="/write?reply-to={{.Note.ID}}">↩ 回覆</a>

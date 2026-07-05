@@ -22,13 +22,14 @@
 
 - [x] CRUD — 筆記的基本增刪改查。
 	- [x] progressive load (not pagination) of data
-- [ ] wikilink caveats
+- [x] wikilink caveats
   - [x] embed
-  - [ ] empty links?
-  - [ ] duplicated note names?
-- [/] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
+  - [x] empty links? — same item as the already-checked "need to handle empty links (stubs)" in [[# some concerns]] below, tracked twice; resolved.
+  - [x] duplicated note names? — structurally resolved by design: per-author `UNIQUE(author_id, slug_ci)` dedup + explicit `@user` syntax for cross-vault links means no global-namespace collision is possible.
+- [x] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
   - **Rationale:** robustness. Natural-language names and slugs (👎) are not a reliable basis for linkage; UUID is the only sound approach for dynamic hypertext. Authoring is still by name (`[[@user/note]]`), but resolution stores a UUID edge (`links.resolved_target_id`) — that edge is the source of truth.
-  - **Status:** believed already satisfied by the Postgres rebuild. **Task = guard against regression**, not new work: confirm `recomputeLinks` stores `resolved_target_id`, and that backlinks/graph/rendering read the UUID edge, not handle+slug, so renames never break links.
+  - **Status:** confirmed (audit 2026-07-05): `recomputeLinks`/`backfillStubLinks` store `resolved_target_id`; `loadBacklinksSplit`/`loadOutgoingSplit`/`buildResolverForNote` all join on that UUID, never handle+slug — renames don't break links. Regression tests added in `link_regression_test.go` (stub backfill through the real edit flow, cross-vault rename safety, backlink/outgoing visibility filtering, fan-in). Also fixed a real bug the audit found: the actual editor path (autosave → publish) skipped the stub-backfill step that `/write`/import already had, so a link to a not-yet-existing note never resolved if the target was created through the normal editor — `autosaveNote` now backfills too.
+  - **Note:** `.claude/CLAUDE.md`'s sitemap description of `internal/external` (Obsidian Publish/Quartz crawler) is stale — that package doesn't exist in the repo currently; cross-vault linking between commaplace users is entirely the `links` table above, no separate mechanism.
 - [ ] address all of these: [[# some concerns]]
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
   - [x] ctrl + O search title — shipped as Cmd+K fuzzy note-title palette (`c0dc24e`), not Ctrl+O, precisely to dodge the browser-hotkey conflict below
@@ -98,7 +99,9 @@
   - [ ] `/goal` also cool
 - [ ] `/random` page take people to a random node
 - [ ] share button, webshare api, open graph, …
-- [ ] 面向華語用戶，所以中文 UI/UX 要做好
+- [/] 面向華語用戶，所以中文 UI/UX 要做好
+  - Audit (2026-07-05): most user-facing flows already Chinese; found a cluster of English-only strings (admin pages, `search.html`, `saved.html`, editor toolbar bits) and translated the clearly-missable ones directly (no framework) — `write.html`, `note.html`, `feed.html`, `search.html`, `saved.html`, `avatar_builder.html` alt text, `cmeditor.js`/`copy.js` status text. Left `admin_dashboard.html`/`admin_reports.html` English (internal-only tool, not reader-facing).
+  - **i18n framework decision: not needed yet.** No locale-switching mechanism exists (checked go.mod/codebase — none). Rough scope if ever built: low hundreds of hardcoded strings across ~20 templates. 繁簡 (Traditional/Simplified) OpenCC conversion is a separate, unrelated concern (character-variant conversion within Chinese, not English↔Chinese) with no shared plumbing — see 繁簡轉換 below.
 - [ ] 服務條款、隱私政策、…
 
 
@@ -130,6 +133,7 @@ Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations). 
 
 ### Cheap Win — Get the Partial Benefit Free now
 - Replace the loose `map[string]any` template data bags with typed structs per page — most of templ's type-safety, zero toolchain cost.
+- **Decision (2026-07-05):** do this *as prep for* the Meta-App view-substrate refactor, not instead of it — typed structs make that refactor itself safer (compiler catches field-name/type mistakes during the `feedItem`/`profileNote`/`searchHit` → `feedCard` consolidation) without paying for a templ build step yet. Full templ adoption stays gated on the trigger above; re-audited 2026-07-05 and neither condition has fired (still 18 registered templates, refactor still not started).
 
 ### Code-organization Debt (Not a Framework Problem)
 - `notes.go` is an 800-line god file (CRUD + link resolution + backlinks + stats). Split into `notes.go` / `links.go` / `notestats.go` — tidy within existing structure. This is why "which file is the main logic" is unanswerable today.
@@ -301,3 +305,5 @@ Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod)
 - [x] need quick reply to others note
 - [x] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
 - [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
+- [x] auto-save draft causing empty-title-empty-body drafts to pile up — root cause found (2026-07-05): `/write` inserts a fresh empty draft row on every page load; `sweepOrphanDrafts` only prunes them opportunistically on a later `/write` visit (7-day cutoff), not on a schedule. Didn't change the sweep cadence (out of scope, revisit only if still a problem); shipped a manual escape hatch instead — bulk-delete-drafts feature (checkbox multi-select on the profile drafts tab, `POST /api/notes/bulk-delete`, soft-delete, drafts-only).
+- [x] publish guard sometimes wrongly blocked a titled note from publishing — two real bugs found+fixed (2026-07-05): (1) client-side, a failed autosave (e.g. a slug collision) didn't stop the publish click, so the server still held the old/empty title when `PublishNote` ran its check (`cmeditor.js` `save()` now rejects on failure); (2) server-side, an emoji/punctuation-only title made `kebabSlug` return `""`, so the slug stayed at its `draft-*` seed value forever, which the publish guard blocks (`PatchNote` now falls back to a non-`draft-` slug in that case).

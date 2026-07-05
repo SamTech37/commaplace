@@ -1,12 +1,12 @@
-{{define "title"}}{{if .Query}}{{.Query}} · search{{else}}Search{{end}} · {{.Site.Title}}{{end}}
+{{define "title"}}{{if .Query}}{{.Query}} · 搜尋{{else}}搜尋{{end}} · {{.Site.Title}}{{end}}
 {{define "content"}}
-  <h1>Search</h1>
+  <h1>搜尋</h1>
   <form method="GET" action="/search" style="margin-bottom:1rem">
-    <label>Query
+    <label>關鍵字
       <input type="search" name="q" value="{{.Query}}" autofocus>
     </label>
     {{if .Scope}}<input type="hidden" name="scope" value="{{.Scope}}">{{end}}
-    <button type="submit">Search</button>
+    <button type="submit">搜尋</button>
   </form>
 
   {{if .Query}}
@@ -19,7 +19,7 @@
     </div>
 
     {{if .Hits}}
-      <p class="note-meta">{{len .Hits}} result{{if ne (len .Hits) 1}}s{{end}}</p>
+      <p class="note-meta">{{len .Hits}} 筆結果</p>
       {{range .Hits}}
         <a class="note-card" href="{{.URL}}">
           <div class="note-title">{{.Title}}</div>
@@ -28,7 +28,7 @@
         </a>
       {{end}}
     {{else}}
-      <p class="note-meta">No matches.</p>
+      <p class="note-meta">沒有符合的結果。</p>
     {{end}}
   {{end}}
 {{end}}
