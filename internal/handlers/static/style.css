@@ -1942,6 +1942,24 @@ html[data-theme="dark"] .local-graph-wrap {
   color: var(--text-3);
   text-align: center;
 }
+.graph-fit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  color: var(--text-3);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.graph-fit:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+}
 .graph-tooltip {
   position: absolute;
   pointer-events: none;

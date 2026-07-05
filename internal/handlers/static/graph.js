@@ -1,4 +1,6 @@
-// Force-directed graph engine, reused by:
+// Graph engine v2 — d3-force layout + custom canvas renderer.
+//
+// Used by:
 //   - /graph (global)            <div data-graph-source="/api/graph" ...>
 //   - per-note pages (local)     <div data-lazy-graph="/api/graph/local?note=..." ...>
 //
@@ -6,454 +8,780 @@
 //   <div data-graph-source="…" data-graph-height="420">
 //     <canvas></canvas>
 //     <div class="graph-empty" hidden></div>     (optional)
-//     <div class="graph-tooltip" hidden></div>   (optional)
 //   </div>
+//
+// Design notes:
+//   - Layout is d3-force (vendored d3-force.min.js) ticked manually inside
+//     our own rAF loop, so physics, camera easing and hover transitions all
+//     share one frame budget and the loop fully stops when idle.
+//   - LOD rendering: zoomed out nodes are ink dots sized by degree; zooming
+//     in crossfades them into the index-card look. Labels fade in between.
+//   - All input is Pointer Events: mouse, touch (incl. pinch zoom) and pen
+//     share one code path.
+//   - Edges are batched into a handful of Path2D strokes per frame instead
+//     of one beginPath per edge; offscreen nodes are culled.
 (function () {
-  // Read theme-aware colors from CSS vars so dark mode works on canvas.
-  function themeColors() {
-    const s = getComputedStyle(document.documentElement);
+  "use strict";
+
+  var TAU = Math.PI * 2;
+  var reducedMotion =
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  // 0 below e0, 1 above e1, smooth in between.
+  function smoothstep(e0, e1, v) {
+    var t = clamp((v - e0) / (e1 - e0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+  function easeOutCubic(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }
+
+  // ---- theme ----------------------------------------------------------
+  // Parse the CSS custom properties once and pre-build every rgba() string
+  // the renderer needs, so draw() never allocates color strings.
+  function parseColor(str, fallback) {
+    str = (str || "").trim();
+    var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(str);
+    if (m) {
+      var h = m[1];
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+    m = /^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/.exec(str);
+    if (m) return [+m[1], +m[2], +m[3]];
+    return fallback;
+  }
+  function buildTheme() {
+    var s = getComputedStyle(document.documentElement);
+    var text = parseColor(s.getPropertyValue("--text"), [26, 26, 26]);
+    var bg = parseColor(s.getPropertyValue("--bg-2"), [255, 255, 255]);
+    var rgba = function (c, a) { return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; };
     return {
-      text:   s.getPropertyValue("--text").trim()   || "#1a1a1a",
-      bg:     s.getPropertyValue("--bg-2").trim()   || "#ffffff",
-      border: s.getPropertyValue("--border").trim() || "rgba(0,0,0,0.2)",
-      muted:  s.getPropertyValue("--text-3").trim() || "rgba(0,0,0,0.4)",
+      text: rgba(text, 1),
+      textDot: rgba(text, 0.85),
+      edge: rgba(text, 0.16),
+      edgeCross: rgba(text, 0.28),
+      edgeHot: rgba(text, 0.55),
+      label: rgba(text, 0.62),
+      border: rgba(text, 0.25),
+      bg: rgba(bg, 1),
+      halo: rgba(text, 0.08),
     };
   }
+  var theme = buildTheme();
+  var themeListeners = [];
+  new MutationObserver(function () {
+    theme = buildTheme();
+    themeListeners.forEach(function (fn) { fn(); });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
+  // ---- per-container init ---------------------------------------------
   function initGraph(wrap) {
-    const url = wrap.dataset.graphSource;
-    if (!url) return;
-    const canvas = wrap.querySelector("canvas");
+    var url = wrap.dataset.graphSource;
+    if (!url || wrap.dataset.graphReady) return;
+    wrap.dataset.graphReady = "1";
+    var canvas = wrap.querySelector("canvas");
     if (!canvas) return;
-    const empty   = wrap.querySelector(".graph-empty");
-    const tooltip = wrap.querySelector(".graph-tooltip");
-    const ctx = canvas.getContext("2d");
+    var ctx = canvas.getContext("2d");
 
-    const fixedHeight = parseInt(wrap.dataset.graphHeight || "0", 10) || 0;
-    const isCompact = !!fixedHeight;
+    var empty = wrap.querySelector(".graph-empty");
+    var tooltip = wrap.querySelector(".graph-tooltip");
+    if (!tooltip) {
+      tooltip = document.createElement("div");
+      tooltip.className = "graph-tooltip";
+      tooltip.hidden = true;
+      wrap.appendChild(tooltip);
+    }
+    var fitBtn = document.createElement("button");
+    fitBtn.type = "button";
+    fitBtn.className = "graph-fit";
+    fitBtn.textContent = "fit";
+    fitBtn.hidden = true;
+    wrap.appendChild(fitBtn);
 
-    let dpr = window.devicePixelRatio || 1;
+    var fixedHeight = parseInt(wrap.dataset.graphHeight || "0", 10) || 0;
+    var isCompact = !!fixedHeight;
+
+    // ---- canvas sizing ----
+    var cw = 0, ch = 0;
     function resize() {
-      const w = wrap.clientWidth;
-      const h = fixedHeight || Math.max(420, Math.round(window.innerHeight * 0.72));
-      canvas.style.width  = w + "px";
-      canvas.style.height = h + "px";
-      canvas.width  = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
+      var dpr = window.devicePixelRatio || 1;
+      cw = wrap.clientWidth;
+      ch = fixedHeight || Math.max(420, Math.round(window.innerHeight * 0.72));
+      canvas.style.width = cw + "px";
+      canvas.style.height = ch + "px";
+      canvas.width = Math.round(cw * dpr);
+      canvas.height = Math.round(ch * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      requestFrame();
     }
-    window.addEventListener("resize", resize);
     resize();
-
-    let nodes = [], edges = [], nodeById = new Map();
-    let hovered = null, dragging = null, centerNode = null, animating = false;
-
-    // Viewport: panX/panY in CSS-pixel space, zoom is a scale factor.
-    let panX = 0, panY = 0, zoom = 1;
-    let panVx = 0, panVy = 0;           // inertia velocity (CSS px / frame)
-    let panning = false, panLastX = 0, panLastY = 0;
-    let autoFitDone = false;
-    let fitBtnRect = null;
-
-    const PAN_FRICTION = 0.80;          // high friction — viewport stops quickly
-    const MIN_ZOOM = 0.10, MAX_ZOOM = 4.0;
-
-    function screenToWorld(p) {
-      return { x: (p.x - panX) / zoom, y: (p.y - panY) / zoom };
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () {
+        if (wrap.clientWidth !== cw) resize();
+      });
+      ro.observe(wrap);
+    } else {
+      window.addEventListener("resize", resize);
     }
 
+    // ---- state ----
+    var nodes = [], edges = [], centerNode = null;
+    var sim = null;
+    var hovered = null, draggingNode = null;
+    var focusNode = null;             // hover focus target, kept while focusT fades out
+
+    // Camera: world → screen is  s = w * zoom + pan.
+    var cam = { x: 0, y: 0, zoom: 1 };
+    var zoomTarget = 1;
+    var zoomAnchor = null;            // {sx, sy, wx, wy} pivot while easing
+    var panVX = 0, panVY = 0;         // pan inertia, css px / frame
+    var autoFollow = true;            // camera tracks fit until user interacts
+    var followSnap = false;           // camera still easing toward fit target
+    var focusT = 0;                   // 0..1 hover-dim amount, eased
+    var bornAt = 0;                   // entrance animation clock
+    var entranceDone = reducedMotion;
+
+    var MIN_ZOOM = 0.05, MAX_ZOOM = 6;
+    var FONT_CARD = 'italic 10px "Newsreader",Georgia,serif';
+    var FONT_AUTHOR = '7px "IBM Plex Mono",monospace';
+    var FONT_LABEL = '9px "IBM Plex Mono",monospace';
+
+    function screenToWorld(sx, sy) {
+      return { x: (sx - cam.x) / cam.zoom, y: (sy - cam.y) / cam.zoom };
+    }
+
+    // ---- data ----
     fetch(url)
-      .then(r => r.json())
-      .then(data => {
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
+      .then(function (data) {
         if (!data.nodes || data.nodes.length === 0) {
           if (empty) empty.hidden = false;
           canvas.hidden = true;
           return;
         }
-        const cw = canvas.clientWidth, ch = canvas.clientHeight;
-        nodes = data.nodes.map(n => ({
-          id: n.id, title: n.title || "", url: n.url, author: n.author || "",
-          isExternal: !!n.ext,
-          x: cw / 2 + (Math.random() - 0.5) * cw * 0.6,
-          y: ch / 2 + (Math.random() - 0.5) * ch * 0.6,
-          vx: 0, vy: 0, degree: 0,
-        }));
-        nodeById = new Map(nodes.map(n => [n.id, n]));
-        edges = (data.edges || []).map(e => {
-          const a = nodeById.get(e.s), b = nodeById.get(e.t);
-          if (!a || !b) return null;
-          a.degree++; b.degree++;
-          return { a, b, cross: !!(a.isExternal || b.isExternal) };
-        }).filter(Boolean);
-        if (data.center) {
-          centerNode = nodeById.get(data.center) || null;
-          if (centerNode) { centerNode.x = cw / 2; centerNode.y = ch / 2; }
-        }
-        canvas.style.cursor = "grab";
-        startAnim();
+        setup(data);
       })
-      .catch(err => {
+      .catch(function (err) {
         if (empty) { empty.hidden = false; empty.textContent = "載入失敗：" + err; }
         canvas.hidden = true;
       });
 
-    // ---- simulation ----
-    const REPULSION  = isCompact ? 1200 : 4000;
-    const SPRING_LEN = isCompact ? 70   : 150;
-    const SPRING_K   = 0.018;
-    // ponytail: CENTER_K kept tiny; repulsion is now alpha-independent so the
-    // equilibrium holds at any alpha — previously repulsion decayed to 0 while
-    // CENTER_K stayed constant, causing everything to clump.
-    const CENTER_K   = isCompact ? 0.004 : 0.0008;
-    const FRICTION   = 0.85;
-    let totalKE = Infinity;
-
-    function step() {
-      const cw = canvas.clientWidth, ch = canvas.clientHeight;
-      const cx = cw / 2, cy = ch / 2;
-      // Repulsion: constant (NOT alpha-scaled). Gives a stable equilibrium
-      // independent of simulation temperature.
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        for (let j = i + 1; j < nodes.length; j++) {
-          const b = nodes[j];
-          let dx = a.x - b.x, dy = a.y - b.y;
-          let d2 = dx * dx + dy * dy;
-          if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
-          const d = Math.sqrt(d2);
-          // +200 softening prevents runaway force at very short distances
-          const f = REPULSION / (d2 + 200);
-          const fx = (dx / d) * f, fy = (dy / d) * f;
-          a.vx += fx; a.vy += fy;
-          b.vx -= fx; b.vy -= fy;
+    function setup(data) {
+      nodes = data.nodes.map(function (n, i) {
+        // Seed in a tight phyllotaxis disc so the layout visibly blooms
+        // outward from the middle on load.
+        var r = 4.5 * Math.sqrt(i), a = i * 2.39996;
+        return {
+          id: n.id, title: n.title || "", url: n.url, author: n.author || "",
+          x: r * Math.cos(a), y: r * Math.sin(a),
+          degree: 0, neighbors: null,
+          // render caches, filled lazily
+          label: null, labelW: 0, cardW: 0, cardH: 0, authorLabel: null,
+          born: 0, pop: 0,
+        };
+      });
+      var byId = new Map(nodes.map(function (n) { return [n.id, n]; }));
+      edges = (data.edges || []).reduce(function (acc, e) {
+        var a = byId.get(e.s), b = byId.get(e.t);
+        if (a && b) {
+          a.degree++; b.degree++;
+          if (!a.neighbors) a.neighbors = new Set();
+          if (!b.neighbors) b.neighbors = new Set();
+          a.neighbors.add(b); b.neighbors.add(a);
+          acc.push({ source: a, target: b, cross: a.author !== b.author });
         }
+        return acc;
+      }, []);
+      centerNode = data.center ? byId.get(data.center) || null : null;
+
+      // Staggered entrance: hubs appear first, leaves ripple outward.
+      var span = Math.min(600, 80 + nodes.length * 2);
+      nodes.forEach(function (n, i) {
+        n.born = reducedMotion ? 0 : (i * 137) % span;
+      });
+
+      // Physics cost scales hard with node count; trade layout finesse for
+      // frame rate as the graph grows.
+      var big = nodes.length > 1200;
+      sim = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(edges)
+          .distance(isCompact ? 85 : 80)
+          .strength(function (e) {
+            // Hubs pull less per-edge so dense clusters can breathe.
+            return 1 / Math.min(4, Math.max(e.source.degree, e.target.degree));
+          }))
+        .force("charge", d3.forceManyBody()
+          .strength(isCompact ? -180 : -240)
+          .theta(big ? 1.2 : 0.9)
+          .distanceMax(big ? 300 : (isCompact ? 400 : 900)))
+        .force("x", d3.forceX(0).strength(centerStrength))
+        .force("y", d3.forceY(0).strength(centerStrength))
+        .alphaDecay(big ? 0.05 : 0.032)
+        .velocityDecay(0.32)
+        .stop();                       // we tick manually in the rAF loop
+      if (isCompact || nodes.length <= 600) {
+        sim.force("collide", d3.forceCollide(function (n) {
+          // compact graphs render as cards, so collide on card size instead
+          return isCompact ? 42 : dotR(n) + 5;
+        }).iterations(1));
       }
-      for (const e of edges) {
-        const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y;
-        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        const diff = d - SPRING_LEN;
-        const f = SPRING_K * diff;
-        const fx = (dx / d) * f, fy = (dy / d) * f;
-        e.a.vx += fx; e.a.vy += fy;
-        e.b.vx -= fx; e.b.vy -= fy;
+
+      if (reducedMotion) {
+        // No entrance animation: pre-settle synchronously within a time
+        // budget (big graphs would block the page if we ran to completion),
+        // then let the frame loop finish the rest.
+        var deadline = performance.now() + 250;
+        while (sim.alpha() > sim.alphaMin() && performance.now() < deadline) sim.tick();
+        snapCameraToFit();
       }
-      for (const n of nodes) {
-        const k = n === centerNode ? CENTER_K * 6 : CENTER_K;
-        n.vx += (cx - n.x) * k;
-        n.vy += (cy - n.y) * k;
-      }
-      totalKE = 0;
-      for (const n of nodes) {
-        if (n === dragging) { n.vx = 0; n.vy = 0; continue; }
-        n.vx *= FRICTION; n.vy *= FRICTION;
-        n.x += n.vx; n.y += n.vy;
-        totalKE += n.vx * n.vx + n.vy * n.vy;
-      }
+
+      canvas.style.cursor = "grab";
+      fitBtn.hidden = false;
+      bornAt = performance.now();
+      requestFrame();
     }
 
-    function connectedTo(node) {
-      const set = new Set();
-      for (const e of edges) {
-        if (e.a === node) set.add(e.b);
-        if (e.b === node) set.add(e.a);
-      }
-      return set;
+    function centerStrength(n) {
+      if (n === centerNode) return 0.3;
+      // Untethered islands drift; single notes get pulled in harder.
+      return n.degree === 0 ? 0.09 : 0.035;
     }
 
-    // Compute card dimensions from text at draw time (world-space units).
+    function dotR(n) {
+      return 3 + Math.sqrt(n.degree) * 1.6;
+    }
+
+    // Card metrics are world-space constants per node; measured once.
     function cardDims(n) {
-      const fontSize = isCompact ? 9 : 10;
-      if (n.isExternal) {
-        ctx.font = fontSize + 'px "IBM Plex Mono",monospace';
-        const tw = ctx.measureText("↗ @" + n.author).width;
-        return { w: Math.max(50, tw + 12), h: isCompact ? 22 : 26 };
+      if (!n.cardW) {
+        ctx.font = FONT_CARD;
+        var max = 18;
+        n.label = n.title.length > max ? n.title.slice(0, max - 1) + "…" : n.title;
+        n.labelW = ctx.measureText(n.label).width;
+        ctx.font = FONT_AUTHOR;
+        n.authorLabel = "@" + n.author;
+        var aw = ctx.measureText(n.authorLabel).width;
+        n.cardW = clamp(Math.max(n.labelW, aw) + 14, 52, 150);
+        n.cardH = 30;
       }
-      ctx.font = 'italic ' + fontSize + 'px "Newsreader",Georgia,serif';
-      const maxLen = isCompact ? 11 : 14;
-      const label = n.title.length > maxLen ? n.title.slice(0, maxLen - 1) + "…" : n.title;
-      const tw = ctx.measureText(label).width;
-      return { w: Math.max(50, tw + 12), h: isCompact ? 28 : 36 };
+      return n;
     }
 
-    // Compute zoom/pan so all nodes fit in the canvas with 10% padding.
-    function fitAll() {
-      if (nodes.length === 0) return;
-      const cw = canvas.clientWidth, ch = canvas.clientHeight;
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      for (const n of nodes) {
-        const { w, h } = cardDims(n);
-        minX = Math.min(minX, n.x - w / 2); minY = Math.min(minY, n.y - h / 2);
-        maxX = Math.max(maxX, n.x + w / 2); maxY = Math.max(maxY, n.y + h / 2);
+    // ---- camera ----
+    function fitTarget() {
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i], r = dotR(n) + 14;
+        if (n.x - r < minX) minX = n.x - r;
+        if (n.y - r < minY) minY = n.y - r;
+        if (n.x + r > maxX) maxX = n.x + r;
+        if (n.y + r > maxY) maxY = n.y + r;
       }
-      const bbW = maxX - minX || 1, bbH = maxY - minY || 1;
-      let newZoom = 0.80 * Math.min(cw / bbW, ch / bbH);
-      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-      panX = cw / 2 - (minX + bbW / 2) * newZoom;
-      panY = ch / 2 - (minY + bbH / 2) * newZoom;
-      zoom = newZoom;
-      panVx = 0; panVy = 0;
+      var bw = maxX - minX || 1, bh = maxY - minY || 1;
+      // Compact (local) graphs land fully in card mode; the global graph
+      // lands fully in dot mode — never inside the crossfade band.
+      var z = clamp(0.86 * Math.min(cw / bw, ch / bh), MIN_ZOOM, isCompact ? 1.4 : 1.0);
+      return {
+        zoom: z,
+        x: cw / 2 - (minX + bw / 2) * z,
+        y: ch / 2 - (minY + bh / 2) * z,
+      };
+    }
+    function snapCameraToFit() {
+      var t = fitTarget();
+      cam.x = t.x; cam.y = t.y; cam.zoom = zoomTarget = t.zoom;
+      panVX = panVY = 0;
+    }
+    fitBtn.addEventListener("click", function () {
+      autoFollow = true; followSnap = true;
+      panVX = panVY = 0; zoomAnchor = null;
+      requestFrame();
+    });
+
+    function userTookCamera() {
+      autoFollow = false; followSnap = false;
     }
 
+    // ---- frame loop ----
+    var frameQueued = false;
+    function requestFrame() {
+      if (frameQueued) return;
+      frameQueued = true;
+      requestAnimationFrame(frame);
+    }
+    var tickMs = 0, tickSkipped = false;
+    function frame(now) {
+      frameQueued = false;
+      var busy = false;
+
+      // physics — when a tick is slower than a frame budget, run it every
+      // other frame so rendering and input stay responsive
+      if (sim && sim.alpha() > sim.alphaMin()) {
+        if (tickMs > 32 && !tickSkipped) {
+          tickSkipped = true;
+        } else {
+          var ts = performance.now();
+          sim.tick();
+          tickMs = performance.now() - ts;
+          tickSkipped = false;
+        }
+        busy = true;
+      }
+
+      // camera: auto-fit follows the layout while it settles
+      if (autoFollow && nodes.length) {
+        var t = fitTarget();
+        var k = followSnap ? 0.18 : 0.1;
+        cam.x = lerp(cam.x, t.x, k);
+        cam.y = lerp(cam.y, t.y, k);
+        cam.zoom = zoomTarget = lerp(cam.zoom, t.zoom, k);
+        var close = Math.abs(cam.zoom - t.zoom) < 0.001 &&
+                    Math.abs(cam.x - t.x) < 0.5 && Math.abs(cam.y - t.y) < 0.5;
+        if (close) followSnap = false;
+        if (!close || busy) busy = true;
+      }
+
+      // wheel zoom easing toward zoomTarget, pivoting at the cursor
+      if (!autoFollow && Math.abs(zoomTarget - cam.zoom) > 0.0005) {
+        var nz = lerp(cam.zoom, zoomTarget, 0.35);
+        if (zoomAnchor) {
+          cam.x = zoomAnchor.sx - zoomAnchor.wx * nz;
+          cam.y = zoomAnchor.sy - zoomAnchor.wy * nz;
+        }
+        cam.zoom = nz;
+        busy = true;
+      } else if (zoomAnchor) {
+        // zoom ease finished: the node under the cursor may have changed
+        if (!draggingNode && activePointers.size === 0) {
+          var hz = nodeAt(zoomAnchor.sx, zoomAnchor.sy);
+          if (hz !== hovered) { hovered = hz; tooltip.hidden = !hz; busy = true; }
+        }
+        zoomAnchor = null;
+      }
+
+      // pan inertia
+      if (activePointers.size === 0 && (panVX !== 0 || panVY !== 0)) {
+        cam.x += panVX; cam.y += panVY;
+        panVX *= 0.86; panVY *= 0.86;
+        if (Math.abs(panVX) < 0.04) panVX = 0;
+        if (Math.abs(panVY) < 0.04) panVY = 0;
+        busy = true;
+      }
+
+      // hover focus transition (focusNode lingers so the fade-out animates)
+      if (hovered) focusNode = hovered;
+      var focusGoal = hovered ? 1 : 0;
+      if (Math.abs(focusT - focusGoal) > 0.005) {
+        focusT = lerp(focusT, focusGoal, 0.22);
+        busy = true;
+      } else {
+        focusT = focusGoal;
+        if (!hovered) focusNode = null;
+      }
+
+      // entrance pop-in
+      if (!entranceDone && nodes.length) {
+        var age = now - bornAt;
+        entranceDone = true;
+        for (var i = 0; i < nodes.length; i++) {
+          var n = nodes[i];
+          n.pop = easeOutCubic((age - n.born) / 400);
+          if (n.pop < 1) entranceDone = false;
+        }
+        if (!entranceDone) busy = true;
+      }
+
+      draw();
+
+      if (busy || draggingNode || activePointers.size > 0) requestFrame();
+      else running = false;
+    }
+    themeListeners.push(requestFrame);
+
+    // ---- rendering ----
     function draw() {
-      const cw = canvas.clientWidth, ch = canvas.clientHeight;
       ctx.clearRect(0, 0, cw, ch);
+      if (!nodes.length) return;
 
-      const C = themeColors();
-      const neighbors = hovered ? connectedTo(hovered) : null;
+      var z = cam.zoom;
+      // Compact (local ego) graphs are always cards; the global graph
+      // crossfades dot → card as you zoom in.
+      var cardT = isCompact ? 1 : smoothstep(1.05, 1.4, z);
+      // dot labels fade out completely before cards start appearing, so the
+      // two text layers never double-print
+      var labelT = isCompact ? 0 : smoothstep(0.55, 0.85, z) * (1 - smoothstep(0.9, 1.05, z));
+      var dim = 1 - 0.82 * focusT;               // alpha for non-neighbors
 
-      // All nodes/edges are drawn in world space via the viewport transform.
+      // world-space view rect (+margin) for culling
+      var vx0 = -cam.x / z - 150, vy0 = -cam.y / z - 150;
+      var vx1 = (cw - cam.x) / z + 150, vy1 = (ch - cam.y) / z + 150;
+
       ctx.save();
-      ctx.translate(panX, panY);
-      ctx.scale(zoom, zoom);
+      ctx.translate(cam.x, cam.y);
+      ctx.scale(z, z);
 
-      // Edges
-      for (const e of edges) {
-        const highlighted = hovered && (e.a === hovered || e.b === hovered);
-        ctx.lineWidth = 0.75;
-        if (e.cross) {
-          ctx.setLineDash([3, 2]);
-          ctx.strokeStyle = highlighted ? C.text : C.muted;
-        } else {
-          ctx.setLineDash([]);
-          ctx.strokeStyle = highlighted ? C.text + "99" : C.text + "33";
+      var fNode = focusNode;
+
+      // -- edges, batched by style --
+      // Focus-adjacent edges are drawn twice: once in the base batch and
+      // once in the hot overlay whose alpha follows focusT, so both the
+      // fade-in and the fade-out are smooth.
+      var plain = new Path2D(), cross = new Path2D(), hot = new Path2D(), hotCross = new Path2D();
+      var hasPlain = false, hasCross = false, hasHot = false, hasHotCross = false;
+      for (var i = 0; i < edges.length; i++) {
+        var e = edges[i];
+        var a = e.source, b = e.target;
+        // cull edges entirely outside the view
+        if ((a.x < vx0 && b.x < vx0) || (a.x > vx1 && b.x > vx1) ||
+            (a.y < vy0 && b.y < vy0) || (a.y > vy1 && b.y > vy1)) continue;
+        var p = e.cross ? cross : plain;
+        p.moveTo(a.x, a.y);
+        p.lineTo(b.x, b.y);
+        if (e.cross) hasCross = true; else hasPlain = true;
+        if (fNode && (a === fNode || b === fNode)) {
+          var hp = e.cross ? hotCross : hot;
+          hp.moveTo(a.x, a.y);
+          hp.lineTo(b.x, b.y);
+          if (e.cross) hasHotCross = true; else hasHot = true;
         }
-        ctx.beginPath();
-        ctx.moveTo(e.a.x, e.a.y);
-        ctx.lineTo(e.b.x, e.b.y);
-        ctx.stroke();
       }
-      ctx.setLineDash([]);
+      // Dash pattern must stay constant in *screen* pixels: a world-space
+      // dash rasterizes thousands of sub-pixel segments per line when
+      // zoomed out and destroys the frame rate.
+      var dash = [4 / z, 3 / z];
+      ctx.lineWidth = 0.8 / Math.max(z, 0.7);
+      ctx.globalAlpha = dim;
+      if (hasPlain) { ctx.strokeStyle = theme.edge; ctx.stroke(plain); }
+      if (hasCross) { ctx.setLineDash(dash); ctx.strokeStyle = theme.edgeCross; ctx.stroke(cross); ctx.setLineDash([]); }
+      if (hasHot || hasHotCross) {
+        ctx.globalAlpha = focusT;
+        ctx.lineWidth = 1.4 / Math.max(z, 0.7);
+        ctx.strokeStyle = theme.edgeHot;
+        if (hasHot) ctx.stroke(hot);
+        if (hasHotCross) { ctx.setLineDash(dash); ctx.stroke(hotCross); ctx.setLineDash([]); }
+      }
+      ctx.globalAlpha = 1;
 
-      // Nodes (index cards)
-      for (const n of nodes) {
-        const { w, h } = cardDims(n);
-        const x = n.x - w / 2, y = n.y - h / 2;
-        const isCurrent = n === centerNode;
-        const isHov = n === hovered || n === dragging;
-        const isDimmed = neighbors && !isCurrent && n !== hovered && !neighbors.has(n);
+      // -- nodes --
+      var dotT = 1 - cardT;
+      function isDimmed(n) {
+        return focusT > 0 && fNode && n !== fNode &&
+          !(fNode.neighbors && fNode.neighbors.has(n));
+      }
 
-        ctx.globalAlpha = isDimmed ? 0.3 : 1;
-
-        ctx.fillStyle = isCurrent ? C.text : C.bg;
-        ctx.fillRect(x, y, w, h);
-
-        if (n.isExternal) {
-          ctx.setLineDash([3, 2]);
-          ctx.strokeStyle = C.text;
-          ctx.lineWidth = 0.75;
-        } else {
-          ctx.setLineDash([]);
-          ctx.strokeStyle = isHov ? C.text : C.border;
-          ctx.lineWidth = isHov ? 1 : 0.5;
+      // batched dot pass (default dots share two paths: lit / dimmed)
+      if (dotT > 0.01) {
+        var dotsDim = new Path2D(), dotsLit = new Path2D();
+        var hasDim = false, hasLit = false;
+        for (i = 0; i < nodes.length; i++) {
+          var n = nodes[i];
+          if (n.x < vx0 || n.x > vx1 || n.y < vy0 || n.y > vy1) continue;
+          if (n === hovered || n === draggingNode || n === centerNode) continue; // drawn individually
+          var r = dotR(n) * dotT * (entranceDone ? 1 : n.pop);
+          if (r <= 0) continue;
+          var dimmed = isDimmed(n);
+          var p2 = dimmed ? dotsDim : dotsLit;
+          p2.moveTo(n.x + r, n.y);
+          p2.arc(n.x, n.y, r, 0, TAU);
+          if (dimmed) hasDim = true; else hasLit = true;
         }
-        ctx.strokeRect(x, y, w, h);
-        ctx.setLineDash([]);
+        ctx.fillStyle = theme.textDot;
+        if (hasLit) { ctx.globalAlpha = 1; ctx.fill(dotsLit); }
+        if (hasDim) { ctx.globalAlpha = dim * 0.5 + 0.08; ctx.fill(dotsDim); }
+        ctx.globalAlpha = 1;
+      }
 
-        ctx.fillStyle = isCurrent ? C.bg : C.text;
-        ctx.textAlign = "left";
-        const fontSize = isCompact ? 9 : 10;
-        if (n.isExternal) {
-          ctx.font = fontSize + 'px "IBM Plex Mono",monospace';
-          ctx.textBaseline = "middle";
-          ctx.fillText("↗ @" + n.author, x + 5, n.y, w - 8);
-        } else {
-          const maxLen = isCompact ? 11 : 14;
-          const title = n.title.length > maxLen ? n.title.slice(0, maxLen - 1) + "…" : n.title;
-          ctx.font = "italic " + fontSize + 'px "Newsreader",Georgia,serif';
-          ctx.textBaseline = "middle";
-          ctx.fillText(title, x + 5, n.y, w - 8);
+      // dot labels (mid zoom)
+      if (labelT > 0.02) {
+        ctx.font = FONT_LABEL;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = theme.label;
+        for (i = 0; i < nodes.length; i++) {
+          n = nodes[i];
+          if (n.x < vx0 || n.x > vx1 || n.y < vy0 || n.y > vy1) continue;
+          var la = labelT;
+          if (isDimmed(n)) la *= dim;
+          if (!entranceDone) la *= n.pop;
+          if (la <= 0.02) continue;
+          ctx.globalAlpha = la;
+          if (!n.label) { cardDims(n); ctx.font = FONT_LABEL; } // cardDims clobbers ctx.font
+          ctx.fillText(n.label, n.x, n.y + dotR(n) + 3);
         }
         ctx.globalAlpha = 1;
       }
 
-      ctx.restore();
+      // individual pass: cards at high zoom, plus hovered/dragged/center
+      // nodes at any zoom. Dot and card versions crossfade over cardT.
+      for (i = 0; i < nodes.length; i++) {
+        n = nodes[i];
+        if (n.x < vx0 || n.x > vx1 || n.y < vy0 || n.y > vy1) continue;
+        var isHov = n === hovered || n === draggingNode;
+        var isCenter = n === centerNode;
+        if (cardT <= 0.01 && !isHov && !isCenter) continue;
 
-      // "fit" button drawn in screen space (outside the viewport transform).
-      if (nodes.length > 0) {
-        const bw = 36, bh = 20, margin = 8;
-        const bx = cw - bw - margin, by = margin;
-        fitBtnRect = { x: bx, y: by, w: bw, h: bh };
-        ctx.fillStyle = C.bg;
-        ctx.strokeStyle = C.border;
-        ctx.lineWidth = 0.5;
-        ctx.setLineDash([]);
-        ctx.fillRect(bx, by, bw, bh);
-        ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = C.text;
-        ctx.font = '10px "IBM Plex Mono",monospace';
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("fit", bx + bw / 2, by + bh / 2);
-      }
-    }
+        var pop = entranceDone ? 1 : n.pop;
+        if (pop <= 0) continue;
+        var alpha = pop * (!isHov && isDimmed(n) ? dim : 1);
 
-    function startAnim() {
-      if (animating) return;
-      animating = true;
-      totalKE = Infinity;
-      function tick() {
-        // Apply pan inertia only when not actively panning.
-        if (!panning && (panVx !== 0 || panVy !== 0)) {
-          panX += panVx; panY += panVy;
-          panVx *= PAN_FRICTION; panVy *= PAN_FRICTION;
-          if (Math.abs(panVx) < 0.01) panVx = 0;
-          if (Math.abs(panVy) < 0.01) panVy = 0;
-        }
-        step();
-        draw();
-        const settling  = totalKE > nodes.length * 0.05 || dragging;
-        const panMoving = panning || panVx !== 0 || panVy !== 0;
-        if (settling || panMoving) {
-          requestAnimationFrame(tick);
-        } else {
-          animating = false;
-          // Auto-fit once after the simulation first settles.
-          if (!autoFitDone) {
-            autoFitDone = true;
-            fitAll();
-            draw();
+        // dot half of the crossfade (also the hover halo)
+        if ((isHov || isCenter) && dotT > 0.01) {
+          var rr = (dotR(n) + (isHov ? 1.5 : 1)) * (isCenter ? 1 : dotT);
+          ctx.globalAlpha = alpha * dotT;
+          if (isHov) {
+            ctx.fillStyle = theme.halo;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, rr + 7 / z, 0, TAU);
+            ctx.fill();
           }
+          ctx.fillStyle = theme.text;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, rr, 0, TAU);
+          ctx.fill();
+          if (isCenter) {
+            ctx.strokeStyle = theme.text;
+            ctx.lineWidth = 1 / z;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, rr + 3 / z, 0, TAU);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
         }
+        if (cardT <= 0.01) continue;
+
+        // card half of the crossfade
+        cardDims(n);
+        var w = n.cardW, h = n.cardH;
+        var x = n.x - w / 2, y = n.y - h / 2;
+        ctx.globalAlpha = alpha * cardT;
+        ctx.fillStyle = isCenter ? theme.text : theme.bg;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = isHov ? theme.text : theme.border;
+        ctx.lineWidth = isHov ? 1.2 : 0.6;
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = isCenter ? theme.bg : theme.text;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.font = FONT_CARD;
+        ctx.fillText(n.label, x + 7, n.y - 4, w - 12);
+        ctx.globalAlpha = alpha * cardT * 0.55;
+        ctx.font = FONT_AUTHOR;
+        ctx.fillText(n.authorLabel, x + 7, n.y + 8, w - 12);
+        ctx.globalAlpha = 1;
       }
-      requestAnimationFrame(tick);
+
+      ctx.restore();
     }
 
-    // ---- pointer interaction ----
-    function pointerPos(e) {
-      const rect = canvas.getBoundingClientRect();
+    // ---- hit testing ----
+    function nodeAt(sx, sy) {
+      if (!sim) return null;
+      var wp = screenToWorld(sx, sy);
+      var reach = Math.max(18 / cam.zoom, 70);
+      var n = sim.find(wp.x, wp.y, reach);
+      if (!n) return null;
+      var cardT = isCompact ? 1 : smoothstep(1.05, 1.4, cam.zoom);
+      if (cardT > 0.5) {
+        cardDims(n);
+        if (Math.abs(wp.x - n.x) <= n.cardW / 2 + 3 && Math.abs(wp.y - n.y) <= n.cardH / 2 + 3) return n;
+        return null;
+      }
+      var r = dotR(n) + 6 / cam.zoom;
+      var dx = wp.x - n.x, dy = wp.y - n.y;
+      return dx * dx + dy * dy <= r * r ? n : null;
+    }
+
+    // ---- pointer input ----
+    // One code path for mouse / touch / pen. Two active pointers = pinch.
+    var activePointers = new Map();   // pointerId -> {x, y}
+    var pinch = null;                 // {dist, zoom, wx, wy}
+    var panLast = null;               // {x, y} for single-pointer pan
+    var downInfo = null;              // {x, y, node, t} for tap detection
+    var moveSamples = [];             // recent deltas for inertia
+
+    function ptrPos(e) {
+      var rect = canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
-    // nodeAt takes world-space coordinates.
-    function nodeAt(wp) {
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const n = nodes[i];
-        const { w, h } = cardDims(n);
-        if (wp.x >= n.x - w / 2 && wp.x <= n.x + w / 2 &&
-            wp.y >= n.y - h / 2 && wp.y <= n.y + h / 2) return n;
-      }
-      return null;
-    }
+    canvas.addEventListener("pointerdown", function (e) {
+      if (!nodes.length || (e.pointerType === "mouse" && e.button !== 0)) return;
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      var p = ptrPos(e);
+      activePointers.set(e.pointerId, p);
+      userTookCamera();
+      panVX = panVY = 0;
 
-    function inFitBtn(p) {
-      return fitBtnRect &&
-        p.x >= fitBtnRect.x && p.x <= fitBtnRect.x + fitBtnRect.w &&
-        p.y >= fitBtnRect.y && p.y <= fitBtnRect.y + fitBtnRect.h;
-    }
-
-    canvas.addEventListener("mousemove", e => {
-      const p = pointerPos(e);
-      if (panning) {
-        panX += p.x - panLastX;
-        panY += p.y - panLastY;
-        panVx = p.x - panLastX;
-        panVy = p.y - panLastY;
-        panLastX = p.x;
-        panLastY = p.y;
-        if (!animating) startAnim();
+      if (activePointers.size === 2) {
+        // second finger: abort node drag, start pinch
+        if (draggingNode) endDrag(false);
+        var pts = Array.from(activePointers.values());
+        var mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+        var wp = screenToWorld(mx, my);
+        pinch = {
+          dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+          zoom: cam.zoom, wx: wp.x, wy: wp.y,
+        };
+        panLast = null;
+        downInfo = null;
         return;
       }
-      const wp = screenToWorld(p);
-      if (dragging) {
-        dragging.x = wp.x;
-        dragging.y = wp.y;
-        totalKE = Infinity;
-        if (!animating) startAnim();
-        return;
-      }
-      const h = nodeAt(wp);
-      if (h !== hovered) {
-        hovered = h;
-        if (!animating) draw();
-        if (h && tooltip) {
-          tooltip.hidden = false;
-          tooltip.textContent = h.title + (h.isExternal ? "  外 · @" : "  @") + h.author;
-          tooltip.style.left = p.x + 14 + "px";
-          tooltip.style.top  = p.y - 8 + "px";
-          canvas.style.cursor = "pointer";
-        } else if (tooltip) {
-          tooltip.hidden = true;
-          canvas.style.cursor = inFitBtn(p) ? "pointer" : "grab";
-        }
-      } else if (h && tooltip) {
-        tooltip.style.left = p.x + 14 + "px";
-        tooltip.style.top  = p.y - 8 + "px";
-      } else if (!h) {
-        canvas.style.cursor = inFitBtn(p) ? "pointer" : "grab";
-      }
-    });
 
-    canvas.addEventListener("mouseleave", () => {
-      panning = false;
-      if (hovered || dragging) {
-        hovered = null;
-        if (tooltip) tooltip.hidden = true;
-        canvas.style.cursor = "grab";
-        if (!animating) draw();
-      }
-    });
-
-    // Single click = navigate; drag = drag. Distinguish by movement.
-    let downPos = null, downNode = null;
-    canvas.addEventListener("mousedown", e => {
-      if (e.button !== 0) return;
-      const p = pointerPos(e);
-      if (inFitBtn(p)) {
-        fitAll();
-        if (!animating) draw();
-        return;
-      }
-      const wp = screenToWorld(p);
-      const n = nodeAt(wp);
-      downPos = p;
-      downNode = n;
+      var n = nodeAt(p.x, p.y);
+      downInfo = { x: p.x, y: p.y, node: n, t: performance.now() };
+      tooltip.hidden = true;
       if (n) {
-        dragging = n;
+        draggingNode = n;
+        var wp2 = screenToWorld(p.x, p.y);
+        n.fx = wp2.x; n.fy = wp2.y;
+        sim.alphaTarget(0.25);
+        if (sim.alpha() < 0.25) sim.alpha(0.25);
         canvas.style.cursor = "grabbing";
       } else {
-        panning = true;
-        panLastX = p.x;
-        panLastY = p.y;
-        panVx = 0; panVy = 0;
+        panLast = p;
+        moveSamples.length = 0;
         canvas.style.cursor = "grabbing";
       }
+      requestFrame();
     });
 
-    window.addEventListener("mouseup", e => {
-      if (panning) {
-        panning = false;
-        canvas.style.cursor = hovered ? "pointer" : "grab";
-        if (!animating && (Math.abs(panVx) > 0.01 || Math.abs(panVy) > 0.01)) startAnim();
+    canvas.addEventListener("pointermove", function (e) {
+      if (!nodes.length) return;
+      var p = ptrPos(e);
+
+      if (activePointers.has(e.pointerId)) {
+        activePointers.set(e.pointerId, p);
+
+        if (pinch && activePointers.size >= 2) {
+          var pts = Array.from(activePointers.values());
+          var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          var mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+          var nz = clamp(pinch.zoom * (d / pinch.dist), MIN_ZOOM, MAX_ZOOM);
+          cam.zoom = zoomTarget = nz;
+          cam.x = mx - pinch.wx * nz;
+          cam.y = my - pinch.wy * nz;
+          zoomAnchor = null;
+          requestFrame();
+          return;
+        }
+        if (draggingNode) {
+          var wp = screenToWorld(p.x, p.y);
+          draggingNode.fx = wp.x;
+          draggingNode.fy = wp.y;
+          requestFrame();
+          return;
+        }
+        if (panLast) {
+          var dx = p.x - panLast.x, dy = p.y - panLast.y;
+          cam.x += dx; cam.y += dy;
+          moveSamples.push({ dx: dx, dy: dy });
+          if (moveSamples.length > 4) moveSamples.shift();
+          panLast = p;
+          requestFrame();
+          return;
+        }
         return;
       }
-      if (!dragging) return;
-      const p = pointerPos(e);
-      const moved = downPos && Math.hypot(p.x - downPos.x, p.y - downPos.y) < 5;
-      const wasNode = downNode;
-      dragging = null;
-      downPos = null;
-      downNode = null;
-      canvas.style.cursor = hovered ? "pointer" : "grab";
-      totalKE = Infinity;
-      if (!animating) startAnim();
-      // Navigate on click (not drag)
-      if (moved && wasNode && wasNode !== centerNode) {
-        window.location.href = wasNode.url;
+
+      // no button held: hover (mouse/pen only)
+      if (e.pointerType === "touch") return;
+      var h = nodeAt(p.x, p.y);
+      if (h !== hovered) {
+        hovered = h;
+        canvas.style.cursor = h ? "pointer" : "grab";
+        requestFrame();
+      }
+      if (h) {
+        tooltip.hidden = false;
+        tooltip.textContent = h.title + "  @" + h.author;
+        tooltip.style.left = Math.min(p.x + 14, cw - 60) + "px";
+        tooltip.style.top = p.y - 10 + "px";
+      } else {
+        tooltip.hidden = true;
       }
     });
 
-    // Scroll to zoom, pivoting at cursor position.
-    canvas.addEventListener("wheel", e => {
+    function endDrag(reheat) {
+      if (!draggingNode) return;
+      draggingNode.fx = null;
+      draggingNode.fy = null;
+      draggingNode = null;
+      sim.alphaTarget(0);
+      if (reheat && sim.alpha() < 0.12) sim.alpha(0.12);
+    }
+
+    function pointerEnd(e) {
+      if (!activePointers.has(e.pointerId)) return;
+      var p = ptrPos(e);
+      activePointers.delete(e.pointerId);
+
+      if (pinch) {
+        if (activePointers.size < 2) {
+          pinch = null;
+          // remaining finger continues as pan
+          var rest = activePointers.values().next().value;
+          panLast = rest || null;
+          moveSamples.length = 0;
+        }
+        requestFrame();
+        return;
+      }
+
+      if (draggingNode) {
+        var tapped = downInfo && downInfo.node === draggingNode &&
+          Math.hypot(p.x - downInfo.x, p.y - downInfo.y) < (e.pointerType === "touch" ? 9 : 5);
+        var target = draggingNode;
+        endDrag(true);
+        canvas.style.cursor = "grab";
+        requestFrame();
+        if (tapped && target !== centerNode && e.type !== "pointercancel") {
+          window.location.href = target.url;
+        }
+        downInfo = null;
+        return;
+      }
+
+      if (panLast) {
+        panLast = null;
+        var vx = 0, vy = 0;
+        for (var i = 0; i < moveSamples.length; i++) { vx += moveSamples[i].dx; vy += moveSamples[i].dy; }
+        if (moveSamples.length) { vx /= moveSamples.length; vy /= moveSamples.length; }
+        if (Math.hypot(vx, vy) > 1.5) { panVX = vx; panVY = vy; }
+        canvas.style.cursor = hovered ? "pointer" : "grab";
+        requestFrame();
+      }
+      downInfo = null;
+    }
+    canvas.addEventListener("pointerup", pointerEnd);
+    canvas.addEventListener("pointercancel", pointerEnd);
+
+    canvas.addEventListener("pointerleave", function (e) {
+      if (activePointers.size > 0) return;
+      if (hovered) {
+        hovered = null;
+        tooltip.hidden = true;
+        canvas.style.cursor = "grab";
+        requestFrame();
+      }
+    });
+
+    // wheel zoom: sets an eased target, pivoting at the cursor
+    canvas.addEventListener("wheel", function (e) {
+      if (!nodes.length) return;
       e.preventDefault();
-      const p = pointerPos(e);
-      const wx = (p.x - panX) / zoom;
-      const wy = (p.y - panY) / zoom;
-      let newZoom = zoom * Math.pow(0.998, e.deltaY);
-      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-      panX = p.x - wx * newZoom;
-      panY = p.y - wy * newZoom;
-      zoom = newZoom;
-      if (!animating) draw();
+      userTookCamera();
+      var p = ptrPos(e);
+      var wp = screenToWorld(p.x, p.y);
+      zoomAnchor = { sx: p.x, sy: p.y, wx: wp.x, wy: wp.y };
+      var factor = Math.pow(0.9985, e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY);
+      zoomTarget = clamp(zoomTarget * factor, MIN_ZOOM, MAX_ZOOM);
+      requestFrame();
     }, { passive: false });
   }
 
@@ -461,8 +789,8 @@
   document.querySelectorAll("[data-graph-source]").forEach(initGraph);
 
   // Local graph (per-note): lazy — initialize when <details> is opened.
-  document.querySelectorAll("[data-lazy-graph]").forEach(wrap => {
-    const details = wrap.closest("details");
+  document.querySelectorAll("[data-lazy-graph]").forEach(function (wrap) {
+    var details = wrap.closest("details");
     if (!details) {
       wrap.dataset.graphSource = wrap.dataset.lazyGraph;
       initGraph(wrap);
@@ -473,6 +801,6 @@
       details.removeEventListener("toggle", onToggle);
       wrap.dataset.graphSource = wrap.dataset.lazyGraph;
       initGraph(wrap);
-    }, { once: false });
+    });
   });
 })();
