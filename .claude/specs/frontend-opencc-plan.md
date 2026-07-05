@@ -1,3 +1,7 @@
+> **Status: NOT STARTED.** Verified 2026-07-05: no `opencc.min.js` or
+> `opencc-toggle.js` in `internal/handlers/static/`. Backend 繁簡 search
+> (opencc s2t/t2s in `search.go`) shipped separately and is unaffected.
+
 # 前端繁簡顯示切換（像深淺色切換一樣的 topbar 按鈕）
 
 ## Context（背景）

@@ -66,7 +66,9 @@
   - [x] empty slate
   - [x] or start from a markdown
   - [x] better writing UX see [[editor-medium-style-spec.md]] 
-- [ ] it is not obvious yet how to send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes. 
+- [/] send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes.
+  - [x] internal link preservation across a batch — already handled generically: `saveNote` backfills any stub link (`resolved_target_id IS NULL`) the moment the target note is created (`notes.go:488-496`), so order doesn't matter across the batch import (`cdc3f8d`).
+  - [ ] authoring `[[@user/note]]` cross-vault links during bulk import — not a thing yet, separate from preservation.
 - [/] 權限與授權管控 (permissions/authz)
   - **MVP = all-public.** Only axis is draft vs published; everything published is world-readable. No private notes at launch. Author-only edit/delete stays.
   - **Not blockers, keep on the radar:** *private* (vault-only) notes and *unlisted* (link-only, hidden from feed/search/graph) tiers — planned, post-launch.

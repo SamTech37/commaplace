@@ -1,3 +1,18 @@
+> **Status: MOSTLY DONE.** Core (v1–v3) shipped and merged — EasyMDE surface,
+> draft model, autosave/publish, uuid-canonical wikilink renderer, tag/reply
+> prefill, profile 公開/草稿 tabs. Verified 2026-07-05, resolved since the v3
+> "Remaining deferred" list below:
+> - `![[...]]` embed renderer — done (`internal/markdown/render.go` `EmbedResolver`)
+> - `![[@handle/slug]]` cross-vault embed — done (`buildEmbedResolver`, `notes.go:799`,
+>   falls back to `vaultHandle` only when `link.User == ""`)
+> - Vault-import menu slot — repurposed, not built as originally scoped: now an
+>   `obsidian://` deep-link ("開啟於 Obsidian"), not an actual import-from-vault feature
+>
+> Still open (verified missing in code):
+> - Discard/back button on `/write` (no matching markup in `write.html`)
+> - Delete button inside the editor (still only on the note-view page)
+> - Slug-history redirect table for renamed/bookmarked URLs
+
 # SPEC — Medium-style markdown editor ("一體成形" writing experience)
 
 ## Goal

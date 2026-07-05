@@ -1,4 +1,12 @@
 
+> **Status: SUPERSEDED (partially).** Ported to main 2026-06-20 (see `.claude/runs.md`).
+> Verified in code (2026-07-05): `vault-masthead` (profile), `wikilink-cross` pill
+> (render.go), Newsreader/IBM Plex Mono fonts (`_base.html`) — all still present.
+> The feed-card class scheme this spec specifies (`entry-title`/`entry-excerpt`/
+> `feed-grid`) is **gone** — `feed.html`/`feed_partial.html` now use a different
+> `card-*`/masonry scheme from later redesigns (two-column layout, masonry-only
+> cards). Don't use §3 (Feed 卡片全面改版) as a guide to current markup.
+
 # Spec for UI overhaul
 Commit 95a9849 (on branch `hank`) — 變更規格
 refer to the actual code on that branch then implement those into main (or new feat/ branch)

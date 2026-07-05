@@ -1,3 +1,8 @@
+> **Status: DONE.** Verified 2026-07-05 in code: `wiki.go` has no early return
+> on empty `q`, falls through to `suggestNotes` (Fix A). `.ac-popup` in
+> `style.css` has `position: fixed` and no `margin-top`, `cmeditor.js`'s
+> `positionPopup()` has the viewport clamp (Fix B).
+
 # Wiki Autocomplete Fix Spec
 
 ## Fix A: 輸入 `[[` 後立即顯示推薦

@@ -1,3 +1,9 @@
+> **Status: DONE.** Postgres rebuild shipped and live (Render). UUID PKs,
+> `resolved_target_id` link resolution, dropped `external_vaults`/`folder_path`
+> all confirmed in current schema/code. The two "Open questions" below (avatar
+> PNG confirmation, connection-pool tuning) were never explicitly closed out —
+> not blocking, but worth a quick look if pool exhaustion ever shows up.
+
 # SPEC: Postgres + Render Rebuild
 
 ## Goal

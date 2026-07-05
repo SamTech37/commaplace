@@ -329,6 +329,11 @@ mark {
 #theme-toggle[data-theme-current="light"] .theme-icon-sun {
   display: block;
 }
+#script-toggle {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
 
 .nav .avatar {
   position: relative;
@@ -2411,6 +2416,26 @@ html[data-theme="dark"] .login-wrap {
   justify-content: flex-end;
   gap: 1rem;
   margin-bottom: 0.75rem;
+}
+.editor-back-btn {
+  margin-right: auto;
+}
+.editor-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.48em 0.85em;
+  font-size: var(--fs-sm);
+  color: var(--danger);
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background var(--dur-fast) ease;
+}
+.editor-delete-btn:hover {
+  background: var(--bg-2);
 }
 .save-status {
   color: var(--text-3);

@@ -77,16 +77,22 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	}
 	if title == "" {
 		s.render(w, r, "write", map[string]any{
-			"Form":  form,
-			"Error": "Title is required.",
+			"Form":      form,
+			"Error":     "Title is required.",
+			"NoteID":    "",
+			"IsEdit":    false,
+			"Published": false,
 		})
 		return
 	}
 	slug := kebabSlug(title)
 	if slug == "" {
 		s.render(w, r, "write", map[string]any{
-			"Form":  form,
-			"Error": "Title must contain at least one letter or digit (it's used as the URL slug).",
+			"Form":      form,
+			"Error":     "Title must contain at least one letter or digit (it's used as the URL slug).",
+			"NoteID":    "",
+			"IsEdit":    false,
+			"Published": false,
 		})
 		return
 	}
@@ -103,8 +109,11 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 			msg = "A note with this title already exists. Pick a different title."
 		}
 		s.render(w, r, "write", map[string]any{
-			"Form":  form,
-			"Error": msg,
+			"Form":      form,
+			"Error":     msg,
+			"NoteID":    "",
+			"IsEdit":    false,
+			"Published": false,
 		})
 		return
 	}
@@ -153,12 +162,12 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var authorID uuid.UUID
-	var title, body string
+	var title, body, slug string
 	var publishedAt sql.NullInt64
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, title, body_md, published_at
+		SELECT author_id, title, body_md, published_at, slug
 		FROM notes WHERE id = $1`, noteID,
-	).Scan(&authorID, &title, &body, &publishedAt)
+	).Scan(&authorID, &title, &body, &publishedAt, &slug)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -197,6 +206,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		"Document":  doc,
 		"IsEdit":    true,
 		"Published": publishedAt.Valid,
+		"NoteURL":   noteURL(u.Handle, slug),
 	})
 }
 

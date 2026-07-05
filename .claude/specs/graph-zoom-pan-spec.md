@@ -1,3 +1,7 @@
+> **Status: DONE.** Verified 2026-07-05: `graph.js` has `panX`/`panY`/`zoom`,
+> `screenToWorld`, wheel-zoom, drag-to-pan with inertia, `fitAll()` incl.
+> auto-fit-once-on-settle, all matching this spec.
+
 # Graph Zoom / Pan Spec
 
 ## Problems being fixed
