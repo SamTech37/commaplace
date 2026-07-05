@@ -4,6 +4,7 @@ bin/
 *.db-[shm|wal|journal]*
 .env
 .env.*
+!.env.example
 .session_secret
 .DS_Store
 

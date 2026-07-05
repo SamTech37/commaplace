@@ -4,7 +4,11 @@
 <script src="/assets/easymde.min.js" defer></script>
 <script src="/assets/cmeditor.js" defer></script>
 
-<div class="editor-page" data-note-id="{{.NoteID}}">
+<div
+  class="editor-page"
+  data-note-id="{{.NoteID}}"
+  data-allow-upload="{{if not .Published}}1{{end}}"
+>
   <div class="editor-bar">
     {{if .Published}}
     <a href="{{.NoteURL}}" class="link-btn editor-back-btn">← 返回</a>

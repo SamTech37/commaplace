@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	loadDotEnv(".env", ".env.local")
 	cfg := loadConfig()
 
 	d, err := db.Open(cfg.DatabaseURL)
@@ -103,6 +104,42 @@ func main() {
 		defer cancel()
 		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 			log.Printf("graceful shutdown failed: %v", err)
+		}
+	}
+}
+
+// loadDotEnv fills os.Environ() from KEY=VALUE files, in order, without
+// overwriting a var that's already set — real env (shell export, Makefile's
+// GO_ENV, Render's dashboard vars) always wins over any file. Missing files
+// are silently skipped. No quoting/escaping beyond a single layer of
+// surrounding "..." or '...', matching what these files actually contain.
+func loadDotEnv(paths ...string) {
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			key, val, ok := strings.Cut(line, "=")
+			if !ok {
+				continue
+			}
+			key = strings.TrimSpace(key)
+			val = strings.TrimSpace(val)
+			if len(val) >= 2 && (val[0] == '"' && val[len(val)-1] == '"' || val[0] == '\'' && val[len(val)-1] == '\'') {
+				val = val[1 : len(val)-1]
+			}
+			if key == "" {
+				continue
+			}
+			if _, exists := os.LookupEnv(key); exists {
+				continue
+			}
+			os.Setenv(key, val)
 		}
 	}
 }

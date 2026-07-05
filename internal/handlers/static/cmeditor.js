@@ -16,6 +16,28 @@
     return { name: name, action: action, text: text, title: title, className: "tb-" + name };
   }
 
+  var toolbar = [
+    tb("bold", EasyMDE.toggleBold, "B", "Bold"),
+    tb("italic", EasyMDE.toggleItalic, "i", "Italic"),
+    "|",
+    tb("wikilink", insertWikiLink, "[[ ]]", "Wiki link"),
+    tb("link", EasyMDE.drawLink, "🔗", "External link"),
+    "|",
+    tb("h1", EasyMDE.toggleHeading1, "T", "Heading 1"),
+    tb("h2", EasyMDE.toggleHeading2, "t", "Heading 2"),
+    tb("quote", EasyMDE.toggleBlockquote, "❝", "Quote"),
+    tb("tag", insertTag, "#", "Tag"),
+    "|",
+    tb("image", uploadImage, "🖼", "Insert image"),
+    tb("code", EasyMDE.toggleCodeBlock, "</>", "Code"),
+  ];
+  // Only offer whole-document .md import while still a draft — it replaces the
+  // entire doc (and CodeMirror's undo history with it), too destructive to
+  // dangle in front of an already-published note.
+  if (page.dataset.allowUpload === "1") {
+    toolbar.push("|", tb("mdupload", uploadMdFile, "📄", "從 .md 檔案匯入"));
+  }
+
   var easymde = new EasyMDE({
     element: ta,
     autofocus: true,
@@ -24,21 +46,7 @@
     autoDownloadFontAwesome: false,
     lineWrapping: true,
     previewRender: function () { return ""; }, // preview is the published page (server goldmark)
-    toolbar: [
-      tb("bold", EasyMDE.toggleBold, "B", "Bold"),
-      tb("italic", EasyMDE.toggleItalic, "i", "Italic"),
-      "|",
-      tb("wikilink", insertWikiLink, "[[ ]]", "Wiki link"),
-      tb("link", EasyMDE.drawLink, "🔗", "External link"),
-      "|",
-      tb("h1", EasyMDE.toggleHeading1, "T", "Heading 1"),
-      tb("h2", EasyMDE.toggleHeading2, "t", "Heading 2"),
-      tb("quote", EasyMDE.toggleBlockquote, "❝", "Quote"),
-      tb("tag", insertTag, "#", "Tag"),
-      "|",
-      tb("image", uploadImage, "🖼", "Insert image"),
-      tb("code", EasyMDE.toggleCodeBlock, "</>", "Code"),
-    ],
+    toolbar: toolbar,
   });
   window.cmEditor = easymde;
   var cm = easymde.codemirror;
@@ -160,6 +168,37 @@
         cm.focus();
       })
       .catch(function () { setStatus("圖片上傳失敗"); });
+  });
+
+  // ---------- .md file import ----------
+  var mdInput = document.createElement("input");
+  mdInput.type = "file";
+  mdInput.accept = ".md,.markdown,text/markdown";
+  mdInput.style.display = "none";
+  document.body.appendChild(mdInput);
+  function uploadMdFile() {
+    mdInput.click();
+  }
+  mdInput.addEventListener("change", function () {
+    var f = mdInput.files[0];
+    mdInput.value = "";
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var text = e.target.result;
+      var m = text.match(/^#\s+(.+)/m);
+      var title = m ? m[1].trim() : f.name.replace(/\.(md|markdown)$/i, "");
+      var body = m ? text.replace(/^#[^\n]*\n?/, "").replace(/^\s+/, "") : text;
+      // On a brand-new, never-edited draft this is the CM instance's first
+      // change event ever, which the "skip EasyMDE's own initial load" guard
+      // above would otherwise swallow — force loaded so it isn't mistaken for
+      // that, then save directly instead of waiting on the debounce/listener.
+      loaded = true;
+      easymde.value(title + "\n\n" + body);
+      save();
+      cm.focus();
+    };
+    reader.readAsText(f);
   });
 
   // ---------- [[ wiki-link autocomplete ----------
