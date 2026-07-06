@@ -16,7 +16,7 @@ someone's note, follow internal `[[wiki links]]` into the same vault or
   - `[[@user/note]]` — into someone else's vault
 - **Live preview** editor (textarea + rendered HTML side-by-side)
 - **Profile pages** at `/[user]` showing recent notes
-- **Note view** at `/[user]/[...path]` with clickable wiki links + backlinks
+- **Note view** at `/[user]/[slug]` with clickable wiki links + backlinks
 - **Feed** (`/feed`) — recommended + following tabs, masonry cards
 - **Graph view** (`/graph`) — Obsidian-style force-directed map of every note and its links
 - **Tags, likes, follows, search, reports** — the small social loop
@@ -89,13 +89,13 @@ go build -o bin/commonplace ./cmd/server
 ## Layout
 
 ```
-cmd/server/        entry point + config
-internal/db/       connection, migrations runner
-internal/auth/     magic-link sessions
-internal/markdown/ goldmark + wiki-link extension
-internal/handlers/ HTTP handlers, templates, static assets
-internal/seed/     demo / onboarding seed content
-migrations/        numbered .sql files, applied at startup
+cmd/server/            entry point + config
+internal/db/           connection, idempotent migration runner
+internal/db/migrations/ numbered .sql files, applied at startup
+internal/auth/         magic-link + Google OAuth sessions
+internal/markdown/     goldmark + wiki-link extension
+internal/handlers/     HTTP handlers, templates, static assets
+internal/seed/         demo / onboarding seed content
 ```
 
 ## Conventions

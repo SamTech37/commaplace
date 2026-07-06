@@ -29,7 +29,7 @@
 - [x] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
   - **Rationale:** robustness. Natural-language names and slugs (👎) are not a reliable basis for linkage; UUID is the only sound approach for dynamic hypertext. Authoring is still by name (`[[@user/note]]`), but resolution stores a UUID edge (`links.resolved_target_id`) — that edge is the source of truth.
   - **Status:** confirmed (audit 2026-07-05): `recomputeLinks`/`backfillStubLinks` store `resolved_target_id`; `loadBacklinksSplit`/`loadOutgoingSplit`/`buildResolverForNote` all join on that UUID, never handle+slug — renames don't break links. Regression tests added in `link_regression_test.go` (stub backfill through the real edit flow, cross-vault rename safety, backlink/outgoing visibility filtering, fan-in). Also fixed a real bug the audit found: the actual editor path (autosave → publish) skipped the stub-backfill step that `/write`/import already had, so a link to a not-yet-existing note never resolved if the target was created through the normal editor — `autosaveNote` now backfills too.
-  - **Note:** `.claude/CLAUDE.md`'s sitemap description of `internal/external` (Obsidian Publish/Quartz crawler) is stale — that package doesn't exist in the repo currently; cross-vault linking between commaplace users is entirely the `links` table above, no separate mechanism.
+  - **Note:** `.claude/CLAUDE.md`'s sitemap description of `internal/external` (Obsidian Publish/Quartz crawler) was stale — that package doesn't exist in the repo; cross-vault linking between commaplace users is entirely the `links` table above, no separate mechanism. Sitemap fixed 2026-07-06 (also re-synced routes/schema/handler list, which had drifted well beyond just this).
 - [ ] address all of these: [[# some concerns]]
 - [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
   - [x] ctrl + O search title — shipped as Cmd+K fuzzy note-title palette (`c0dc24e`), not Ctrl+O, precisely to dodge the browser-hotkey conflict below
@@ -292,6 +292,7 @@ Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod)
 
 - [ ] migrations: in early dev stage it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 	- [x] what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already? — resolved: no production data existed, so the Postgres rebuild shipped as a clean rip-and-replace with no migration/rollback tooling (see `.claude/postgres-railway-rebuild-spec.md`).
+	- [ ] **TODO: squash `internal/db/migrations/001_init.sql`…`005_*.sql` into one file before beta launch.** Once real user data exists this squash-anytime freedom ends (per the "Revisit when" in Decision 3, `docs/DECISIONS.md`) — do it while the DB is still disposable, not after.
 - [ ] liked and saved should be separated
   - [ ] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
   - [ ] 收藏清單, playlist 管理, *cf.* Spotify's feels clunky, Youtube's alright, 小紅書 might be good
