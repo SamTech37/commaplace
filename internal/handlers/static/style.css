@@ -320,6 +320,29 @@ mark {
   color: var(--text);
   background: var(--bg-2);
 }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translate(-50%, 8px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 0.6em 1.1em;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-sm);
+  font-family: var(--font-sans);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+  z-index: 1000;
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 .icon-btn .theme-icon {
   display: none;
 }
@@ -1568,6 +1591,13 @@ html[data-theme="dark"] .ac-popup {
     border-color var(--dur-fast) ease,
     color var(--dur-fast) ease,
     background var(--dur-fast) ease;
+}
+/* Icon-only action buttons (⋯ menu, share) — square instead of
+   content-width, so they don't look narrower than each other. */
+.action-menu summary.action-btn,
+.article-actions .share-btn {
+  aspect-ratio: 1 / 1;
+  justify-content: center;
 }
 .action-btn:hover {
   border-color: var(--border-2);

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -141,4 +142,16 @@ func noteHasImage(r *http.Request, db *sql.DB, noteID uuid.UUID) bool {
 		`SELECT EXISTS(SELECT 1 FROM note_images WHERE note_id = $1)`, noteID,
 	).Scan(&exists)
 	return exists
+}
+
+// resolveOGImage returns the absolute image URL for a note's og:image — the
+// note's own uploaded image when present, else the static site default.
+// Always non-empty (v0 has no "no image" state) — see note.html's meta
+// block for why that lets twitter:card be unconditional.
+func (s *Server) resolveOGImage(noteID uuid.UUID, hasImage bool) string {
+	base := strings.TrimRight(s.BaseURL, "/")
+	if hasImage {
+		return base + "/api/notes/" + noteID.String() + "/image"
+	}
+	return base + "/assets/og-default.png"
 }

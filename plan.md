@@ -98,7 +98,7 @@
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
   - [ ] `/goal` also cool
 - [ ] `/random` page take people to a random node
-- [ ] share button, webshare api, open graph, …
+- [x] share button, webshare api, open graph, … — shipped: note-page share icon (`navigator.share` + clipboard/toast fallback), real `og:description`/`og:image`/`og:url` + `twitter:card` on note.html, see `.claude/share-og-spec.md`
 - [/] 面向華語用戶，所以中文 UI/UX 要做好
   - Audit (2026-07-05): most user-facing flows already Chinese; found a cluster of English-only strings (admin pages, `search.html`, `saved.html`, editor toolbar bits) and translated the clearly-missable ones directly (no framework) — `write.html`, `note.html`, `feed.html`, `search.html`, `saved.html`, `avatar_builder.html` alt text, `cmeditor.js`/`copy.js` status text. Left `admin_dashboard.html`/`admin_reports.html` English (internal-only tool, not reader-facing).
   - **i18n framework decision: not needed yet.** No locale-switching mechanism exists (checked go.mod/codebase — none). Rough scope if ever built: low hundreds of hardcoded strings across ~20 templates. 繁簡 (Traditional/Simplified) OpenCC conversion is a separate, unrelated concern (character-variant conversion within Chinese, not English↔Chinese) with no shared plumbing — see 繁簡轉換 below.

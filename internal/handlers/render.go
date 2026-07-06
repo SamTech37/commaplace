@@ -176,6 +176,7 @@ type Server struct {
 	PlaytestKey string            // non-empty enables /_dev/login?key=... outside Debug mode
 	AdminHandle string            // empty disables admin entirely
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
+	BaseURL     string            // e.g. "http://localhost:8080"; for absolute OG/canonical URLs
 	tagChips    tagChipCache      // memoized top-tag chips; see tagChipCache
 }
 
@@ -294,4 +295,3 @@ func avatarInitial(handle string) string {
 	}
 	return "?"
 }
-

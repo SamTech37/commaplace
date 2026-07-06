@@ -319,6 +319,8 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		log.Printf("GetNote userFollows %s: %v", n.ID, err)
 	}
 
+	hasImage := noteHasImage(r, s.DB, n.ID)
+
 	s.render(w, r, "note", map[string]any{
 		"Note":           n,
 		"AuthorHandle":   handle,
@@ -338,7 +340,10 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		"ViewerLoggedIn": viewer != nil,
 		"IsAuthor":       viewer != nil && viewer.ID == n.AuthorID,
 		"IsHidden":       n.HiddenAt.Valid,
-		"HasImage":       noteHasImage(r, s.DB, n.ID),
+		"HasImage":       hasImage,
+		"OGDescription":  markdown.Excerpt(n.BodyMD, 160),
+		"OGImage":        s.resolveOGImage(n.ID, hasImage),
+		"OGURL":          s.absoluteNoteURL(handle, n.Slug),
 	})
 }
 
@@ -742,6 +747,11 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 
 func noteURL(handle, slug string) string {
 	return "/" + handle + "/" + slug
+}
+
+// absoluteNoteURL is noteURL prefixed with BaseURL, for og:url.
+func (s *Server) absoluteNoteURL(handle, slug string) string {
+	return strings.TrimRight(s.BaseURL, "/") + noteURL(handle, slug)
 }
 
 func nowUnix() int64 { return timeNow().Unix() }

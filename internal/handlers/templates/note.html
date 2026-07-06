@@ -4,7 +4,10 @@
 <meta property="og:title" content="{{.Note.Title}} · @{{.AuthorHandle}}" />
 <meta property="og:type" content="article" />
 <meta property="og:article:author" content="@{{.AuthorHandle}}" />
-<meta name="twitter:card" content="summary" />
+<meta property="og:description" content="{{.OGDescription}}" />
+<meta property="og:image" content="{{.OGImage}}" />
+<meta property="og:url" content="{{.OGURL}}" />
+<meta name="twitter:card" content="summary_large_image" />
 {{end}} {{define "content"}} {{if .IsHidden}}
 <p class="error">
   這篇筆記已被管理員隱藏，只有作者本人和管理員看得到。
@@ -72,6 +75,32 @@
       <span class="action-btn" aria-disabled="true"
         >♡ <span class="count">{{.LikeCount}}</span></span
       >
+      {{end}}
+      {{if and (not .IsHidden) .Note.PublishedAt.Valid}}
+      <button
+        type="button"
+        class="action-btn share-btn"
+        aria-label="分享"
+        data-title="{{.Note.Title}}"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+      </button>
       {{end}}
       <details class="action-menu">
         <summary class="action-btn" aria-label="更多">⋯</summary>

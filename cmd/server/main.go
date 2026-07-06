@@ -74,6 +74,7 @@ func main() {
 		PlaytestKey: cfg.PlaytestKey,
 		AdminHandle: cfg.AdminHandle,
 		OAuthCfg:    cfg.googleOAuthConfig(),
+		BaseURL:     cfg.BaseURL,
 	}
 
 	log.Printf("commonplace listening on %s (db=postgres, mailer=%s)",
