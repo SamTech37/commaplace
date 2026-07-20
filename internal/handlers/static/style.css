@@ -198,6 +198,37 @@ body {
   }
 }
 
+/* ── Reduce motion — OS preference or the nav toggle (html[data-motion]) ── */
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none;
+    transition-duration: 0.001ms !important;
+  }
+  [data-reveal] {
+    transition-duration: 0.001ms;
+    transition-delay: 0s;
+    /* !important beats the inline clip-path reveal.js sets pre-reveal; with
+       near-zero durations Chromium never fires transitionend, so reveal.js's
+       own clip-path cleanup can't be relied on here */
+    clip-path: none !important;
+  }
+}
+html[data-motion="reduced"] .content {
+  animation: none;
+  /* !important beats the inline transition reveal.js sets on every htmx swap
+     (content.style.transition = "opacity 0.15s ease") — without it the htmx
+     page-fade ignores this toggle */
+  transition-duration: 0.001ms !important;
+}
+html[data-motion="reduced"] [data-reveal] {
+  transition-duration: 0.001ms;
+  transition-delay: 0s;
+  /* !important beats the inline clip-path reveal.js sets pre-reveal; with
+     near-zero durations Chromium never fires transitionend, so reveal.js's
+     own clip-path cleanup can't be relied on here */
+  clip-path: none !important;
+}
+
 /* ── Topbar ─────────────────────────────────────────────────────────────── */
 .topbar {
   display: flex;
@@ -352,10 +383,16 @@ mark {
 #theme-toggle[data-theme-current="light"] .theme-icon-sun {
   display: block;
 }
-#script-toggle {
+#script-toggle,
+#motion-toggle {
   font-family: var(--font-sans);
   font-size: var(--fs-sm);
   font-weight: 600;
+}
+#motion-toggle[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--bg-2);
+  text-decoration: line-through;
 }
 
 .nav .avatar {

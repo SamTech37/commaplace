@@ -1,5 +1,23 @@
 # Plan
 
+## 三人內部發文 MVP（2026-07-20 — 現在的最高優先）
+
+**目標:三個團隊成員能在正式站（commaplace.onrender.com）登入、發文、互相看到。其他一切先不管。**
+
+程式功能其實已經夠了（CRUD / feed / wikilink / like 都能用）；卡住的是「登入」和「正式站是假資料 demo 站」。所以這幾乎全是設定工作,不是開發工作。
+
+- [ ] **Step 0 — 今天就能上（全是 Render 後台設定,不寫程式）**
+  - [ ] merge PR #9(CI + 減少動畫),Render 後台開啟 Auto-Deploy
+  - [ ] Render 設 `PLAYTEST_LOGIN_KEY`,三人先用 `/_dev/login?as=<handle>&key=<key>` 登入 — 這個 stopgap 已經寫好,就是為此準備的
+  - [ ] 關 `SEED_DEV`(render.yaml 改 `"0"`)— 別再每次部署塞 alice/bob 假資料
+  - [ ] 決定:現有假資料砍掉重來,還是留著?(DB 仍是可拋棄階段,砍掉最乾淨)
+- [ ] **Step 1 — 本週:真登入,擇一就好**
+  - [ ] A(建議). SMTP:申請一家郵件服務 free tier(Resend / Brevo / Postmark),Render 填 `SMTP_HOST/PORT/USER/PASS/FROM` — magic link 程式已完成,純設定;順便完成下面「test Magic Link」那項
+  - [ ] B. Google OAuth:Console 建 credentials,Render 填 `GOOGLE_CLIENT_ID/SECRET` — 順便完成下面「測試 Google OAuth」那項
+  - 建議 A 的理由:零程式改動、三人都有 email;OAuth 的同 email 歸戶邏輯已寫但未實測,等有 SMTP 後再驗
+- [ ] **Step 2 — DB 保命(別漏)**:Render free Postgres **30 天到期會整個刪掉**(見 `.claude/budget-render.md`)。查 `comma-db` 到期日;要長期用就升 Basic-1gb($19/mo),至少先設個到期提醒
+- **明確不做**(等三人真的用起來再說):timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記、前端簡繁切換、/random
+
 ## Next Step
 - [x] review and merge changes from `branch/killer`
 - [ ] 測試 Google OAuth 登入功能 
@@ -14,7 +32,8 @@
 - [ ] CI/CD pipeline (not yet established — currently manual)
   - Render DOES auto-deploy on push to the connected branch (Vercel-style): enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
   - But Render has **no built-in test gate** like Vercel checks. Render's "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for migrations, weak as a test gate (a failure there blocks the deploy but burns a build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push (the gate); Render auto-deploys on merge to `main` (the deploy).**
-  - TODO: add `.github/workflows/ci.yml` (go test) + turn on Render Auto-Deploy.
+  - [x] `.github/workflows/ci.yml` added: `go build` + `go test` (with a Postgres 17 service container so the DB-backed tests actually run instead of skipping) on PR + push to `main`.
+  - TODO: turn on Render Auto-Deploy (dashboard toggle, manual).
 
 > Navigation, Exploration, Interaction.
 
@@ -193,7 +212,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] https://github.com/ButTaiwan/genyo-font
   - [ ] that's serif, for sans serif go with 思源 or 源流黑體
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
-- [ ] 減少動畫設定 (reduce-motion toggle) — pure frontend, no DB/route needed; split out from the autocomplete/tag-picker plan to keep that scope tight. See design below.
+- [x] 減少動畫設定 (reduce-motion toggle) — shipped per the design below, as a topbar icon button (動, next to the theme toggle) instead of a checkbox to match the existing 原/简 toggle pattern. One deviation from the design: at 0.001ms Chromium never fires `transitionend` (rounds to 0 → no transition event), so reveal.js's clip-path cleanup can't be relied on in reduced mode — solved with `clip-path: none !important` on `[data-reveal]` in both reduced contexts, which also neutralizes the inline pre-reveal clip. Verified headless (toggle + OS `prefers-reduced-motion`): animations instant, no stuck-clipped elements, persists across reload pre-paint, no console errors.
 
 ### Reduce Motion — Design (Pure fRontend, no bAckend)
 

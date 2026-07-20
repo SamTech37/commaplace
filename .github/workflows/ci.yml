@@ -1,0 +1,38 @@
+# The test gate (plan.md: GitHub Actions gates PRs/pushes; Render auto-deploys
+# merges to main). Tests skip themselves when TEST_DATABASE_URL is unset, so a
+# Postgres service is required for them to actually run.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: commaplace
+          POSTGRES_PASSWORD: commaplace
+          POSTGRES_DB: commaplace_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U commaplace"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: go build ./...
+      - name: Test
+        env:
+          TEST_DATABASE_URL: postgres://commaplace:commaplace@localhost:5432/commaplace_test?sslmode=disable
+        run: go test -p 1 ./...

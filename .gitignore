@@ -31,7 +31,11 @@ server
 !.claude/specs
 
 
-.github/
+# CI workflows must be tracked for GitHub Actions to run them;
+# everything else in .github/ stays local. (A bare `.github/` ignore
+# can't be negated — git never descends into a fully ignored dir.)
+.github/*
+!.github/workflows/
 
 
 # local-only tooling that references personal paths

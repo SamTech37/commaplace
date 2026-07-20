@@ -26,6 +26,14 @@
         }
         html.setAttribute("data-theme", resolved);
       })();
+      (function () {
+        var v = null;
+        try {
+          v = localStorage.getItem("motion");
+        } catch (e) {}
+        if (v === "reduced")
+          document.documentElement.setAttribute("data-motion", "reduced");
+      })();
     </script>
     <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
     {{block "meta" .}}
@@ -141,6 +149,29 @@
             } catch (e) {}
           });
         }
+        // Motion toggle (icon button: flips reduced <-> normal, localStorage only)
+        var mg = document.getElementById("motion-toggle");
+        if (mg) {
+          var syncMotion = function () {
+            var on =
+              document.documentElement.getAttribute("data-motion") ===
+              "reduced";
+            mg.setAttribute("aria-pressed", on ? "true" : "false");
+            mg.setAttribute("aria-label", on ? "恢復動畫" : "減少動畫");
+            mg.setAttribute("title", on ? "恢復動畫" : "減少動畫");
+          };
+          syncMotion();
+          mg.addEventListener("click", function () {
+            var html = document.documentElement;
+            var reduced = html.getAttribute("data-motion") !== "reduced";
+            if (reduced) html.setAttribute("data-motion", "reduced");
+            else html.removeAttribute("data-motion");
+            try {
+              localStorage.setItem("motion", reduced ? "reduced" : "normal");
+            } catch (e) {}
+            syncMotion();
+          });
+        }
       });
     </script>
   </head>
@@ -218,6 +249,17 @@
                 d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998z"
               ></path>
             </svg>
+          </button>
+
+          <button
+            type="button"
+            id="motion-toggle"
+            class="icon-btn"
+            aria-pressed="false"
+            aria-label="減少動畫"
+            title="減少動畫"
+          >
+            動
           </button>
 
           <button
