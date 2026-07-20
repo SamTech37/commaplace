@@ -14,7 +14,8 @@
 - [ ] CI/CD pipeline (not yet established — currently manual)
   - Render DOES auto-deploy on push to the connected branch (Vercel-style): enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
   - But Render has **no built-in test gate** like Vercel checks. Render's "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for migrations, weak as a test gate (a failure there blocks the deploy but burns a build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push (the gate); Render auto-deploys on merge to `main` (the deploy).**
-  - TODO: add `.github/workflows/ci.yml` (go test) + turn on Render Auto-Deploy.
+  - [x] `.github/workflows/ci.yml` added: `go build` + `go test` (with a Postgres 17 service container so the DB-backed tests actually run instead of skipping) on PR + push to `main`.
+  - TODO: turn on Render Auto-Deploy (dashboard toggle, manual).
 
 > Navigation, Exploration, Interaction.
 
@@ -193,7 +194,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
   - [ ] https://github.com/ButTaiwan/genyo-font
   - [ ] that's serif, for sans serif go with 思源 or 源流黑體
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
-- [ ] 減少動畫設定 (reduce-motion toggle) — pure frontend, no DB/route needed; split out from the autocomplete/tag-picker plan to keep that scope tight. See design below.
+- [x] 減少動畫設定 (reduce-motion toggle) — shipped per the design below, as a topbar icon button (動, next to the theme toggle) instead of a checkbox to match the existing 原/简 toggle pattern. One deviation from the design: at 0.001ms Chromium never fires `transitionend` (rounds to 0 → no transition event), so reveal.js's clip-path cleanup can't be relied on in reduced mode — solved with `clip-path: none !important` on `[data-reveal]` in both reduced contexts, which also neutralizes the inline pre-reveal clip. Verified headless (toggle + OS `prefers-reduced-motion`): animations instant, no stuck-clipped elements, persists across reload pre-paint, no console errors.
 
 ### Reduce Motion — Design (Pure fRontend, no bAckend)
 
