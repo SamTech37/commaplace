@@ -1,5 +1,27 @@
 # Plan
 
+## 🌙 2026-07-24 overnight 自動開發成果（branch `claude/roadmap-work-0zcjnb`）
+
+一次過把〈開發決定〉裡「✅ 要做、且不需外部帳號」的項目逐一做完、各自 build+test+瀏覽器實測+commit+push。全部 7 個 feature 已推上分支，`go test -p 1 ./...` 全綠。
+
+**做完並驗證：**
+1. 本地端字體選項（note 頁 Aa popover：字級 + 宋/黑體）
+2. RSVP 快速閱讀器（note 頁 ⚡快速閱讀 overlay）
+3. 改 @handle（owner profile 表單 + `POST /settings/handle` + 測試）
+4. 連結區分 self/others（補上 backlinks 的自己/他人子區）
+5. 服務條款 + 隱私政策頁（`/terms` `/privacy` + footer）
+6. 讚與收藏分開（`saves` 表 migration 006 + 收藏鈕 + 測試）
+7. 前端簡繁三態切換 — 查證後發現**早已上線**，只是 checkbox stale；重新實測確認正常。
+
+**沒動（原因）：**
+- **Ko-fi 打賞** — 需要你先申請帳號拿連結（真人手動工作，見另一分支的清單）。
+- **migration 合併** — 資料庫破壞性操作，不適合無人監督的夜間自動跑；等你在場再做。
+- **Ctrl+F 內文搜尋 + line()/tag()/section() 運算子** — 運算子語意未定案（Obsidian 風格 DSL），需你確認規格再做，否則容易做錯方向。
+- **Tag 自動建標籤（純演算法）** — 中文無詞界，關鍵字抽取需選 n-gram/字典方案；範圍偏大，留待有你回饋時做。
+- **Dora mode** — 最大的一項；為避免夜間留下半成品，沒有起手。等你指定就做。
+
+> 註：〈真人手動工作清單〉與完整〈開發決定〉在另一分支 `claude/manager-direction-plan-review-0zcjnb`（已推、未合併）。
+
 ## 三人內部發文 MVP（2026-07-20 — 現在的最高優先）
 
 **目標:三個團隊成員能在正式站（commaplace.onrender.com）登入、發文、互相看到。其他一切先不管。**
@@ -67,7 +89,7 @@
 	- [ ] canvas (like sticky notes on a bulletin board or whiteboard) — backlog
     - [ ] like graph view but not shaky and dynamic, only static draggables
 	  - [ ] kanban? — backlog
-	- [ ] [[RSVP reader]] — backlog
+	- [x] [[RSVP reader]] — shipped: ⚡快速閱讀 overlay on note pages (`rsvp.js`), latin words whole + CJK per-char, play/pause/speed/progress.
 	- [x] calendar (date view) — shipped to main (`4868ecc`)
 	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
 - [ ] Tag page 文字雲功能 (on/off of course), based on how many times the tag is used
@@ -121,7 +143,7 @@
 - [/] 面向華語用戶，所以中文 UI/UX 要做好
   - Audit (2026-07-05): most user-facing flows already Chinese; found a cluster of English-only strings (admin pages, `search.html`, `saved.html`, editor toolbar bits) and translated the clearly-missable ones directly (no framework) — `write.html`, `note.html`, `feed.html`, `search.html`, `saved.html`, `avatar_builder.html` alt text, `cmeditor.js`/`copy.js` status text. Left `admin_dashboard.html`/`admin_reports.html` English (internal-only tool, not reader-facing).
   - **i18n framework decision: not needed yet.** No locale-switching mechanism exists (checked go.mod/codebase — none). Rough scope if ever built: low hundreds of hardcoded strings across ~20 templates. 繁簡 (Traditional/Simplified) OpenCC conversion is a separate, unrelated concern (character-variant conversion within Chinese, not English↔Chinese) with no shared plumbing — see 繁簡轉換 below.
-- [ ] 服務條款、隱私政策、…
+- [x] 服務條款、隱私政策、… — `/terms` + `/privacy` server-rendered (v0 繁中草稿), linked from a new site footer, both handles reserved. 正式上線前需法務校訂。
 
 
 ## Tech Stack & Frontend Direction
@@ -205,13 +227,13 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [x] 明暗主題
 - [/] 繁簡轉換。
   - [x] 後端搜尋互通：opencc s2t/t2s，已接入 `/search`、wiki-link 與 tag 的 autocomplete（`searchVariants`/`likeAnyVariant`，見 `internal/handlers/search.go`）。
-  - [ ] 前端顯示切換：讀者看到的內容仍是作者原字體，尚未實作 topbar 三態切換（原文/简/繁）— 規劃見 `.claude/frontend-opencc-plan.md`，尚未動工。
+  - [x] 前端顯示切換：topbar 三態切換（原文/简/繁）**其實早已實作並上線**（`opencc-toggle.js` + `#script-toggle` 原按鈕，見 `.claude/specs/frontend-opencc-plan.md` 標記 DONE）。此處 checkbox 先前是 stale；2026-07-24 重新實測確認 原→简→繁→原 循環正常、449 字轉換、無 console error。
   - [x] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
 - [ ] 思源宋體（or 源漾明體、源流明體）
   - [x] https://github.com/adobe-fonts/source-han-serif
   - [ ] https://github.com/ButTaiwan/genyo-font
   - [ ] that's serif, for sans serif go with 思源 or 源流黑體
-- [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
+- [x] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks）。— shipped: note 頁 Aa popover（字級 小/中/大、字體 宋體/黑體），`--reader-scale` 乘上既有 `--fs-*` token，localStorage + pre-paint，`reader.js`。
 - [x] 減少動畫設定 (reduce-motion toggle) — shipped per the design below, as a topbar icon button (動, next to the theme toggle) instead of a checkbox to match the existing 原/简 toggle pattern. One deviation from the design: at 0.001ms Chromium never fires `transitionend` (rounds to 0 → no transition event), so reveal.js's clip-path cleanup can't be relied on in reduced mode — solved with `clip-path: none !important` on `[data-reveal]` in both reduced contexts, which also neutralizes the inline pre-reveal clip. Verified headless (toggle + OS `prefers-reduced-motion`): animations instant, no stuck-clipped elements, persists across reload pre-paint, no console errors.
 
 ### Reduce Motion — Design (Pure fRontend, no bAckend)
@@ -312,13 +334,13 @@ Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod)
 - [ ] migrations: in early dev stage it's fine to squash and reset the DB periodically; keep the schema clean, not precious
 	- [x] what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already? — resolved: no production data existed, so the Postgres rebuild shipped as a clean rip-and-replace with no migration/rollback tooling (see `.claude/postgres-railway-rebuild-spec.md`).
 	- [ ] **TODO: squash `internal/db/migrations/001_init.sql`…`005_*.sql` into one file before beta launch.** Once real user data exists this squash-anytime freedom ends (per the "Revisit when" in Decision 3, `docs/DECISIONS.md`) — do it while the DB is still disposable, not after.
-- [ ] liked and saved should be separated
-  - [ ] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
-  - [ ] 收藏清單, playlist 管理, *cf.* Spotify's feels clunky, Youtube's alright, 小紅書 might be good
-- [ ] distinctions
-  - [ ] inbound/outbound links
-  - [ ] linked by self or by others
-- [ ] can users change their `@handle`? 
+- [x] liked and saved should be separated — shipped: `saves` table (migration 006) + `POST /api/save` toggle + 收藏 button on notes, independent of the like heart; `/me/saved` now reads `saves` not `likes`. Covered by `saves_test.go`.
+  - [x] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
+  - [ ] 收藏清單, playlist 管理（多清單）— 目前是單一收藏清單；multi-playlist 仍待做。
+- [x] distinctions
+  - [x] inbound/outbound links — 這篇連到的筆記（outbound）vs 引用了這篇筆記的人（inbound），note 頁已分兩區。
+  - [x] linked by self or by others — inbound/outbound 皆再分「同個 vault（自己）」vs「其他人」子區（2026-07-24 補上 backlinks 的 self/others 標籤）。
+- [x] can users change their `@handle`? — shipped: owner profile「改用戶名」表單 → `POST /settings/handle`，驗證 URL-safe 格式、拒絕保留字與重複（handle_ci），連結靠 UUID 不斷鏈。`settings_test.go`。
 	- uuid should handle all the linkage already, so probably it'll be fine to permit changes
 - [x] maybe no "folders"? how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders? — resolved: folders removed from product, `folder_path` column dropped entirely in the Postgres rebuild.
 - [x] need to handle empty links (stubs) like wikipedia or obsidian does. 
