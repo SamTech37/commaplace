@@ -84,6 +84,7 @@ func (s *Server) Routes() http.Handler {
 
 	// Settings
 	mux.HandleFunc("POST /settings/theme", s.PostThemeSetting)
+	mux.HandleFunc("POST /settings/handle", s.PostHandleSetting)
 
 	// Avatar builder
 	mux.HandleFunc("GET /me/avatar", s.GetAvatarBuilder)

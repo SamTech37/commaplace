@@ -1746,6 +1746,55 @@ html[data-theme="dark"] .action-menu-list {
   font-family: var(--font-sans);
 }
 
+/* ── Change-handle form (owner profile) ─────────────────────────────────── */
+.handle-edit {
+  display: inline-block;
+}
+.handle-edit summary {
+  cursor: pointer;
+  color: var(--text-2);
+}
+.handle-edit summary:hover {
+  color: var(--text);
+}
+.handle-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-top: 0.6em;
+}
+.handle-form .handle-at {
+  color: var(--text-3);
+  font-family: var(--font-sans);
+}
+.handle-form input {
+  width: 12em;
+  padding: 0.35em 0.6em;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-input);
+  background: var(--bg-2);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+.handle-save {
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-btn);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.handle-hint {
+  flex-basis: 100%;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+}
+
 /* ── RSVP fast-reader overlay ────────────────────────────────────────────── */
 .rsvp-overlay {
   position: fixed;
