@@ -1746,6 +1746,54 @@ html[data-theme="dark"] .action-menu-list {
   font-family: var(--font-sans);
 }
 
+/* ── Legal pages + site footer ──────────────────────────────────────────── */
+.legal {
+  max-width: var(--maxw-article);
+  margin: 0 auto;
+}
+.legal h1 {
+  font-size: var(--fs-2xl);
+  letter-spacing: -0.02em;
+}
+.legal h2 {
+  font-size: var(--fs-lg);
+  margin: 1.6em 0 0.4em;
+}
+.legal p,
+.legal li {
+  color: var(--text-2);
+  line-height: 1.8;
+}
+.legal ul {
+  padding-left: 1.3em;
+}
+.legal-updated {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+.legal-contact {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+.site-footer {
+  max-width: var(--maxw);
+  margin: 3rem auto 1.5rem;
+  padding: 1.2rem 1rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.site-footer a {
+  color: var(--text-3);
+}
+.site-footer a:hover {
+  color: var(--text);
+}
+
 /* ── Change-handle form (owner profile) ─────────────────────────────────── */
 .handle-edit {
   display: inline-block;

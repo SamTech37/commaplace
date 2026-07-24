@@ -238,6 +238,7 @@ var reservedHandles = map[string]bool{
 	"settings": true, "about": true,
 	"favicon.ico": true, "robots.txt": true,
 	"tag": true, "search": true, "onboarding": true,
+	"terms": true, "privacy": true,
 }
 
 func IsReservedHandle(h string) bool { return reservedHandles[h] }

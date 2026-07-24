@@ -323,6 +323,13 @@
         </nav>
       </header>
       <main class="content">{{block "content" .}}{{end}}</main>
+      <footer class="site-footer">
+        <span>© {{.Site.Title}}</span>
+        <span class="crumb-sep">·</span>
+        <a href="/terms">服務條款</a>
+        <span class="crumb-sep">·</span>
+        <a href="/privacy">隱私政策</a>
+      </footer>
     </div>
   </body>
 </html>
