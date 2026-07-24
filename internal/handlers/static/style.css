@@ -1745,6 +1745,91 @@ html[data-theme="dark"] .action-menu-list {
 .reader-opt[data-reader-set="font"][data-val="sans"] {
   font-family: var(--font-sans);
 }
+
+/* ── RSVP fast-reader overlay ────────────────────────────────────────────── */
+.rsvp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  background: var(--bg);
+  padding: 1.5rem;
+}
+.rsvp-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  line-height: 1;
+}
+.rsvp-close:hover {
+  color: var(--text);
+}
+.rsvp-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4em;
+}
+.rsvp-word {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 9vw, 4.5rem);
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+.rsvp-bar {
+  width: min(90%, 640px);
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+.rsvp-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--text-2);
+}
+.rsvp-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.rsvp-btn {
+  border: 1px solid var(--border-2);
+  background: var(--bg-2);
+  color: var(--text);
+  border-radius: var(--r-pill);
+  width: 2.6em;
+  height: 2.6em;
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+.rsvp-btn:hover {
+  background: var(--bg-3);
+}
+.rsvp-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.rsvp-range {
+  accent-color: var(--text-2);
+}
 .action-menu-list a,
 .action-menu-list button {
   display: flex;
