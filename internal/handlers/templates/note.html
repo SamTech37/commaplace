@@ -257,6 +257,11 @@
       >{{add (len .BacklinksSame) (len .BacklinksCross)}} 篇</span
     >
   </div>
+  {{if .BacklinksSame}}
+  <div class="subsection-label">
+    <span class="dot"></span>在 {{.AuthorHandle}} 的同個 vault 引用 · {{len
+    .BacklinksSame}} 篇
+  </div>
   <div class="backlinks-list">
     {{range .BacklinksSame}}
     <a class="backlink-row" href="{{.URL}}">
@@ -271,7 +276,14 @@
         @{{.AuthorHandle}}
       </span>
     </a>
-    {{end}} {{range .BacklinksCross}}
+    {{end}}
+  </div>
+  {{end}} {{if .BacklinksCross}}
+  <div class="subsection-label cross">
+    ↜ 其他人引用 · {{len .BacklinksCross}} 篇
+  </div>
+  <div class="backlinks-list">
+    {{range .BacklinksCross}}
     <a class="backlink-row" href="{{.URL}}">
       <span class="backlink-icon">↜</span>
       <span class="backlink-title">{{.Title}}</span>
@@ -286,6 +298,7 @@
     </a>
     {{end}}
   </div>
+  {{end}}
 </section>
 {{end}} {{if or .OutgoingSame .OutgoingCross .BacklinksSame .BacklinksCross}}
 <details class="local-graph-toggle">
