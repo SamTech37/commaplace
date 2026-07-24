@@ -76,6 +76,23 @@
         >♡ <span class="count">{{.LikeCount}}</span></span
       >
       {{end}}
+      {{if .ViewerLoggedIn}}
+      <form
+        class="inline-form"
+        hx-post="/api/save"
+        hx-target="this"
+        hx-swap="outerHTML"
+      >
+        <input type="hidden" name="note_id" value="{{.Note.ID}}" />
+        <button
+          type="submit"
+          class="action-btn save-btn{{if .Saved}} saved{{end}}"
+          aria-pressed="{{.Saved}}"
+        >
+          {{if .Saved}}✓ 已收藏{{else}}＋ 收藏{{end}}
+        </button>
+      </form>
+      {{end}}
       {{if and (not .IsHidden) .Note.PublishedAt.Valid}}
       <button
         type="button"

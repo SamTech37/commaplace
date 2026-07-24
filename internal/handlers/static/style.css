@@ -1655,6 +1655,11 @@ html[data-theme="dark"] .ac-popup {
   background: var(--text);
   border-color: var(--text);
 }
+.action-btn.save-btn.saved {
+  color: var(--bg);
+  background: var(--text-2);
+  border-color: var(--text-2);
+}
 .action-btn.danger {
   color: var(--danger);
 }

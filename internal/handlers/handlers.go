@@ -70,6 +70,7 @@ func (s *Server) Routes() http.Handler {
 	// Likes
 	mux.HandleFunc("POST /api/like", s.PostLike)
 	mux.HandleFunc("GET /me/saved", s.GetSaved)
+	mux.HandleFunc("POST /api/save", s.PostSave)
 
 	// Follows
 	mux.HandleFunc("POST /api/follow", s.PostFollow)
