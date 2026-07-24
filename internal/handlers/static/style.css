@@ -1695,6 +1695,56 @@ html[data-theme="dark"] .ac-popup {
 html[data-theme="dark"] .action-menu-list {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
+
+/* Reader settings (Aa) popover */
+.reader-menu summary {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+.reader-panel {
+  min-width: 13em;
+  gap: 0.55em;
+  padding: 0.6em;
+}
+.reader-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75em;
+}
+.reader-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.reader-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-btn);
+  overflow: hidden;
+}
+.reader-opt {
+  border: 0;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  padding: 0.32em 0.7em;
+  cursor: pointer;
+}
+.reader-opt + .reader-opt {
+  border-left: 1px solid var(--border-2);
+}
+.reader-opt[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.reader-opt[data-reader-set="font"][data-val="serif"] {
+  font-family: var(--font-serif);
+}
+.reader-opt[data-reader-set="font"][data-val="sans"] {
+  font-family: var(--font-sans);
+}
 .action-menu-list a,
 .action-menu-list button {
   display: flex;
@@ -1763,12 +1813,24 @@ html[data-theme="dark"] .action-menu-list {
   padding: 1.6rem 1.8rem 2rem;
 }
 .article-title {
-  font-size: var(--fs-2xl);
+  font-size: calc(var(--fs-2xl) * var(--reader-scale, 1));
   font-weight: 700;
   margin: 0 0 0.3em;
   line-height: 1.2;
   letter-spacing: -0.025em;
   color: var(--text);
+}
+
+/* Reader preference (Aa popover on note pages) — scales the article body
+   and swaps its font. Defaults leave every value at its design token. */
+html[data-reader-size="s"] {
+  --reader-scale: 0.9;
+}
+html[data-reader-size="l"] {
+  --reader-scale: 1.16;
+}
+html[data-reader-font="sans"] {
+  --reader-font: var(--font-sans);
 }
 .note-image {
   display: block;
@@ -1783,7 +1845,8 @@ html[data-theme="dark"] .action-menu-list {
   margin: 0.4em 0;
 }
 .article-body {
-  font-size: var(--fs-md);
+  font-size: calc(var(--fs-md) * var(--reader-scale, 1));
+  font-family: var(--reader-font, var(--font-serif));
   line-height: 1.82;
   margin-top: 0.75em;
   color: var(--text-2);
@@ -1792,12 +1855,12 @@ html[data-theme="dark"] .action-menu-list {
   margin-top: 0;
 }
 .article-body h2 {
-  font-size: var(--fs-lg);
+  font-size: calc(var(--fs-lg) * var(--reader-scale, 1));
   margin: 1.8em 0 0.55em;
   color: var(--text);
 }
 .article-body h3 {
-  font-size: var(--fs-md);
+  font-size: calc(var(--fs-md) * var(--reader-scale, 1));
   margin: 1.5em 0 0.4em;
   color: var(--text);
 }
@@ -2333,10 +2396,10 @@ pre.mermaid {
     padding: 2rem 2.4rem 2.5rem;
   }
   .article-title {
-    font-size: var(--fs-2xl);
+    font-size: calc(var(--fs-2xl) * var(--reader-scale, 1));
   }
   .article-body {
-    font-size: var(--fs-md);
+    font-size: calc(var(--fs-md) * var(--reader-scale, 1));
   }
 }
 

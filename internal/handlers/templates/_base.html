@@ -34,6 +34,16 @@
         if (v === "reduced")
           document.documentElement.setAttribute("data-motion", "reduced");
       })();
+      (function () {
+        try {
+          var s = localStorage.getItem("reader-size");
+          var f = localStorage.getItem("reader-font");
+          if (s && s !== "m")
+            document.documentElement.setAttribute("data-reader-size", s);
+          if (f && f !== "serif")
+            document.documentElement.setAttribute("data-reader-font", f);
+        } catch (e) {}
+      })();
     </script>
     <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
     {{block "meta" .}}
@@ -67,6 +77,7 @@
     <script src="/assets/d3-force.min.js" defer></script>
     <script src="/assets/graph.js" defer></script>
     <script src="/assets/reveal.js" defer></script>
+    <script src="/assets/reader.js" defer></script>
     <script src="/assets/palette.js" defer></script>
     <script src="/assets/opencc-toggle.js" defer></script>
     <script

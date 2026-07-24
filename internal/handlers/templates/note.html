@@ -102,6 +102,26 @@
         </svg>
       </button>
       {{end}}
+      <details class="action-menu reader-menu">
+        <summary class="action-btn" aria-label="閱讀設定" title="閱讀設定">Aa</summary>
+        <div class="action-menu-list reader-panel">
+          <div class="reader-row">
+            <span class="reader-label">字級</span>
+            <div class="reader-seg" role="group" aria-label="字級">
+              <button type="button" class="reader-opt" data-reader-set="size" data-val="s">小</button>
+              <button type="button" class="reader-opt" data-reader-set="size" data-val="m">中</button>
+              <button type="button" class="reader-opt" data-reader-set="size" data-val="l">大</button>
+            </div>
+          </div>
+          <div class="reader-row">
+            <span class="reader-label">字體</span>
+            <div class="reader-seg" role="group" aria-label="字體">
+              <button type="button" class="reader-opt" data-reader-set="font" data-val="serif">宋體</button>
+              <button type="button" class="reader-opt" data-reader-set="font" data-val="sans">黑體</button>
+            </div>
+          </div>
+        </div>
+      </details>
       <details class="action-menu">
         <summary class="action-btn" aria-label="更多">⋯</summary>
         <div class="action-menu-list">
