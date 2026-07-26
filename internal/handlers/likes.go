@@ -52,11 +52,13 @@ func (s *Server) PostLike(w http.ResponseWriter, r *http.Request) {
 	writeHeartFragment(w, noteID, liked, count)
 }
 
-// writeHeartFragment renders the heart button + count. The button toggles
-// itself when clicked.
+// writeHeartFragment renders the like button + count. The button toggles
+// itself when clicked. Uses the same .action-btn class as the initial
+// server-rendered button in note.html (and its share/save siblings) so the
+// button doesn't restyle/jump on the first toggle.
 func writeHeartFragment(w http.ResponseWriter, noteID uuid.UUID, liked bool, count int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	cls := "heart"
+	cls := "action-btn"
 	icon := "♡"
 	if liked {
 		cls += " liked"

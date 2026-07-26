@@ -1153,40 +1153,9 @@ html[data-theme="dark"] .masonry-card:hover {
   text-decoration: none;
 }
 
-/* ── Heart button ───────────────────────────────────────────────────────── */
-.heart {
-  background: none;
-  border: 1.5px solid var(--border);
-  color: var(--text-3);
-  padding: 0.3em 0.85em;
-  border-radius: var(--r-pill);
-  font-size: var(--fs-base);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-  font-family: var(--font-sans);
-  transition:
-    border-color var(--dur-fast) ease,
-    color var(--dur-fast) ease,
-    background var(--dur-fast) ease;
-}
-.heart:hover {
-  color: var(--text);
-  border-color: var(--border-2);
-  background: none;
-}
-.heart.liked {
-  color: var(--bg);
-  background: var(--text);
-  border-color: var(--text);
-}
-.heart.liked:hover {
-  opacity: 0.85;
-}
-.heart .count {
-  font-variant-numeric: tabular-nums;
-}
+/* The like button now reuses .action-btn (matching its share/save siblings),
+   so the old .heart button rules were removed here. .heart-static below was
+   already unused before that change — left as-is (pre-existing dead code). */
 .heart-static {
   color: var(--text-3);
   font-size: var(--fs-base);
