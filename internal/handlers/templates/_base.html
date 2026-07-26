@@ -212,12 +212,14 @@
             <a href="/feed">{{.Nav.Feed}}</a>
             <a href="/graph">{{.Nav.Graph}}</a>
             <a href="/me/calendar">{{.Nav.Calendar}}</a>
+            <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
             <form method="POST" action="/logout" class="inline-form">
               <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
             </form>
             {{else}}
             <a href="/feed">{{.Nav.Feed}}</a>
             <a href="/graph">{{.Nav.Graph}}</a>
+            <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
             <a href="/login">{{.Nav.Login}}</a>
             {{end}}
           </div>
@@ -309,6 +311,7 @@
               <a href="/feed">{{.Nav.Feed}}</a>
               <a href="/graph">{{.Nav.Graph}}</a>
               <a href="/me/calendar">{{.Nav.Calendar}}</a>
+              <a href="/random">漫遊</a>
               <div class="mobile-menu-sep"></div>
               <form method="POST" action="/logout" class="inline-form">
                 <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
@@ -316,6 +319,7 @@
               {{else}}
               <a href="/feed">{{.Nav.Feed}}</a>
               <a href="/graph">{{.Nav.Graph}}</a>
+              <a href="/random">漫遊</a>
               <a href="/login">{{.Nav.Login}}</a>
               {{end}}
             </div>

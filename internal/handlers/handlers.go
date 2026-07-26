@@ -88,6 +88,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /settings/handle", s.PostHandleSetting)
 	mux.HandleFunc("GET /terms", s.GetTerms)
 	mux.HandleFunc("GET /privacy", s.GetPrivacy)
+	mux.HandleFunc("GET /random", s.GetRandom)
 
 	// Avatar builder
 	mux.HandleFunc("GET /me/avatar", s.GetAvatarBuilder)
