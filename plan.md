@@ -13,6 +13,11 @@
 6. 讚與收藏分開（`saves` 表 migration 006 + 收藏鈕 + 測試）
 7. 前端簡繁三態切換 — 查證後發現**早已上線**，只是 checkbox stale；重新實測確認正常。
 
+**追加打磨（第二輪）：**
+- **/random「漫遊」** — 隨機跳一篇筆記，nav 入口，切合 cross-vault rabbit-hole 主題。
+- **修 like 按鈕跳版 bug** — 按讚後 toggle 回傳的 fragment 用 `.heart` class、跟初始的 `.action-btn`（和 share/收藏 兄弟鈕）不一致而變樣；改成一律 `.action-btn`，順手清掉被孤立的 `.heart` CSS。
+- 查證：htmx-rules #9「loading indicator 未接」其實已接（feed sentinel 有動畫三點 + skeleton CSS），屬 stale 註記。
+
 **沒動（原因）：**
 - **Ko-fi 打賞** — 需要你先申請帳號拿連結（真人手動工作，見另一分支的清單）。
 - **migration 合併** — 資料庫破壞性操作，不適合無人監督的夜間自動跑；等你在場再做。
@@ -47,7 +52,7 @@
 	- [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
-- [ ] need random / suprise-me / I'm feeling lucky button or page
+- [x] need random / suprise-me / I'm feeling lucky button or page — shipped: `GET /random` 303→隨機一篇已發佈筆記（空則退回 /feed），nav 加「漫遊」入口。`random.go`。
 
 - [x] minimal deployment to Render — **LIVE** at https://commaplace.onrender.com
   - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres, `render.yaml` Blueprint, env vars in `.env.example`/README. Deployed.
@@ -138,7 +143,7 @@
   - [x] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
   - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
   - [ ] `/goal` also cool
-- [ ] `/random` page take people to a random node
+- [x] `/random` page take people to a random node — `GET /random`（見 Next Step 的「漫遊」入口）。
 - [x] share button, webshare api, open graph, … — shipped: note-page share icon (`navigator.share` + clipboard/toast fallback), real `og:description`/`og:image`/`og:url` + `twitter:card` on note.html, see `.claude/share-og-spec.md`
 - [/] 面向華語用戶，所以中文 UI/UX 要做好
   - Audit (2026-07-05): most user-facing flows already Chinese; found a cluster of English-only strings (admin pages, `search.html`, `saved.html`, editor toolbar bits) and translated the clearly-missable ones directly (no framework) — `write.html`, `note.html`, `feed.html`, `search.html`, `saved.html`, `avatar_builder.html` alt text, `cmeditor.js`/`copy.js` status text. Left `admin_dashboard.html`/`admin_reports.html` English (internal-only tool, not reader-facing).
