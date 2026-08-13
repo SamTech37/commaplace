@@ -95,7 +95,7 @@ func userHasLiked(ctx context.Context, db *sql.DB, userID, noteID uuid.UUID) (bo
 	return true, nil
 }
 
-// GetSaved lists notes the current user has liked, newest like first.
+// GetSaved lists notes the current user has saved, newest save first.
 func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 	u := s.requireUser(w, r)
 	if u == nil {

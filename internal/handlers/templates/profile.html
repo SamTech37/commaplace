@@ -7,7 +7,9 @@
   </div>
   <div class="vault-meta">{{if .EstYear}}Est. {{.EstYear}} · {{end}}{{.NoteCount}} entries</div>
 </header>
-<p class="note-meta">
+<!-- div, not p: <details> below is block-level and would auto-close a <p>,
+     stranding the crumb separator and breaking the form out of the row. -->
+<div class="note-meta profile-meta">
   {{.FollowerCount}} follower{{if ne .FollowerCount 1}}s{{end}}
   <span class="crumb-sep">·</span>
   {{.FollowingCount}} following
@@ -25,17 +27,17 @@
           type="text"
           name="handle"
           value="{{.Profile.Handle}}"
-          pattern="[a-z0-9]([a-z0-9-]{0,28}[a-z0-9])?"
+          pattern="[a-z0-9][a-z0-9-]{0,28}[a-z0-9]"
           maxlength="30"
           required
           aria-label="新的用戶名"
+          title="小寫英數字與連字號，2–30 字"
         />
         <button type="submit" class="handle-save">儲存</button>
-        <span class="handle-hint">小寫英數字與連字號 · 連結不會斷（用 UUID）</span>
       </form>
     </details>
   {{end}}
-</p>
+</div>
 {{if and .IsSelf .Pinned}}
   <div class="pinned-card">
     <div class="pinned-label">📌 Pinned</div>

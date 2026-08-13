@@ -125,16 +125,16 @@
           <div class="reader-row">
             <span class="reader-label">字級</span>
             <div class="reader-seg" role="group" aria-label="字級">
-              <button type="button" class="reader-opt" data-reader-set="size" data-val="s">小</button>
-              <button type="button" class="reader-opt" data-reader-set="size" data-val="m">中</button>
-              <button type="button" class="reader-opt" data-reader-set="size" data-val="l">大</button>
+              <button type="button" class="reader-opt" data-reader-set="size" data-val="s" aria-pressed="false">小</button>
+              <button type="button" class="reader-opt" data-reader-set="size" data-val="m" aria-pressed="true">中</button>
+              <button type="button" class="reader-opt" data-reader-set="size" data-val="l" aria-pressed="false">大</button>
             </div>
           </div>
           <div class="reader-row">
             <span class="reader-label">字體</span>
             <div class="reader-seg" role="group" aria-label="字體">
-              <button type="button" class="reader-opt" data-reader-set="font" data-val="serif">宋體</button>
-              <button type="button" class="reader-opt" data-reader-set="font" data-val="sans">黑體</button>
+              <button type="button" class="reader-opt" data-reader-set="font" data-val="serif" aria-pressed="true">宋體</button>
+              <button type="button" class="reader-opt" data-reader-set="font" data-val="sans" aria-pressed="false">黑體</button>
             </div>
           </div>
         </div>
@@ -161,7 +161,7 @@
           <div class="action-menu-sep"></div>
           <a
             href="{{obsidianURL .Note.Slug .Note.BodyMD}}"
-            title="在預設 Obsidian vault 建立這篇筆記（長筆記可能超出 URL 長度上限，建議改用下載 .md）"
+            title="在 Obsidian 開啟"
           >
             ⬇ 匯入到我的 vault
           </a>

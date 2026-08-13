@@ -28,14 +28,21 @@
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-  function lerp(a, b, t) { return a + (b - a) * t; }
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
   // 0 below e0, 1 above e1, smooth in between.
   function smoothstep(e0, e1, v) {
     var t = clamp((v - e0) / (e1 - e0), 0, 1);
     return t * t * (3 - 2 * t);
   }
-  function easeOutCubic(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }
+  function easeOutCubic(t) {
+    t = clamp(t, 0, 1);
+    return 1 - Math.pow(1 - t, 3);
+  }
 
   // ---- theme ----------------------------------------------------------
   // Parse the CSS custom properties once and pre-build every rgba() string
@@ -46,7 +53,11 @@
     if (m) {
       var h = m[1];
       if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      return [
+        parseInt(h.slice(0, 2), 16),
+        parseInt(h.slice(2, 4), 16),
+        parseInt(h.slice(4, 6), 16),
+      ];
     }
     m = /^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/.exec(str);
     if (m) return [+m[1], +m[2], +m[3]];
@@ -56,7 +67,9 @@
     var s = getComputedStyle(document.documentElement);
     var text = parseColor(s.getPropertyValue("--text"), [26, 26, 26]);
     var bg = parseColor(s.getPropertyValue("--bg-2"), [255, 255, 255]);
-    var rgba = function (c, a) { return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; };
+    var rgba = function (c, a) {
+      return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
+    };
     return {
       text: rgba(text, 1),
       textDot: rgba(text, 0.85),
@@ -73,8 +86,13 @@
   var themeListeners = [];
   new MutationObserver(function () {
     theme = buildTheme();
-    themeListeners.forEach(function (fn) { fn(); });
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    themeListeners.forEach(function (fn) {
+      fn();
+    });
+  }).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
 
   // ---- per-container init ---------------------------------------------
   function initGraph(wrap) {
@@ -96,7 +114,7 @@
     var fitBtn = document.createElement("button");
     fitBtn.type = "button";
     fitBtn.className = "graph-fit";
-    fitBtn.textContent = "fit";
+    fitBtn.textContent = "全圖";
     fitBtn.hidden = true;
     wrap.appendChild(fitBtn);
 
@@ -104,7 +122,8 @@
     var isCompact = !!fixedHeight;
 
     // ---- canvas sizing ----
-    var cw = 0, ch = 0;
+    var cw = 0,
+      ch = 0;
     function resize() {
       var dpr = window.devicePixelRatio || 1;
       cw = wrap.clientWidth;
@@ -127,23 +146,28 @@
     }
 
     // ---- state ----
-    var nodes = [], edges = [], centerNode = null;
+    var nodes = [],
+      edges = [],
+      centerNode = null;
     var sim = null;
-    var hovered = null, draggingNode = null;
-    var focusNode = null;             // hover focus target, kept while focusT fades out
+    var hovered = null,
+      draggingNode = null;
+    var focusNode = null; // hover focus target, kept while focusT fades out
 
     // Camera: world → screen is  s = w * zoom + pan.
     var cam = { x: 0, y: 0, zoom: 1 };
     var zoomTarget = 1;
-    var zoomAnchor = null;            // {sx, sy, wx, wy} pivot while easing
-    var panVX = 0, panVY = 0;         // pan inertia, css px / frame
-    var autoFollow = true;            // camera tracks fit until user interacts
-    var followSnap = false;           // camera still easing toward fit target
-    var focusT = 0;                   // 0..1 hover-dim amount, eased
-    var bornAt = 0;                   // entrance animation clock
+    var zoomAnchor = null; // {sx, sy, wx, wy} pivot while easing
+    var panVX = 0,
+      panVY = 0; // pan inertia, css px / frame
+    var autoFollow = true; // camera tracks fit until user interacts
+    var followSnap = false; // camera still easing toward fit target
+    var focusT = 0; // 0..1 hover-dim amount, eased
+    var bornAt = 0; // entrance animation clock
     var entranceDone = reducedMotion;
 
-    var MIN_ZOOM = 0.05, MAX_ZOOM = 6;
+    var MIN_ZOOM = 0.05,
+      MAX_ZOOM = 6;
     var FONT_CARD = 'italic 10px "Newsreader",Georgia,serif';
     var FONT_AUTHOR = '7px "IBM Plex Mono",monospace';
     var FONT_LABEL = '9px "IBM Plex Mono",monospace';
@@ -167,7 +191,10 @@
         setup(data);
       })
       .catch(function (err) {
-        if (empty) { empty.hidden = false; empty.textContent = "載入失敗：" + err; }
+        if (empty) {
+          empty.hidden = false;
+          empty.textContent = "載入失敗：" + err;
+        }
         canvas.hidden = true;
       });
 
@@ -175,24 +202,42 @@
       nodes = data.nodes.map(function (n, i) {
         // Seed in a tight phyllotaxis disc so the layout visibly blooms
         // outward from the middle on load.
-        var r = 4.5 * Math.sqrt(i), a = i * 2.39996;
+        var r = 4.5 * Math.sqrt(i),
+          a = i * 2.39996;
         return {
-          id: n.id, title: n.title || "", url: n.url, author: n.author || "",
-          x: r * Math.cos(a), y: r * Math.sin(a),
-          degree: 0, neighbors: null,
+          id: n.id,
+          title: n.title || "",
+          url: n.url,
+          author: n.author || "",
+          x: r * Math.cos(a),
+          y: r * Math.sin(a),
+          degree: 0,
+          neighbors: null,
           // render caches, filled lazily
-          label: null, labelW: 0, cardW: 0, cardH: 0, authorLabel: null,
-          born: 0, pop: 0,
+          label: null,
+          labelW: 0,
+          cardW: 0,
+          cardH: 0,
+          authorLabel: null,
+          born: 0,
+          pop: 0,
         };
       });
-      var byId = new Map(nodes.map(function (n) { return [n.id, n]; }));
+      var byId = new Map(
+        nodes.map(function (n) {
+          return [n.id, n];
+        }),
+      );
       edges = (data.edges || []).reduce(function (acc, e) {
-        var a = byId.get(e.s), b = byId.get(e.t);
+        var a = byId.get(e.s),
+          b = byId.get(e.t);
         if (a && b) {
-          a.degree++; b.degree++;
+          a.degree++;
+          b.degree++;
           if (!a.neighbors) a.neighbors = new Set();
           if (!b.neighbors) b.neighbors = new Set();
-          a.neighbors.add(b); b.neighbors.add(a);
+          a.neighbors.add(b);
+          b.neighbors.add(a);
           acc.push({ source: a, target: b, cross: a.author !== b.author });
         }
         return acc;
@@ -208,27 +253,43 @@
       // Physics cost scales hard with node count; trade layout finesse for
       // frame rate as the graph grows.
       var big = nodes.length > 1200;
-      sim = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(edges)
-          .distance(isCompact ? 85 : 80)
-          .strength(function (e) {
-            // Hubs pull less per-edge so dense clusters can breathe.
-            return 1 / Math.min(4, Math.max(e.source.degree, e.target.degree));
-          }))
-        .force("charge", d3.forceManyBody()
-          .strength(isCompact ? -180 : -240)
-          .theta(big ? 1.2 : 0.9)
-          .distanceMax(big ? 300 : (isCompact ? 400 : 900)))
+      sim = d3
+        .forceSimulation(nodes)
+        .force(
+          "link",
+          d3
+            .forceLink(edges)
+            .distance(isCompact ? 85 : 80)
+            .strength(function (e) {
+              // Hubs pull less per-edge so dense clusters can breathe.
+              return (
+                1 / Math.min(4, Math.max(e.source.degree, e.target.degree))
+              );
+            }),
+        )
+        .force(
+          "charge",
+          d3
+            .forceManyBody()
+            .strength(isCompact ? -180 : -240)
+            .theta(big ? 1.2 : 0.9)
+            .distanceMax(big ? 300 : isCompact ? 400 : 900),
+        )
         .force("x", d3.forceX(0).strength(centerStrength))
         .force("y", d3.forceY(0).strength(centerStrength))
         .alphaDecay(big ? 0.05 : 0.032)
         .velocityDecay(0.32)
-        .stop();                       // we tick manually in the rAF loop
+        .stop(); // we tick manually in the rAF loop
       if (isCompact || nodes.length <= 600) {
-        sim.force("collide", d3.forceCollide(function (n) {
-          // compact graphs render as cards, so collide on card size instead
-          return isCompact ? 42 : dotR(n) + 5;
-        }).iterations(1));
+        sim.force(
+          "collide",
+          d3
+            .forceCollide(function (n) {
+              // compact graphs render as cards, so collide on card size instead
+              return isCompact ? 42 : dotR(n) + 5;
+            })
+            .iterations(1),
+        );
       }
 
       if (reducedMotion) {
@@ -236,7 +297,8 @@
         // budget (big graphs would block the page if we ran to completion),
         // then let the frame loop finish the rest.
         var deadline = performance.now() + 250;
-        while (sim.alpha() > sim.alphaMin() && performance.now() < deadline) sim.tick();
+        while (sim.alpha() > sim.alphaMin() && performance.now() < deadline)
+          sim.tick();
         snapCameraToFit();
       }
 
@@ -261,7 +323,8 @@
       if (!n.cardW) {
         ctx.font = FONT_CARD;
         var max = 18;
-        n.label = n.title.length > max ? n.title.slice(0, max - 1) + "…" : n.title;
+        n.label =
+          n.title.length > max ? n.title.slice(0, max - 1) + "…" : n.title;
         n.labelW = ctx.measureText(n.label).width;
         ctx.font = FONT_AUTHOR;
         n.authorLabel = "@" + n.author;
@@ -274,18 +337,27 @@
 
     // ---- camera ----
     function fitTarget() {
-      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      var minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
       for (var i = 0; i < nodes.length; i++) {
-        var n = nodes[i], r = dotR(n) + 14;
+        var n = nodes[i],
+          r = dotR(n) + 14;
         if (n.x - r < minX) minX = n.x - r;
         if (n.y - r < minY) minY = n.y - r;
         if (n.x + r > maxX) maxX = n.x + r;
         if (n.y + r > maxY) maxY = n.y + r;
       }
-      var bw = maxX - minX || 1, bh = maxY - minY || 1;
+      var bw = maxX - minX || 1,
+        bh = maxY - minY || 1;
       // Compact (local) graphs land fully in card mode; the global graph
       // lands fully in dot mode — never inside the crossfade band.
-      var z = clamp(0.86 * Math.min(cw / bw, ch / bh), MIN_ZOOM, isCompact ? 1.4 : 1.0);
+      var z = clamp(
+        0.86 * Math.min(cw / bw, ch / bh),
+        MIN_ZOOM,
+        isCompact ? 1.4 : 1.0,
+      );
       return {
         zoom: z,
         x: cw / 2 - (minX + bw / 2) * z,
@@ -294,17 +366,22 @@
     }
     function snapCameraToFit() {
       var t = fitTarget();
-      cam.x = t.x; cam.y = t.y; cam.zoom = zoomTarget = t.zoom;
+      cam.x = t.x;
+      cam.y = t.y;
+      cam.zoom = zoomTarget = t.zoom;
       panVX = panVY = 0;
     }
     fitBtn.addEventListener("click", function () {
-      autoFollow = true; followSnap = true;
-      panVX = panVY = 0; zoomAnchor = null;
+      autoFollow = true;
+      followSnap = true;
+      panVX = panVY = 0;
+      zoomAnchor = null;
       requestFrame();
     });
 
     function userTookCamera() {
-      autoFollow = false; followSnap = false;
+      autoFollow = false;
+      followSnap = false;
     }
 
     // ---- frame loop ----
@@ -314,7 +391,8 @@
       frameQueued = true;
       requestAnimationFrame(frame);
     }
-    var tickMs = 0, tickSkipped = false;
+    var tickMs = 0,
+      tickSkipped = false;
     function frame(now) {
       frameQueued = false;
       var busy = false;
@@ -340,8 +418,10 @@
         cam.x = lerp(cam.x, t.x, k);
         cam.y = lerp(cam.y, t.y, k);
         cam.zoom = zoomTarget = lerp(cam.zoom, t.zoom, k);
-        var close = Math.abs(cam.zoom - t.zoom) < 0.001 &&
-                    Math.abs(cam.x - t.x) < 0.5 && Math.abs(cam.y - t.y) < 0.5;
+        var close =
+          Math.abs(cam.zoom - t.zoom) < 0.001 &&
+          Math.abs(cam.x - t.x) < 0.5 &&
+          Math.abs(cam.y - t.y) < 0.5;
         if (close) followSnap = false;
         if (!close || busy) busy = true;
       }
@@ -359,15 +439,21 @@
         // zoom ease finished: the node under the cursor may have changed
         if (!draggingNode && activePointers.size === 0) {
           var hz = nodeAt(zoomAnchor.sx, zoomAnchor.sy);
-          if (hz !== hovered) { hovered = hz; tooltip.hidden = !hz; busy = true; }
+          if (hz !== hovered) {
+            hovered = hz;
+            tooltip.hidden = !hz;
+            busy = true;
+          }
         }
         zoomAnchor = null;
       }
 
       // pan inertia
       if (activePointers.size === 0 && (panVX !== 0 || panVY !== 0)) {
-        cam.x += panVX; cam.y += panVY;
-        panVX *= 0.86; panVY *= 0.86;
+        cam.x += panVX;
+        cam.y += panVY;
+        panVX *= 0.86;
+        panVY *= 0.86;
         if (Math.abs(panVX) < 0.04) panVX = 0;
         if (Math.abs(panVY) < 0.04) panVY = 0;
         busy = true;
@@ -414,12 +500,16 @@
       var cardT = isCompact ? 1 : smoothstep(1.05, 1.4, z);
       // dot labels fade out completely before cards start appearing, so the
       // two text layers never double-print
-      var labelT = isCompact ? 0 : smoothstep(0.55, 0.85, z) * (1 - smoothstep(0.9, 1.05, z));
-      var dim = 1 - 0.82 * focusT;               // alpha for non-neighbors
+      var labelT = isCompact
+        ? 0
+        : smoothstep(0.55, 0.85, z) * (1 - smoothstep(0.9, 1.05, z));
+      var dim = 1 - 0.82 * focusT; // alpha for non-neighbors
 
       // world-space view rect (+margin) for culling
-      var vx0 = -cam.x / z - 150, vy0 = -cam.y / z - 150;
-      var vx1 = (cw - cam.x) / z + 150, vy1 = (ch - cam.y) / z + 150;
+      var vx0 = -cam.x / z - 150,
+        vy0 = -cam.y / z - 150;
+      var vx1 = (cw - cam.x) / z + 150,
+        vy1 = (ch - cam.y) / z + 150;
 
       ctx.save();
       ctx.translate(cam.x, cam.y);
@@ -431,23 +521,37 @@
       // Focus-adjacent edges are drawn twice: once in the base batch and
       // once in the hot overlay whose alpha follows focusT, so both the
       // fade-in and the fade-out are smooth.
-      var plain = new Path2D(), cross = new Path2D(), hot = new Path2D(), hotCross = new Path2D();
-      var hasPlain = false, hasCross = false, hasHot = false, hasHotCross = false;
+      var plain = new Path2D(),
+        cross = new Path2D(),
+        hot = new Path2D(),
+        hotCross = new Path2D();
+      var hasPlain = false,
+        hasCross = false,
+        hasHot = false,
+        hasHotCross = false;
       for (var i = 0; i < edges.length; i++) {
         var e = edges[i];
-        var a = e.source, b = e.target;
+        var a = e.source,
+          b = e.target;
         // cull edges entirely outside the view
-        if ((a.x < vx0 && b.x < vx0) || (a.x > vx1 && b.x > vx1) ||
-            (a.y < vy0 && b.y < vy0) || (a.y > vy1 && b.y > vy1)) continue;
+        if (
+          (a.x < vx0 && b.x < vx0) ||
+          (a.x > vx1 && b.x > vx1) ||
+          (a.y < vy0 && b.y < vy0) ||
+          (a.y > vy1 && b.y > vy1)
+        )
+          continue;
         var p = e.cross ? cross : plain;
         p.moveTo(a.x, a.y);
         p.lineTo(b.x, b.y);
-        if (e.cross) hasCross = true; else hasPlain = true;
+        if (e.cross) hasCross = true;
+        else hasPlain = true;
         if (fNode && (a === fNode || b === fNode)) {
           var hp = e.cross ? hotCross : hot;
           hp.moveTo(a.x, a.y);
           hp.lineTo(b.x, b.y);
-          if (e.cross) hasHotCross = true; else hasHot = true;
+          if (e.cross) hasHotCross = true;
+          else hasHot = true;
         }
       }
       // Dash pattern must stay constant in *screen* pixels: a world-space
@@ -456,28 +560,46 @@
       var dash = [4 / z, 3 / z];
       ctx.lineWidth = 0.8 / Math.max(z, 0.7);
       ctx.globalAlpha = dim;
-      if (hasPlain) { ctx.strokeStyle = theme.edge; ctx.stroke(plain); }
-      if (hasCross) { ctx.setLineDash(dash); ctx.strokeStyle = theme.edgeCross; ctx.stroke(cross); ctx.setLineDash([]); }
+      if (hasPlain) {
+        ctx.strokeStyle = theme.edge;
+        ctx.stroke(plain);
+      }
+      if (hasCross) {
+        ctx.setLineDash(dash);
+        ctx.strokeStyle = theme.edgeCross;
+        ctx.stroke(cross);
+        ctx.setLineDash([]);
+      }
       if (hasHot || hasHotCross) {
         ctx.globalAlpha = focusT;
         ctx.lineWidth = 1.4 / Math.max(z, 0.7);
         ctx.strokeStyle = theme.edgeHot;
         if (hasHot) ctx.stroke(hot);
-        if (hasHotCross) { ctx.setLineDash(dash); ctx.stroke(hotCross); ctx.setLineDash([]); }
+        if (hasHotCross) {
+          ctx.setLineDash(dash);
+          ctx.stroke(hotCross);
+          ctx.setLineDash([]);
+        }
       }
       ctx.globalAlpha = 1;
 
       // -- nodes --
       var dotT = 1 - cardT;
       function isDimmed(n) {
-        return focusT > 0 && fNode && n !== fNode &&
-          !(fNode.neighbors && fNode.neighbors.has(n));
+        return (
+          focusT > 0 &&
+          fNode &&
+          n !== fNode &&
+          !(fNode.neighbors && fNode.neighbors.has(n))
+        );
       }
 
       // batched dot pass (default dots share two paths: lit / dimmed)
       if (dotT > 0.01) {
-        var dotsDim = new Path2D(), dotsLit = new Path2D();
-        var hasDim = false, hasLit = false;
+        var dotsDim = new Path2D(),
+          dotsLit = new Path2D();
+        var hasDim = false,
+          hasLit = false;
         for (i = 0; i < nodes.length; i++) {
           var n = nodes[i];
           if (n.x < vx0 || n.x > vx1 || n.y < vy0 || n.y > vy1) continue;
@@ -488,11 +610,18 @@
           var p2 = dimmed ? dotsDim : dotsLit;
           p2.moveTo(n.x + r, n.y);
           p2.arc(n.x, n.y, r, 0, TAU);
-          if (dimmed) hasDim = true; else hasLit = true;
+          if (dimmed) hasDim = true;
+          else hasLit = true;
         }
         ctx.fillStyle = theme.textDot;
-        if (hasLit) { ctx.globalAlpha = 1; ctx.fill(dotsLit); }
-        if (hasDim) { ctx.globalAlpha = dim * 0.5 + 0.08; ctx.fill(dotsDim); }
+        if (hasLit) {
+          ctx.globalAlpha = 1;
+          ctx.fill(dotsLit);
+        }
+        if (hasDim) {
+          ctx.globalAlpha = dim * 0.5 + 0.08;
+          ctx.fill(dotsDim);
+        }
         ctx.globalAlpha = 1;
       }
 
@@ -510,7 +639,10 @@
           if (!entranceDone) la *= n.pop;
           if (la <= 0.02) continue;
           ctx.globalAlpha = la;
-          if (!n.label) { cardDims(n); ctx.font = FONT_LABEL; } // cardDims clobbers ctx.font
+          if (!n.label) {
+            cardDims(n);
+            ctx.font = FONT_LABEL;
+          } // cardDims clobbers ctx.font
           ctx.fillText(n.label, n.x, n.y + dotR(n) + 3);
         }
         ctx.globalAlpha = 1;
@@ -556,8 +688,10 @@
 
         // card half of the crossfade
         cardDims(n);
-        var w = n.cardW, h = n.cardH;
-        var x = n.x - w / 2, y = n.y - h / 2;
+        var w = n.cardW,
+          h = n.cardH;
+        var x = n.x - w / 2,
+          y = n.y - h / 2;
         ctx.globalAlpha = alpha * cardT;
         ctx.fillStyle = isCenter ? theme.text : theme.bg;
         ctx.fillRect(x, y, w, h);
@@ -588,21 +722,26 @@
       var cardT = isCompact ? 1 : smoothstep(1.05, 1.4, cam.zoom);
       if (cardT > 0.5) {
         cardDims(n);
-        if (Math.abs(wp.x - n.x) <= n.cardW / 2 + 3 && Math.abs(wp.y - n.y) <= n.cardH / 2 + 3) return n;
+        if (
+          Math.abs(wp.x - n.x) <= n.cardW / 2 + 3 &&
+          Math.abs(wp.y - n.y) <= n.cardH / 2 + 3
+        )
+          return n;
         return null;
       }
       var r = dotR(n) + 6 / cam.zoom;
-      var dx = wp.x - n.x, dy = wp.y - n.y;
+      var dx = wp.x - n.x,
+        dy = wp.y - n.y;
       return dx * dx + dy * dy <= r * r ? n : null;
     }
 
     // ---- pointer input ----
     // One code path for mouse / touch / pen. Two active pointers = pinch.
-    var activePointers = new Map();   // pointerId -> {x, y}
-    var pinch = null;                 // {dist, zoom, wx, wy}
-    var panLast = null;               // {x, y} for single-pointer pan
-    var downInfo = null;              // {x, y, node, t} for tap detection
-    var moveSamples = [];             // recent deltas for inertia
+    var activePointers = new Map(); // pointerId -> {x, y}
+    var pinch = null; // {dist, zoom, wx, wy}
+    var panLast = null; // {x, y} for single-pointer pan
+    var downInfo = null; // {x, y, node, t} for tap detection
+    var moveSamples = []; // recent deltas for inertia
 
     function ptrPos(e) {
       var rect = canvas.getBoundingClientRect();
@@ -610,7 +749,8 @@
     }
 
     canvas.addEventListener("pointerdown", function (e) {
-      if (!nodes.length || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (!nodes.length || (e.pointerType === "mouse" && e.button !== 0))
+        return;
       e.preventDefault();
       canvas.setPointerCapture(e.pointerId);
       var p = ptrPos(e);
@@ -622,11 +762,14 @@
         // second finger: abort node drag, start pinch
         if (draggingNode) endDrag(false);
         var pts = Array.from(activePointers.values());
-        var mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+        var mx = (pts[0].x + pts[1].x) / 2,
+          my = (pts[0].y + pts[1].y) / 2;
         var wp = screenToWorld(mx, my);
         pinch = {
           dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
-          zoom: cam.zoom, wx: wp.x, wy: wp.y,
+          zoom: cam.zoom,
+          wx: wp.x,
+          wy: wp.y,
         };
         panLast = null;
         downInfo = null;
@@ -639,7 +782,8 @@
       if (n) {
         draggingNode = n;
         var wp2 = screenToWorld(p.x, p.y);
-        n.fx = wp2.x; n.fy = wp2.y;
+        n.fx = wp2.x;
+        n.fy = wp2.y;
         sim.alphaTarget(0.25);
         if (sim.alpha() < 0.25) sim.alpha(0.25);
         canvas.style.cursor = "grabbing";
@@ -661,7 +805,8 @@
         if (pinch && activePointers.size >= 2) {
           var pts = Array.from(activePointers.values());
           var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-          var mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+          var mx = (pts[0].x + pts[1].x) / 2,
+            my = (pts[0].y + pts[1].y) / 2;
           var nz = clamp(pinch.zoom * (d / pinch.dist), MIN_ZOOM, MAX_ZOOM);
           cam.zoom = zoomTarget = nz;
           cam.x = mx - pinch.wx * nz;
@@ -678,8 +823,10 @@
           return;
         }
         if (panLast) {
-          var dx = p.x - panLast.x, dy = p.y - panLast.y;
-          cam.x += dx; cam.y += dy;
+          var dx = p.x - panLast.x,
+            dy = p.y - panLast.y;
+          cam.x += dx;
+          cam.y += dy;
           moveSamples.push({ dx: dx, dy: dy });
           if (moveSamples.length > 4) moveSamples.shift();
           panLast = p;
@@ -734,8 +881,11 @@
       }
 
       if (draggingNode) {
-        var tapped = downInfo && downInfo.node === draggingNode &&
-          Math.hypot(p.x - downInfo.x, p.y - downInfo.y) < (e.pointerType === "touch" ? 9 : 5);
+        var tapped =
+          downInfo &&
+          downInfo.node === draggingNode &&
+          Math.hypot(p.x - downInfo.x, p.y - downInfo.y) <
+            (e.pointerType === "touch" ? 9 : 5);
         var target = draggingNode;
         endDrag(true);
         canvas.style.cursor = "grab";
@@ -749,10 +899,20 @@
 
       if (panLast) {
         panLast = null;
-        var vx = 0, vy = 0;
-        for (var i = 0; i < moveSamples.length; i++) { vx += moveSamples[i].dx; vy += moveSamples[i].dy; }
-        if (moveSamples.length) { vx /= moveSamples.length; vy /= moveSamples.length; }
-        if (Math.hypot(vx, vy) > 1.5) { panVX = vx; panVY = vy; }
+        var vx = 0,
+          vy = 0;
+        for (var i = 0; i < moveSamples.length; i++) {
+          vx += moveSamples[i].dx;
+          vy += moveSamples[i].dy;
+        }
+        if (moveSamples.length) {
+          vx /= moveSamples.length;
+          vy /= moveSamples.length;
+        }
+        if (Math.hypot(vx, vy) > 1.5) {
+          panVX = vx;
+          panVY = vy;
+        }
         canvas.style.cursor = hovered ? "pointer" : "grab";
         requestFrame();
       }
@@ -772,17 +932,24 @@
     });
 
     // wheel zoom: sets an eased target, pivoting at the cursor
-    canvas.addEventListener("wheel", function (e) {
-      if (!nodes.length) return;
-      e.preventDefault();
-      userTookCamera();
-      var p = ptrPos(e);
-      var wp = screenToWorld(p.x, p.y);
-      zoomAnchor = { sx: p.x, sy: p.y, wx: wp.x, wy: wp.y };
-      var factor = Math.pow(0.9985, e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY);
-      zoomTarget = clamp(zoomTarget * factor, MIN_ZOOM, MAX_ZOOM);
-      requestFrame();
-    }, { passive: false });
+    canvas.addEventListener(
+      "wheel",
+      function (e) {
+        if (!nodes.length) return;
+        e.preventDefault();
+        userTookCamera();
+        var p = ptrPos(e);
+        var wp = screenToWorld(p.x, p.y);
+        zoomAnchor = { sx: p.x, sy: p.y, wx: wp.x, wy: wp.y };
+        var factor = Math.pow(
+          0.9985,
+          e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY,
+        );
+        zoomTarget = clamp(zoomTarget * factor, MIN_ZOOM, MAX_ZOOM);
+        requestFrame();
+      },
+      { passive: false },
+    );
   }
 
   // Global graph: initialize immediately.

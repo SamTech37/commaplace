@@ -12,7 +12,7 @@ import (
 // interior hyphens, 2–30 chars. Matches how handles are minted from emails
 // (auth.handleFromEmail) so a changed handle is never something the router
 // or profile URLs can't represent.
-var handleRE = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$`)
+var handleRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$`)
 
 // PostHandleSetting lets a logged-in user rename their own @handle. Links
 // survive because edges resolve by UUID (links.resolved_target_id), not by

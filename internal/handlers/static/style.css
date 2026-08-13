@@ -1781,6 +1781,8 @@ html[data-theme="dark"] .action-menu-list {
 }
 .handle-form {
   display: flex;
+  /* the global `form` rule stacks column; this one is a single row */
+  flex-direction: row;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.4em;
@@ -1810,13 +1812,6 @@ html[data-theme="dark"] .action-menu-list {
   font-size: var(--fs-sm);
   cursor: pointer;
 }
-.handle-hint {
-  flex-basis: 100%;
-  color: var(--text-3);
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
-}
-
 /* ── RSVP fast-reader overlay ────────────────────────────────────────────── */
 .rsvp-overlay {
   position: fixed;
@@ -1834,6 +1829,12 @@ html[data-theme="dark"] .action-menu-list {
   position: absolute;
   top: 1rem;
   right: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Esc is the other way out, and touch has no Esc — keep the 44px target. */
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--text-3);
@@ -1895,6 +1896,8 @@ html[data-theme="dark"] .action-menu-list {
 }
 .rsvp-speed {
   display: inline-flex;
+  /* the global `label` rule stacks column; this one is a single row */
+  flex-direction: row;
   align-items: center;
   gap: 0.5em;
 }
