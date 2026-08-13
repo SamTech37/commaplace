@@ -70,6 +70,7 @@ func (s *Server) Routes() http.Handler {
 	// Likes
 	mux.HandleFunc("POST /api/like", s.PostLike)
 	mux.HandleFunc("GET /me/saved", s.GetSaved)
+	mux.HandleFunc("POST /api/save", s.PostSave)
 
 	// Follows
 	mux.HandleFunc("POST /api/follow", s.PostFollow)
@@ -84,6 +85,10 @@ func (s *Server) Routes() http.Handler {
 
 	// Settings
 	mux.HandleFunc("POST /settings/theme", s.PostThemeSetting)
+	mux.HandleFunc("POST /settings/handle", s.PostHandleSetting)
+	mux.HandleFunc("GET /terms", s.GetTerms)
+	mux.HandleFunc("GET /privacy", s.GetPrivacy)
+	mux.HandleFunc("GET /random", s.GetRandom)
 
 	// Avatar builder
 	mux.HandleFunc("GET /me/avatar", s.GetAvatarBuilder)

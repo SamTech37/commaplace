@@ -34,6 +34,16 @@
         if (v === "reduced")
           document.documentElement.setAttribute("data-motion", "reduced");
       })();
+      (function () {
+        try {
+          var s = localStorage.getItem("reader-size");
+          var f = localStorage.getItem("reader-font");
+          if (s && s !== "m")
+            document.documentElement.setAttribute("data-reader-size", s);
+          if (f && f !== "serif")
+            document.documentElement.setAttribute("data-reader-font", f);
+        } catch (e) {}
+      })();
     </script>
     <title>{{block "title" .}}{{.Site.Title}}{{end}}</title>
     {{block "meta" .}}
@@ -67,6 +77,8 @@
     <script src="/assets/d3-force.min.js" defer></script>
     <script src="/assets/graph.js" defer></script>
     <script src="/assets/reveal.js" defer></script>
+    <script src="/assets/reader.js" defer></script>
+    <script src="/assets/rsvp.js" defer></script>
     <script src="/assets/palette.js" defer></script>
     <script src="/assets/opencc-toggle.js" defer></script>
     <script
@@ -200,12 +212,14 @@
             <a href="/feed">{{.Nav.Feed}}</a>
             <a href="/graph">{{.Nav.Graph}}</a>
             <a href="/me/calendar">{{.Nav.Calendar}}</a>
+            <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
             <form method="POST" action="/logout" class="inline-form">
               <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
             </form>
             {{else}}
             <a href="/feed">{{.Nav.Feed}}</a>
             <a href="/graph">{{.Nav.Graph}}</a>
+            <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
             <a href="/login">{{.Nav.Login}}</a>
             {{end}}
           </div>
@@ -297,6 +311,7 @@
               <a href="/feed">{{.Nav.Feed}}</a>
               <a href="/graph">{{.Nav.Graph}}</a>
               <a href="/me/calendar">{{.Nav.Calendar}}</a>
+              <a href="/random">漫遊</a>
               <div class="mobile-menu-sep"></div>
               <form method="POST" action="/logout" class="inline-form">
                 <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
@@ -304,6 +319,7 @@
               {{else}}
               <a href="/feed">{{.Nav.Feed}}</a>
               <a href="/graph">{{.Nav.Graph}}</a>
+              <a href="/random">漫遊</a>
               <a href="/login">{{.Nav.Login}}</a>
               {{end}}
             </div>
@@ -311,6 +327,13 @@
         </nav>
       </header>
       <main class="content">{{block "content" .}}{{end}}</main>
+      <footer class="site-footer">
+        <span>© {{.Site.Title}}</span>
+        <span class="crumb-sep">·</span>
+        <a href="/terms">服務條款</a>
+        <span class="crumb-sep">·</span>
+        <a href="/privacy">隱私政策</a>
+      </footer>
     </div>
   </body>
 </html>

@@ -52,11 +52,13 @@ func (s *Server) PostLike(w http.ResponseWriter, r *http.Request) {
 	writeHeartFragment(w, noteID, liked, count)
 }
 
-// writeHeartFragment renders the heart button + count. The button toggles
-// itself when clicked.
+// writeHeartFragment renders the like button + count. The button toggles
+// itself when clicked. Uses the same .action-btn class as the initial
+// server-rendered button in note.html (and its share/save siblings) so the
+// button doesn't restyle/jump on the first toggle.
 func writeHeartFragment(w http.ResponseWriter, noteID uuid.UUID, liked bool, count int) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	cls := "heart"
+	cls := "action-btn"
 	icon := "♡"
 	if liked {
 		cls += " liked"
@@ -101,11 +103,11 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.DB.QueryContext(r.Context(), `
 		SELECT n.title, n.slug, n.body_md, n.updated_at, u2.handle
-		FROM likes l
-		JOIN notes n  ON n.id = l.note_id
+		FROM saves sv
+		JOIN notes n  ON n.id = sv.note_id
 		JOIN users u2 ON u2.id = n.author_id
-		WHERE l.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
-		ORDER BY l.created_at DESC
+		WHERE sv.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+		ORDER BY sv.created_at DESC
 		LIMIT 200`, u.ID)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())

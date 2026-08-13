@@ -1153,40 +1153,9 @@ html[data-theme="dark"] .masonry-card:hover {
   text-decoration: none;
 }
 
-/* ── Heart button ───────────────────────────────────────────────────────── */
-.heart {
-  background: none;
-  border: 1.5px solid var(--border);
-  color: var(--text-3);
-  padding: 0.3em 0.85em;
-  border-radius: var(--r-pill);
-  font-size: var(--fs-base);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-  font-family: var(--font-sans);
-  transition:
-    border-color var(--dur-fast) ease,
-    color var(--dur-fast) ease,
-    background var(--dur-fast) ease;
-}
-.heart:hover {
-  color: var(--text);
-  border-color: var(--border-2);
-  background: none;
-}
-.heart.liked {
-  color: var(--bg);
-  background: var(--text);
-  border-color: var(--text);
-}
-.heart.liked:hover {
-  opacity: 0.85;
-}
-.heart .count {
-  font-variant-numeric: tabular-nums;
-}
+/* The like button now reuses .action-btn (matching its share/save siblings),
+   so the old .heart button rules were removed here. .heart-static below was
+   already unused before that change — left as-is (pre-existing dead code). */
 .heart-static {
   color: var(--text-3);
   font-size: var(--fs-base);
@@ -1655,6 +1624,11 @@ html[data-theme="dark"] .ac-popup {
   background: var(--text);
   border-color: var(--text);
 }
+.action-btn.save-btn.saved {
+  color: var(--bg);
+  background: var(--text-2);
+  border-color: var(--text-2);
+}
 .action-btn.danger {
   color: var(--danger);
 }
@@ -1694,6 +1668,238 @@ html[data-theme="dark"] .ac-popup {
 }
 html[data-theme="dark"] .action-menu-list {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Reader settings (Aa) popover */
+.reader-menu summary {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+.reader-panel {
+  min-width: 13em;
+  gap: 0.55em;
+  padding: 0.6em;
+}
+.reader-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75em;
+}
+.reader-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.reader-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-btn);
+  overflow: hidden;
+}
+.reader-opt {
+  border: 0;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  padding: 0.32em 0.7em;
+  cursor: pointer;
+}
+.reader-opt + .reader-opt {
+  border-left: 1px solid var(--border-2);
+}
+.reader-opt[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.reader-opt[data-reader-set="font"][data-val="serif"] {
+  font-family: var(--font-serif);
+}
+.reader-opt[data-reader-set="font"][data-val="sans"] {
+  font-family: var(--font-sans);
+}
+
+/* ── Legal pages + site footer ──────────────────────────────────────────── */
+.legal {
+  max-width: var(--maxw-article);
+  margin: 0 auto;
+}
+.legal h1 {
+  font-size: var(--fs-2xl);
+  letter-spacing: -0.02em;
+}
+.legal h2 {
+  font-size: var(--fs-lg);
+  margin: 1.6em 0 0.4em;
+}
+.legal p,
+.legal li {
+  color: var(--text-2);
+  line-height: 1.8;
+}
+.legal ul {
+  padding-left: 1.3em;
+}
+.legal-updated {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+.legal-contact {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+.site-footer {
+  max-width: var(--maxw);
+  margin: 3rem auto 1.5rem;
+  padding: 1.2rem 1rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.site-footer a {
+  color: var(--text-3);
+}
+.site-footer a:hover {
+  color: var(--text);
+}
+
+/* ── Change-handle form (owner profile) ─────────────────────────────────── */
+.handle-edit {
+  display: inline-block;
+}
+.handle-edit summary {
+  cursor: pointer;
+  color: var(--text-2);
+}
+.handle-edit summary:hover {
+  color: var(--text);
+}
+.handle-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-top: 0.6em;
+}
+.handle-form .handle-at {
+  color: var(--text-3);
+  font-family: var(--font-sans);
+}
+.handle-form input {
+  width: 12em;
+  padding: 0.35em 0.6em;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-input);
+  background: var(--bg-2);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+.handle-save {
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-btn);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.handle-hint {
+  flex-basis: 100%;
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+}
+
+/* ── RSVP fast-reader overlay ────────────────────────────────────────────── */
+.rsvp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  background: var(--bg);
+  padding: 1.5rem;
+}
+.rsvp-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  line-height: 1;
+}
+.rsvp-close:hover {
+  color: var(--text);
+}
+.rsvp-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4em;
+}
+.rsvp-word {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 9vw, 4.5rem);
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+.rsvp-bar {
+  width: min(90%, 640px);
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+.rsvp-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--text-2);
+}
+.rsvp-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.rsvp-btn {
+  border: 1px solid var(--border-2);
+  background: var(--bg-2);
+  color: var(--text);
+  border-radius: var(--r-pill);
+  width: 2.6em;
+  height: 2.6em;
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+.rsvp-btn:hover {
+  background: var(--bg-3);
+}
+.rsvp-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.rsvp-range {
+  accent-color: var(--text-2);
 }
 .action-menu-list a,
 .action-menu-list button {
@@ -1763,12 +1969,24 @@ html[data-theme="dark"] .action-menu-list {
   padding: 1.6rem 1.8rem 2rem;
 }
 .article-title {
-  font-size: var(--fs-2xl);
+  font-size: calc(var(--fs-2xl) * var(--reader-scale, 1));
   font-weight: 700;
   margin: 0 0 0.3em;
   line-height: 1.2;
   letter-spacing: -0.025em;
   color: var(--text);
+}
+
+/* Reader preference (Aa popover on note pages) — scales the article body
+   and swaps its font. Defaults leave every value at its design token. */
+html[data-reader-size="s"] {
+  --reader-scale: 0.9;
+}
+html[data-reader-size="l"] {
+  --reader-scale: 1.16;
+}
+html[data-reader-font="sans"] {
+  --reader-font: var(--font-sans);
 }
 .note-image {
   display: block;
@@ -1783,7 +2001,8 @@ html[data-theme="dark"] .action-menu-list {
   margin: 0.4em 0;
 }
 .article-body {
-  font-size: var(--fs-md);
+  font-size: calc(var(--fs-md) * var(--reader-scale, 1));
+  font-family: var(--reader-font, var(--font-serif));
   line-height: 1.82;
   margin-top: 0.75em;
   color: var(--text-2);
@@ -1792,12 +2011,12 @@ html[data-theme="dark"] .action-menu-list {
   margin-top: 0;
 }
 .article-body h2 {
-  font-size: var(--fs-lg);
+  font-size: calc(var(--fs-lg) * var(--reader-scale, 1));
   margin: 1.8em 0 0.55em;
   color: var(--text);
 }
 .article-body h3 {
-  font-size: var(--fs-md);
+  font-size: calc(var(--fs-md) * var(--reader-scale, 1));
   margin: 1.5em 0 0.4em;
   color: var(--text);
 }
@@ -2333,10 +2552,10 @@ pre.mermaid {
     padding: 2rem 2.4rem 2.5rem;
   }
   .article-title {
-    font-size: var(--fs-2xl);
+    font-size: calc(var(--fs-2xl) * var(--reader-scale, 1));
   }
   .article-body {
-    font-size: var(--fs-md);
+    font-size: calc(var(--fs-md) * var(--reader-scale, 1));
   }
 }
 

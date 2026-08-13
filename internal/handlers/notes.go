@@ -314,6 +314,10 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("GetNote userHasLiked %s: %v", n.ID, err)
 	}
+	saved, err := userHasSaved(r.Context(), s.DB, viewerID, n.ID)
+	if err != nil {
+		log.Printf("GetNote userHasSaved %s: %v", n.ID, err)
+	}
 	viewerFollows, err := userFollows(r.Context(), s.DB, viewerID, n.AuthorID)
 	if err != nil {
 		log.Printf("GetNote userFollows %s: %v", n.ID, err)
@@ -337,6 +341,7 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		"ReadingMinutes": readingMinutes(n.BodyMD),
 		"LikeCount":      likeN,
 		"Liked":          liked,
+		"Saved":          saved,
 		"ViewerLoggedIn": viewer != nil,
 		"IsAuthor":       viewer != nil && viewer.ID == n.AuthorID,
 		"IsHidden":       n.HiddenAt.Valid,

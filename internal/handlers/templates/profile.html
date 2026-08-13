@@ -16,6 +16,24 @@
     <a href="/me/avatar">編輯大頭貼</a>
     <span class="crumb-sep">·</span>
     <a href="/write">寫筆記</a>
+    <span class="crumb-sep">·</span>
+    <details class="handle-edit">
+      <summary>改用戶名</summary>
+      <form method="POST" action="/settings/handle" class="handle-form">
+        <span class="handle-at">@</span>
+        <input
+          type="text"
+          name="handle"
+          value="{{.Profile.Handle}}"
+          pattern="[a-z0-9]([a-z0-9-]{0,28}[a-z0-9])?"
+          maxlength="30"
+          required
+          aria-label="新的用戶名"
+        />
+        <button type="submit" class="handle-save">儲存</button>
+        <span class="handle-hint">小寫英數字與連字號 · 連結不會斷（用 UUID）</span>
+      </form>
+    </details>
   {{end}}
 </p>
 {{if and .IsSelf .Pinned}}
