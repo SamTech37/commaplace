@@ -23,9 +23,18 @@ services:
         generateValue: true
       - key: SEED_DEV
         value: "1"
-      # Fill in after the first deploy, once Render shows you the
-      # https://<service>.onrender.com hostname.
+      # Public origin. Google OAuth derives its redirect URI from this
+      # (BASE_URL + /auth/google/callback), so it must match the URI
+      # registered in the Google Cloud console exactly — no trailing slash.
       - key: BASE_URL
+        value: https://commaplace.app
+      # Google OAuth. The client ID is public (it ships in the consent-page
+      # redirect the browser follows); the secret never lands in git — set it
+      # once in Render, and the "Continue with Google" button appears as soon
+      # as both are present.
+      - key: GOOGLE_CLIENT_ID
+        value: 826692770873-jvkl14nvmkvpb7qfevn4glbvbkjqsuor.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
       # Optional — your handle, lower-case, to unlock /admin/reports.
       - key: ADMIN_HANDLE
