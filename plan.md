@@ -1,6 +1,6 @@
 # Plan
 
-## 🌙 2026-07-24 overnight 自動開發成果（branch `claude/roadmap-work-0zcjnb`）
+## 🌙 2026-07-24 overnight 自動開發成果（PR #10，2026-08-13 併入 main）
 
 一次過把〈開發決定〉裡「✅ 要做、且不需外部帳號」的項目逐一做完、各自 build+test+瀏覽器實測+commit+push。全部 7 個 feature 已推上分支，`go test -p 1 ./...` 全綠。
 
@@ -27,6 +27,17 @@
 
 > 註：〈真人手動工作清單〉與完整〈開發決定〉在另一分支 `claude/manager-direction-plan-review-0zcjnb`（已推、未合併）。
 
+**合併後修的（2026-08-13，commit `e0b44e3`）：**
+- `handleRE` 放行 1 字用戶名，錯誤訊息卻寫 2–30；regex 與 input `pattern` 一起收緊。
+- 閱讀選項的 `aria-pressed` 只有 JS 上得了，JS 掛掉就全部沒有選中態；改成 server HTML 就帶。
+- `.rsvp-close` 只有字大小，遠低於 44px 觸控目標，而 overlay 只剩 Esc 可退。
+- 改用戶名表單放在 `<p>` 裡，但 `<details>` 是 block，parser 會提前關掉段落 → meta 行留一個孤兒 `·`，表單被踢出該行。改用 `<div>`。
+- `.handle-form`、`.rsvp-speed` 只寫 `display:flex` 沒寫方向，被全域 `form`/`label` 的 `flex-direction: column` 蓋掉，排成直的。兩處都補上 `row`。
+  後兩項 diff 看不出來，是實際開瀏覽器才發現的。
+
+**注意：`/me/saved` 會從空的開始。** migration 006 只建表不搬資料，之前存在 `likes` 的收藏不會帶過來。要帶的話：
+`INSERT INTO saves SELECT user_id, note_id, created_at FROM likes ON CONFLICT DO NOTHING;`
+
 ## 三人內部發文 MVP（2026-07-20 — 現在的最高優先）
 
 **目標：三個團隊成員能在正式站（https://commaplace.app）登入、發文、互相看到。其他一切先不管。**
@@ -35,7 +46,8 @@
 
 - [/] **Step 0 — Render 後台設定**
   - [x] Blueprint 部署（`render.yaml`），自訂網域 commaplace.app 接上（www 301 導到 apex）（2026-08-13）
-  - [ ] merge PR #9（CI + 減少動畫），開 Auto-Deploy
+  - [x] merge PR #9（CI + 減少動畫）
+  - [ ] Render 後台開 Auto-Deploy（手動開關）
   - [x] 設 `PLAYTEST_LOGIN_KEY`，三人用 `/_dev/login?as=<handle>&key=<key>` 登入
   - [ ] 關 `SEED_DEV`（`render.yaml` 改 `"0"`），別再每次部署塞 alice/bob
   - [ ] 決定現有假資料砍掉重來還是留著。DB 還在可拋棄階段，砍掉最乾淨
@@ -43,7 +55,7 @@
   - [x] B. Google OAuth 通了（2026-08-13）。同 email 歸戶邏輯仍未實測
   - [ ] A. SMTP：申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式已完成，純設定。順帶完成下面「test Magic Link」
 - [x] **Step 2 — DB 保命**：已無此問題。Blueprint 本身就要付費方案，DB 跟著是付費的，沒有 free tier 30 天砍檔那回事（`.claude/budget-render.md` 的免費方案討論已過期）
-- **明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記、/random
+- **明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記
 
 ### Google OAuth（2026-08-13 通了）
 
