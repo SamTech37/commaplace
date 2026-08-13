@@ -112,6 +112,13 @@ One-line rule for CLAUDE.md:
 - **真的需要提示，放 `title` 或欄位自身的驗證**，不要當成內文塞在版面上。
 - 法務頁（`/terms`、`/privacy`）例外，那裡的字是有法律作用的。
 
+## Flex 方向要寫出來
+
+`style.css` 全域有 `form { flex-direction: column }` 和 `label { flex-direction: column }`。
+任何想排成橫列的 form/label，只寫 `display: flex` 會被蓋掉、直接變直排——而且 diff 上看不出來。
+橫列就把 `flex-direction: row` 寫出來。（`.handle-form`、`.rsvp-speed` 都中過；
+`.follow-form`、`.add-vault-form` 同樣沒寫方向，還沒出事。）
+
 ## 不做
 
 - 無彩色（accent blue、teal、red 全移除）
