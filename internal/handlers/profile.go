@@ -109,7 +109,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	data["ViewerLoggedIn"] = viewer != nil
 	data["Tab"] = tab
 	if isSelf {
-		data["Email"] = viewer.Email
 		data["Pinned"], _ = pinnedNoteForUser(r.Context(), s.DB, profile.ID)
 	}
 	s.render(w, r, "profile", data)
