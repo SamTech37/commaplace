@@ -2,52 +2,43 @@
 
 ## 三人內部發文 MVP（2026-07-20 — 現在的最高優先）
 
-**目標:三個團隊成員能在正式站（https://www.commaplace.app）登入、發文、互相看到。其他一切先不管。**
+**目標：三個團隊成員能在正式站（https://commaplace.app）登入、發文、互相看到。其他一切先不管。**
 
-程式功能其實已經夠了（CRUD / feed / wikilink / like 都能用）；卡住的是「登入」和「正式站是假資料 demo 站」。所以這幾乎全是設定工作,不是開發工作。
+功能本身夠了（CRUD、feed、wikilink、like 都能用）。卡住的是登入，以及正式站塞滿假資料。剩下的幾乎都是設定，不是寫程式。
 
-- [/] **Step 0 — 今天就能上（全是 Render 後台設定,不寫程式）**
-  - [x] Render Blueprint 部署完成(`render.yaml`),自訂網域 **commaplace.app** 已接上(2026-08-13)
-  - [ ] merge PR #9(CI + 減少動畫),Render 後台開啟 Auto-Deploy
-  - [ ] Render 設 `PLAYTEST_LOGIN_KEY`,三人先用 `/_dev/login?as=<handle>&key=<key>` 登入 — 這個 stopgap 已經寫好,就是為此準備的
-  - [ ] 關 `SEED_DEV`(render.yaml 改 `"0"`)— 別再每次部署塞 alice/bob 假資料
-  - [ ] 決定:現有假資料砍掉重來,還是留著?(DB 仍是可拋棄階段,砍掉最乾淨)
-- [/] **Step 1 — 本週:真登入,擇一就好**
-  - [ ] A(建議). SMTP:申請一家郵件服務 free tier(Resend / Brevo / Postmark),Render 填 `SMTP_HOST/PORT/USER/PASS/FROM` — magic link 程式已完成,純設定;順便完成下面「test Magic Link」那項
-  - [/] B. Google OAuth:Console credentials 已建、Render `GOOGLE_CLIENT_ID/SECRET` 已填,但 consent 頁噴 `Error 400: invalid_request` — 見下面「Google OAuth 部署設定」
-  - 建議 A 的理由:零程式改動、三人都有 email;OAuth 的同 email 歸戶邏輯已寫但未實測,等有 SMTP 後再驗
+- [/] **Step 0 — Render 後台設定**
+  - [x] Blueprint 部署（`render.yaml`），自訂網域 commaplace.app 接上（www 301 導到 apex）（2026-08-13）
+  - [ ] merge PR #9（CI + 減少動畫），開 Auto-Deploy
+  - [ ] 設 `PLAYTEST_LOGIN_KEY`，三人用 `/_dev/login?as=<handle>&key=<key>` 登入
+  - [ ] 關 `SEED_DEV`（`render.yaml` 改 `"0"`），別再每次部署塞 alice/bob
+  - [ ] 決定現有假資料砍掉重來還是留著。DB 還在可拋棄階段，砍掉最乾淨
+- [/] **Step 1 — 真登入**
+  - [x] B. Google OAuth 通了（2026-08-13）。同 email 歸戶邏輯仍未實測
+  - [ ] A. SMTP：申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式已完成，純設定。順帶完成下面「test Magic Link」
+- [ ] **Step 2 — DB 保命**：Render free Postgres 30 天到期整個刪掉（見 `.claude/budget-render.md`）。查 `comma-db` 到期日，要長期用就升 Basic-1gb（$19/mo），至少先設到期提醒
+- **明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記、/random
 
-### Google OAuth 部署設定(2026-08-13,尚未收尾)
+### Google OAuth（2026-08-13 通了）
 
-症狀:`redirect_uri=comma.onrender.com/auth/google/callback` → `Error 400: invalid_request`。
+redirect URI 整串是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`），Google 逐字比對，`www.` 有無算兩個 host。後台手改過的 env var 會蓋掉 `render.yaml`。`Error 400: invalid_request` 就是看 `redirect_uri=` 那串對不對。
 
-原因:Render 後台的 `BASE_URL` 少了 scheme(而且還是舊的 onrender 網域)。`RedirectURL = BaseURL + "/auth/google/callback"`(`cmd/server/main.go:176`),沒有 `https://` 就不是合法絕對 URI,Google 直接擋掉。Blueprint 裡寫的是對的,但後台手改過的 env var 會蓋掉 Blueprint 值。
+實測（2026-08-13 curl）：**apex `commaplace.app` 才是主網域，`www` 301 導到 apex**。但 `BASE_URL` 設的是 www，所以現在能登入是靠運氣：`oauth_state` cookie 沒有 `Domain`，只綁 apex；Google 把人送到 www 的 callback，www 301 回 apex 時**有帶著 query string**，cookie 才送得出去。哪天那個 301 不保留 query，登入就掛 `invalid OAuth state`。
 
-實際 host(2026-08-13):Render 預設網域是 `comma-c8h6.onrender.com`(不是 `comma.onrender.com`),自訂網域是 **`www.commaplace.app`**(有 www)。Google 逐字比對 redirect URI,`www.` 有無算不同 host。
-
-- [ ] Render → 服務 → Environment:`BASE_URL` 改成 `https://www.commaplace.app`(無尾斜線)→ redeploy
-- [ ] Google Cloud Console → Credentials → OAuth client → Authorized redirect URIs 三個都加:
-      `https://www.commaplace.app/auth/google/callback`、
-      `https://comma-c8h6.onrender.com/auth/google/callback`、
-      `http://localhost:8080/auth/google/callback`
-- [ ] 同頁 Authorized JavaScript origins 加 `https://www.commaplace.app`
-- [ ] 確認 Render 自訂網域已驗證、憑證已簽發
-- [ ] Render 自訂網域也加 apex `commaplace.app`(Render 會自動 301 → www),否則有人直接打裸網域會連不上。裸網域只當入口,`BASE_URL` 維持 www — OAuth callback 落在會被 301 的 host 上會壞
-- [x] `loadConfig` 加防呆:`BASE_URL` 去尾斜線、缺 scheme 自動補 `https://`,避免同樣的 400 再發生
-- [ ] **Step 2 — DB 保命(別漏)**:Render free Postgres **30 天到期會整個刪掉**(見 `.claude/budget-render.md`)。查 `comma-db` 到期日;要長期用就升 Basic-1gb($19/mo),至少先設個到期提醒
-- **明確不做**(等三人真的用起來再說):timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記、前端簡繁切換、/random
+- [ ] `BASE_URL` 改成 apex `https://commaplace.app`，Console 加 `https://commaplace.app/auth/google/callback`。少一跳，也不再依賴 301 的行為
+- [ ] `render.yaml` 的 `GOOGLE_CLIENT_ID` 是舊的（`...jvkl14nv...`，線上跑的是 `...gvmbdlsl...`）。重跑 Blueprint 會換掉 OAuth client，那支的 Console 不見得註冊了這些 callback
 
 ## Next Step
 - [x] review and merge changes from `branch/killer`
-- [ ] 測試 Google OAuth 登入功能 
-	- [ ] OAuth2.0 要可以提醒使用者他用什麼管道/平台註冊的 (e.g. identify by same email)
-	- [ ] 用 magic link 登入又用同一支 gmail 登入的話要歸戶給同一個人
+- [/] 測試 Google OAuth 登入功能
+	- [x] 正式站登入走得通（2026-08-13，見上面「Google OAuth 部署設定」）
+	- [ ] 要能提醒使用者他當初用哪個管道註冊的（用 email 認人）
+	- [ ] magic link 跟同一支 gmail 登入要歸戶給同一個人。程式碼寫了，沒實測過
 - [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
 - [ ] need random / suprise-me / I'm feeling lucky button or page
 
-- [x] minimal deployment to Render — **LIVE** at https://www.commaplace.app (Render 預設網域 `comma-c8h6.onrender.com` 仍可用)
-  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres, `render.yaml` Blueprint, env vars in `.env.example`/README. Blueprint 部署 + 自訂網域 www.commaplace.app 完成 2026-08-13。
+- [x] minimal deployment to Render — **LIVE** at https://commaplace.app (www 301 導到 apex；Render 預設網域 `comma-c8h6.onrender.com` 仍可用)
+  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres, `render.yaml` Blueprint, env vars in `.env.example`/README. Blueprint 部署 + 自訂網域 commaplace.app 完成 2026-08-13。
 - [ ] CI/CD pipeline (not yet established — currently manual)
   - Render DOES auto-deploy on push to the connected branch (Vercel-style): enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
   - But Render has **no built-in test gate** like Vercel checks. Render's "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for migrations, weak as a test gate (a failure there blocks the deploy but burns a build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push (the gate); Render auto-deploys on merge to `main` (the deploy).**
@@ -115,12 +106,12 @@
   - [ ] 需要實際試用看看
 - [ ] 付費牆管理 (payment handling)
   - **Stripe is out:** no US company + geopolitical friction blocks direct Stripe.
-  - **Does this gate launch? No.** Monetization gates revenue, not release. Launch free, validate the cross-vault rabbit-hole thesis with real users, add payments once there's demonstrated willingness to pay. The real blocker is demand, not the integration. (Don't build the paywall before there's something worth paying for.)
-  - **When needed → Merchant-of-Record (MoR).** The MoR is the legal seller of record; they handle entity, global tax/VAT, and pay out to you — no US presence required. This is the standard "no US company" answer.
+  - Doesn't gate launch. Launch free, validate the cross-vault rabbit-hole thesis with real users, add payments once someone shows willingness to pay. The blocker is demand, not the integration.
+  - When needed: Merchant-of-Record (MoR). The MoR is the legal seller of record — handles entity, global tax/VAT, pays out to you. No US presence required.
     - Candidates: **Paddle**, **Lemon Squeezy**, **Gumroad** (all MoR, indie-friendly).
-    - Taiwan-local alternative (needs a TW business entity): **ECPay (綠界)**, **NewebPay (藍新)**, **TapPay** — native TW methods (信用卡/ATM/超商).
+    - Taiwan-local alternative (needs a TW business entity): **ECPay** (綠界), **NewebPay** (藍新), **TapPay** — native TW methods (信用卡/ATM/超商).
     - ⚠️ VERIFY Taiwan **seller/payout eligibility** on each platform's supported-countries page before committing — this changes and is unverified.
-  - **DECISION: launch free + lightweight tips/donations now; full MoR paywall later.** Tips double as the willingness-to-pay signal that tells us *when* to build the real paywall.
+  - Decision: launch free + lightweight tips/donations now, full MoR paywall later. Tips are also the willingness-to-pay signal that says when to build the real paywall.
   - **Tips/donations vendor (no company needed):** **Ko-fi** or **Buy Me a Coffee** — both take one-time tips, route through their own PayPal/Stripe, payout to a TW bank, zero/low platform cut, just embed a link/button. Recommended over a raw PayPal.me button because [Unverified] Taiwan PayPal accounts have historically had receiving/withdrawal restrictions — verify before relying on bare PayPal.
   - Full paywall (later) = Merchant-of-Record, see candidates above.
   - paid features and incentives: 
@@ -145,51 +136,51 @@
 
 ## Tech Stack & Frontend Direction
 
-Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations). Context: 3-founder team — one backend/ponytail, two design/product who *will* push richer UI/UX over the product cycle. So the call is not "least JS now" but "what substrate survives feature #20 without a React rewrite."
+Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations). 3 founders: one backend, two design/product who will keep pushing richer UI. So the question isn't "least JS now", it's what survives feature #20 without a React rewrite.
 
-### Server / Rendering — Keep As-is
-- Go `net/http` (1.22 patterns) + stdlib `html/template` + `//go:embed` → **single static binary, no build tooling.** This is the right shape; not changing it.
+### Server / rendering — keep as is
+- Go `net/http` (1.22 patterns) + stdlib `html/template` + `//go:embed` → **single static binary, no build tooling.** Not changing it.
 - Postgres via `pgx/v5` (README was stale, said SQLite — fixed). FTS = `tsvector`+GIN.
 
-### Htmx — Keep, Adopt the Best Practices We're Missing
-- Vendored `htmx.min.js` + hand-written `hx-*` attributes **is** the best practice.
-- **Reject** `htmgo` (full framework rewrite off stdlib, max lock-in) and `donseba/go-htmx` (wraps ~10 lines of header reads we already do — negative ROI).
-- **Fix the one wheel we reinvented:** replace the `?partial=1` query param with the native `HX-Request` header (`r.Header.Get("HX-Request")`).
+### htmx — keep, adopt the native patterns we're missing
+- Vendored `htmx.min.js` + hand-written `hx-*` attributes is what the htmx docs themselves recommend.
+- Rejected: `htmgo` (full framework rewrite off stdlib, max lock-in) and `donseba/go-htmx` (wraps ~10 lines of header reads we already do).
+- One wheel we reinvented: replace the `?partial=1` query param with the native `HX-Request` header (`r.Header.Get("HX-Request")`).
 - **Adopt incrementally as features need them** (all native, zero deps): OOB swaps (`hx-swap-oob`), `HX-Trigger` response header (decoupled toasts/events), `hx-indicator`+view-transitions (FOUC fix), `hx-boost`.
 
-### Alpine.js — ADOPT (Vendored, no bUild sTep)
-- The forward bet for client-side state the design/product founders will want (popovers, multi-step UI, optimistic toggles, persisted prefs via `$persist`).
-- htmx for server-driven 90%, Alpine for the stateful 10% — the proven pairing.
+### Alpine.js — adopt (vendored, no build step)
+- For the client-side state the design/product founders will want: popovers, multi-step UI, optimistic toggles, persisted prefs via `$persist`.
+- htmx for the server-driven 90%, Alpine for the stateful 10%.
 - One vendored `alpine.min.js` + `defer` in `_base.html`. Single binary intact.
 - **Roll in incrementally, not big-bang:** first the feed layout-restore script, then the wiki-autocomplete popup state (the worst hand-rolled state machine, cmeditor.js). Leave EasyMDE (editor core) and the canvas graph alone — Alpine doesn't help either.
 
-### Templ — DEFER (Adopt lAter, not nOw)
-- Type-safe Go templates (JSX-like, compiles `.templ`→`.go`). Genuinely attractive for a JS/TS-primary team and would catch the silent `map[string]any` template-bag typos at compile time.
-- **Cost blocks it today:** adds a `templ generate` codegen step → breaks the "no build tooling" property and complicates `go:embed` (embed generated Go, not `.html`). Both Go reviewers said no *at current size* (18 templates).
-- **Sequencing rule (important):** do NOT migrate to templ *before* the Meta-App view-substrate refactor — that's a double migration. Refactor in stdlib first, let the shared component boundary (`NoteListView`) stabilize, *then* templ is a mechanical port of one clean component instead of 18 ad-hoc templates.
-- **Adopt trigger:** when templates exceed ~25, OR a second founder starts writing templates regularly, OR the view-substrate refactor has landed and we want the shared card components type-checked. Revisit then.
+### templ — defer
+- Type-safe Go templates (JSX-like, compiles `.templ`→`.go`). Attractive for a JS/TS-primary team, and would catch the silent `map[string]any` template-bag typos at compile time.
+- Cost today: adds a `templ generate` codegen step → breaks the "no build tooling" property and complicates `go:embed` (embed generated Go, not `.html`). Both Go reviewers said no *at current size* (18 templates).
+- Sequencing: do not migrate to templ *before* the Meta-App view-substrate refactor — that's a double migration. Refactor in stdlib first, let the shared component boundary (`NoteListView`) stabilize, *then* templ is a mechanical port of one clean component instead of 18 ad-hoc templates.
+- Adopt when templates exceed ~25, OR a second founder starts writing templates regularly, OR the view-substrate refactor has landed and we want the shared card components type-checked. Revisit then.
 
-### Cheap Win — Get the Partial Benefit Free now
+### Typed template structs — templ's main win, without templ
 - Replace the loose `map[string]any` template data bags with typed structs per page — most of templ's type-safety, zero toolchain cost.
 - **Decision (2026-07-05):** do this *as prep for* the Meta-App view-substrate refactor, not instead of it — typed structs make that refactor itself safer (compiler catches field-name/type mistakes during the `feedItem`/`profileNote`/`searchHit` → `feedCard` consolidation) without paying for a templ build step yet. Full templ adoption stays gated on the trigger above; re-audited 2026-07-05 and neither condition has fired (still 18 registered templates, refactor still not started).
 
-### Code-organization Debt (Not a Framework Problem)
-- `notes.go` is an 800-line god file (CRUD + link resolution + backlinks + stats). Split into `notes.go` / `links.go` / `notestats.go` — tidy within existing structure. This is why "which file is the main logic" is unanswerable today.
+### Code-organization debt
+- `notes.go` is 800 lines (CRUD + link resolution + backlinks + stats). Split into `notes.go` / `links.go` / `notestats.go`. This is why "which file is the main logic" has no answer today.
 - Card-type duplication (`feedItem`/`profileNote`/`searchHit` + 5 scan loops) → collapse to `feedCard` in the Meta-App view-substrate refactor (see spec).
 
-### Fonts / CJK Delivery — Current + Options on the Table
+### Fonts / CJK delivery
 
 **Now (shipped):** self-hosted, unicode-range-split Source Han Serif **TC** via `cn-font-split` (668 woff2 chunks + generated `@font-face` CSS in `static/fonts/tc/`). Browser fetches only chunks with on-page glyphs (~3.6MB/dense page, cached) instead of the 19.7MB monolith. Originals kept in `fonts-src/` (out of `go:embed`). Self-hosted = single static binary, no external dep, no Google. **SC not split yet** — re-run cn-font-split when simplified-Chinese ships (`fonts-src/README.md`).
 
-**Why chunking isn't automatic:** the browser can't subset a remote monolithic font; the split must be precomputed by a tool. CDNs (Google/Adobe/Fontsource) do it on their server — that's the convenience. Self-hosting = we own the step. The truly-automatic future is W3C **Incremental Font Transfer (IFT)**, not deployed yet.
+Chunking isn't automatic: the browser can't subset a remote monolithic font, so the split must be precomputed by a tool. CDNs (Google/Adobe/Fontsource) do it on their server. Self-hosting means we own that step. W3C Incremental Font Transfer (IFT) would automate it, but isn't deployed yet.
 
-**The scaling ceiling:** each extra self-hosted CJK family ≈ +34MB binary, +668 files. One reading serif is fine; a multi-font **picker** (sans + serif + weights + SC variants) would bloat the binary (~155MB / ~2,700 files for 4 families). Per-page egress stays bounded (user loads one font), but repo/binary size doesn't.
+Scaling ceiling: each extra self-hosted CJK family ≈ +34MB binary, +668 files. One reading serif is fine; a multi-font **picker** (sans + serif + weights + SC variants) would bloat the binary (~155MB / ~2,700 files for 4 families). Per-page egress stays bounded (user loads one font), but repo/binary size doesn't.
 
 **Options when we add more fonts (don't embed family #2 — switch delivery):**
 - **jsDelivr + Fontsource** (recommended non-Google) — serves Noto Sans/Serif CJK already unicode-range-chunked. jsDelivr is a neutral open-source CDN (no Google tracking). Zero binary weight, cross-site browser cache, N families ~free.
 - **Google Fonts CSS API** — most automatic, best-tuned chunking, but external dep + Google privacy (user finds distasteful). Fallback if jsDelivr insufficient.
 - **System sans is already free** — UI chrome uses `-apple-system…sans-serif`; system CJK sans (PingFang / MS YaHei / Noto Sans) needs no download. The *downloaded* font is the reading serif (the differentiator) — we may never need a downloaded CJK sans.
-- **Decision rule:** keep the single self-hosted serif now; when the font picker ships (Should-Have, post-launch), move CJK webfonts to jsDelivr/Fontsource rather than embedding a 2nd 34MB family. Embedding family #2 is the line not to cross. Swapping to the CDN is a ~10-min change.
+- Keep the single self-hosted serif now. When the font picker ships (Should-Have, post-launch), move CJK webfonts to jsDelivr/Fontsource instead of embedding a 2nd 34MB family. Family #2 is the line not to cross; swapping to the CDN is a ~10-min change.
 
 ## Dev & Testing
 
@@ -218,14 +209,14 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - `invalid OAuth state` → state cookie expired (>5 min between start and callback) or browser blocked cookies
 - `token exchange` error → wrong client secret, or redirect URI doesn't exactly match what's in Google Console
 - `no email in Google userinfo` → scopes missing; ensure `openid` and `email` are listed
-- `Error 400: invalid_request` on the consent page → look at the `redirect_uri=` in the error detail. No `https://` prefix means `BASE_URL` is scheme-less (that's the whole redirect URI: `BASE_URL + /auth/google/callback`). A correct-looking URI means it isn't registered in the Console — check `www.` too, Google matches host literally. Prod uses `https://www.commaplace.app/auth/google/callback`.
+- `Error 400: invalid_request` → read the `redirect_uri=` in the error. No scheme means `BASE_URL` is scheme-less; otherwise it isn't registered in the Console (`www.` counts).
 
 ## Should Have
 
 - [x] 明暗主題
-- [/] 繁簡轉換。
+- [x] 繁簡轉換。
   - [x] 後端搜尋互通：opencc s2t/t2s，已接入 `/search`、wiki-link 與 tag 的 autocomplete（`searchVariants`/`likeAnyVariant`，見 `internal/handlers/search.go`）。
-  - [ ] 前端顯示切換：讀者看到的內容仍是作者原字體，尚未實作 topbar 三態切換（原文/简/繁）— 規劃見 `.claude/frontend-opencc-plan.md`，尚未動工。
+  - [x] 前端顯示切換：topbar 三態鈕 原→简→繁（`static/opencc-toggle.js` + vendored `opencc.min.js`），2026-07-05 上線。
   - [x] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
 - [ ] 思源宋體（or 源漾明體、源流明體）
   - [x] https://github.com/adobe-fonts/source-han-serif
@@ -234,7 +225,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - [ ] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks, or whatever）。
 - [x] 減少動畫設定 (reduce-motion toggle) — shipped per the design below, as a topbar icon button (動, next to the theme toggle) instead of a checkbox to match the existing 原/简 toggle pattern. One deviation from the design: at 0.001ms Chromium never fires `transitionend` (rounds to 0 → no transition event), so reveal.js's clip-path cleanup can't be relied on in reduced mode — solved with `clip-path: none !important` on `[data-reveal]` in both reduced contexts, which also neutralizes the inline pre-reveal clip. Verified headless (toggle + OS `prefers-reduced-motion`): animations instant, no stuck-clipped elements, persists across reload pre-paint, no console errors.
 
-### Reduce Motion — Design (Pure fRontend, no bAckend)
+### Reduce motion — design (frontend only)
 
 Covers the `.content` `pageFadeIn` CSS keyframe (style.css ~198-210) and the `[data-reveal]` scroll-reveal system (`reveal.js` + style.css ~166-195), including the htmx afterSwap/beforeSwap inline opacity fade in `reveal.js` ~79-90. Single on/off toggle, `localStorage` only — no `users` DB column, no new route/handler. (Original draft mirrored the `users.theme` DB-column pattern; unnecessary here — this preference has no reason to sync across devices, unlike dark/light mode, and a one-time flash of full motion on first load elsewhere is low-stakes.)
 
@@ -310,19 +301,19 @@ Verification: DevTools Rendering tab → emulate `prefers-reduced-motion: reduce
   - [ ] writing queue?
   - [ ] reading?
 
-### Benchmark Findings (2026-06-20, Local `benchmark` DB, 100 Users × 1000 Notes = 100K Notes / 300K note_tags / 100K Resolved Links)
+### Benchmark findings (2026-06-20, local `benchmark` DB, 100 users × 1000 notes = 100K notes / 300K note_tags / 100K resolved links)
 
 Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod), `EXPLAIN ANALYZE` on the hot query paths. Numbers are local single-query (no concurrency); treat as relative, not absolute prod latency.
 
 | Query                                                                | @100K       | Verdict                                                                                                                  |
 | -------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Feed (recommended, `idx_notes_feed`)                                 | **0.07 ms** | Flat vs 200 rows — partial index does index-scan-stop-at-LIMIT, never sorts 90K. Index **vindicated** at forecast scale. |
+| Feed (recommended, `idx_notes_feed`)                                 | **0.07 ms** | Flat vs 200 rows — partial index does index-scan-stop-at-LIMIT, never sorts 90K. Index holds at forecast scale. |
 | **Tag-chips aggregate** (`loadTopTagChips`, runs on EVERY feed load) | **~40 ms**  | 🔴 **Only real bottleneck.** HashAggregate over full note_tags⋈notes join. Grows with table.                             |
 | Tag page (sort after join)                                           | ~21 ms      | 🟡 Slowest page, tolerable, watch.                                                                                       |
 | Backlinks (`idx_links_resolved`)                                     | fast        | Bitmap scan, fine.                                                                                                       |
 | FTS                                                                  | n/a         | Test invalid (every seeded body matched the term); re-test with varied corpus.                                           |
 
-- **Conclusion:** feed architecture holds at the 100K forecast. The index/N+1 changes from the arch review are unmeasurable at current 200-row scale but correct forward — feed stays O(LIMIT) not O(N).
+- Feed architecture holds at the 100K forecast. The index/N+1 changes from the arch review are unmeasurable at the current 200-row scale, but correct going forward: feed stays O(LIMIT), not O(N).
 - [ ] **Tag-chips fix (when it bites, not now — 40 ms is fine today):** it changes slowly, so cache it (Render Key Value / in-process TTL map) or drop it off the synchronous feed render. Don't optimize until it's on the measured hot path for real traffic. See "speed up tags" options below.
 - [ ] **Concurrency untested** — single-query SQL ≠ concurrent load. Needs an HTTP load tool (k6 / vegeta) against the running binary: connection-pool saturation, write contention. Separate exercise.
 - Reproduce: `benchmark` DB lives in the local docker postgres; reseed script in session notes. DBs: prod (Render), `commaplace` (dev), `benchmark` (load), `commaplace_test` (tests).
@@ -334,7 +325,7 @@ Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod)
 	- [ ] **TODO: squash `internal/db/migrations/001_init.sql`…`005_*.sql` into one file before beta launch.** Once real user data exists this squash-anytime freedom ends (per the "Revisit when" in Decision 3, `docs/DECISIONS.md`) — do it while the DB is still disposable, not after.
 - [ ] liked and saved should be separated
   - [ ] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
-  - [ ] 收藏清單, playlist 管理, *cf.* Spotify's feels clunky, Youtube's alright, 小紅書 might be good
+  - [ ] 收藏清單、playlist 管理，*cf.* Spotify's feels clunky, Youtube's alright, 小紅書 might be good
 - [ ] distinctions
   - [ ] inbound/outbound links
   - [ ] linked by self or by others
@@ -346,4 +337,5 @@ Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod)
 - [x] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
 - [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
 - [x] auto-save draft causing empty-title-empty-body drafts to pile up — root cause found (2026-07-05): `/write` inserts a fresh empty draft row on every page load; `sweepOrphanDrafts` only prunes them opportunistically on a later `/write` visit (7-day cutoff), not on a schedule. Didn't change the sweep cadence (out of scope, revisit only if still a problem); shipped a manual escape hatch instead — bulk-delete-drafts feature (checkbox multi-select on the profile drafts tab, `POST /api/notes/bulk-delete`, soft-delete, drafts-only).
+- [x] 個人頁把自己的 email 印在 profile 上（2026-08-13 移除）。只有本人看得到（`{{if .IsSelf}}`），沒外洩，但也沒理由印。`profile.html` 的 `<span>{{.Email}}</span>` 跟 `profile.go` 的 `data["Email"]` 一起刪掉。email 只剩 `/admin` 看得到
 - [x] publish guard sometimes wrongly blocked a titled note from publishing — two real bugs found+fixed (2026-07-05): (1) client-side, a failed autosave (e.g. a slug collision) didn't stop the publish click, so the server still held the old/empty title when `PublishNote` ran its check (`cmeditor.js` `save()` now rejects on failure); (2) server-side, an emoji/punctuation-only title made `kebabSlug` return `""`, so the slug stayed at its `draft-*` seed value forever, which the publish guard blocks (`PatchNote` now falls back to a non-`draft-` slug in that case).
