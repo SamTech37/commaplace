@@ -174,7 +174,6 @@
             {{else}}
             <a href="/feed">{{.Nav.Feed}}</a>
             <a href="/graph">{{.Nav.Graph}}</a>
-            <a href="/login">{{.Nav.Login}}</a>
             {{end}}
           </div>
 
@@ -261,10 +260,13 @@
               {{else}}
               <a href="/feed">{{.Nav.Feed}}</a>
               <a href="/graph">{{.Nav.Graph}}</a>
-              <a href="/login">{{.Nav.Login}}</a>
               {{end}}
             </div>
           </details>
+
+          {{if not .User}}
+          <a href="/login" class="nav-login">{{.Nav.Login}}</a>
+          {{end}}
         </nav>
       </header>
       <main class="content">{{block "content" .}}{{end}}</main>
