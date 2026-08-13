@@ -223,14 +223,19 @@ const secretFile = ".session_secret"
 
 // loadOrCreateSecret returns the HMAC secret. Resolution order:
 //
-//  1. SESSION_SECRET env (hex-encoded)
+//  1. SESSION_SECRET env (hex-encoded, else used as raw bytes)
 //  2. .session_secret file (hex-encoded)
 //  3. generate, write the file, return
 //
 // This way prod sets env, dev just runs the binary.
 func loadOrCreateSecret(envValue string) ([]byte, error) {
 	if envValue != "" {
-		return hex.DecodeString(envValue)
+		// ponytail: Render's generateValue emits base64-ish, not hex — any
+		// non-hex value is just used as-is.
+		if b, err := hex.DecodeString(envValue); err == nil {
+			return b, nil
+		}
+		return []byte(envValue), nil
 	}
 	if data, err := os.ReadFile(secretFile); err == nil {
 		return hex.DecodeString(strings.TrimSpace(string(data)))
