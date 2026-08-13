@@ -2,19 +2,38 @@
 
 ## 三人內部發文 MVP（2026-07-20 — 現在的最高優先）
 
-**目標:三個團隊成員能在正式站（commaplace.onrender.com）登入、發文、互相看到。其他一切先不管。**
+**目標:三個團隊成員能在正式站（https://www.commaplace.app）登入、發文、互相看到。其他一切先不管。**
 
 程式功能其實已經夠了（CRUD / feed / wikilink / like 都能用）；卡住的是「登入」和「正式站是假資料 demo 站」。所以這幾乎全是設定工作,不是開發工作。
 
-- [ ] **Step 0 — 今天就能上（全是 Render 後台設定,不寫程式）**
+- [/] **Step 0 — 今天就能上（全是 Render 後台設定,不寫程式）**
+  - [x] Render Blueprint 部署完成(`render.yaml`),自訂網域 **commaplace.app** 已接上(2026-08-13)
   - [ ] merge PR #9(CI + 減少動畫),Render 後台開啟 Auto-Deploy
   - [ ] Render 設 `PLAYTEST_LOGIN_KEY`,三人先用 `/_dev/login?as=<handle>&key=<key>` 登入 — 這個 stopgap 已經寫好,就是為此準備的
   - [ ] 關 `SEED_DEV`(render.yaml 改 `"0"`)— 別再每次部署塞 alice/bob 假資料
   - [ ] 決定:現有假資料砍掉重來,還是留著?(DB 仍是可拋棄階段,砍掉最乾淨)
-- [ ] **Step 1 — 本週:真登入,擇一就好**
+- [/] **Step 1 — 本週:真登入,擇一就好**
   - [ ] A(建議). SMTP:申請一家郵件服務 free tier(Resend / Brevo / Postmark),Render 填 `SMTP_HOST/PORT/USER/PASS/FROM` — magic link 程式已完成,純設定;順便完成下面「test Magic Link」那項
-  - [ ] B. Google OAuth:Console 建 credentials,Render 填 `GOOGLE_CLIENT_ID/SECRET` — 順便完成下面「測試 Google OAuth」那項
+  - [/] B. Google OAuth:Console credentials 已建、Render `GOOGLE_CLIENT_ID/SECRET` 已填,但 consent 頁噴 `Error 400: invalid_request` — 見下面「Google OAuth 部署設定」
   - 建議 A 的理由:零程式改動、三人都有 email;OAuth 的同 email 歸戶邏輯已寫但未實測,等有 SMTP 後再驗
+
+### Google OAuth 部署設定(2026-08-13,尚未收尾)
+
+症狀:`redirect_uri=comma.onrender.com/auth/google/callback` → `Error 400: invalid_request`。
+
+原因:Render 後台的 `BASE_URL` 少了 scheme(而且還是舊的 onrender 網域)。`RedirectURL = BaseURL + "/auth/google/callback"`(`cmd/server/main.go:176`),沒有 `https://` 就不是合法絕對 URI,Google 直接擋掉。Blueprint 裡寫的是對的,但後台手改過的 env var 會蓋掉 Blueprint 值。
+
+實際 host(2026-08-13):Render 預設網域是 `comma-c8h6.onrender.com`(不是 `comma.onrender.com`),自訂網域是 **`www.commaplace.app`**(有 www)。Google 逐字比對 redirect URI,`www.` 有無算不同 host。
+
+- [ ] Render → 服務 → Environment:`BASE_URL` 改成 `https://www.commaplace.app`(無尾斜線)→ redeploy
+- [ ] Google Cloud Console → Credentials → OAuth client → Authorized redirect URIs 三個都加:
+      `https://www.commaplace.app/auth/google/callback`、
+      `https://comma-c8h6.onrender.com/auth/google/callback`、
+      `http://localhost:8080/auth/google/callback`
+- [ ] 同頁 Authorized JavaScript origins 加 `https://www.commaplace.app`
+- [ ] 確認 Render 自訂網域已驗證、憑證已簽發
+- [ ] Render 自訂網域也加 apex `commaplace.app`(Render 會自動 301 → www),否則有人直接打裸網域會連不上。裸網域只當入口,`BASE_URL` 維持 www — OAuth callback 落在會被 301 的 host 上會壞
+- [x] `loadConfig` 加防呆:`BASE_URL` 去尾斜線、缺 scheme 自動補 `https://`,避免同樣的 400 再發生
 - [ ] **Step 2 — DB 保命(別漏)**:Render free Postgres **30 天到期會整個刪掉**(見 `.claude/budget-render.md`)。查 `comma-db` 到期日;要長期用就升 Basic-1gb($19/mo),至少先設個到期提醒
 - **明確不做**(等三人真的用起來再說):timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記、前端簡繁切換、/random
 
@@ -27,8 +46,8 @@
   - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
 - [ ] need random / suprise-me / I'm feeling lucky button or page
 
-- [x] minimal deployment to Render — **LIVE** at https://commaplace.onrender.com
-  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres, `render.yaml` Blueprint, env vars in `.env.example`/README. Deployed.
+- [x] minimal deployment to Render — **LIVE** at https://www.commaplace.app (Render 預設網域 `comma-c8h6.onrender.com` 仍可用)
+  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres, `render.yaml` Blueprint, env vars in `.env.example`/README. Blueprint 部署 + 自訂網域 www.commaplace.app 完成 2026-08-13。
 - [ ] CI/CD pipeline (not yet established — currently manual)
   - Render DOES auto-deploy on push to the connected branch (Vercel-style): enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
   - But Render has **no built-in test gate** like Vercel checks. Render's "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for migrations, weak as a test gate (a failure there blocks the deploy but burns a build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push (the gate); Render auto-deploys on merge to `main` (the deploy).**
@@ -199,6 +218,7 @@ Google OAuth requires real credentials — there is no mock mode. Steps:
 - `invalid OAuth state` → state cookie expired (>5 min between start and callback) or browser blocked cookies
 - `token exchange` error → wrong client secret, or redirect URI doesn't exactly match what's in Google Console
 - `no email in Google userinfo` → scopes missing; ensure `openid` and `email` are listed
+- `Error 400: invalid_request` on the consent page → look at the `redirect_uri=` in the error detail. No `https://` prefix means `BASE_URL` is scheme-less (that's the whole redirect URI: `BASE_URL + /auth/google/callback`). A correct-looking URI means it isn't registered in the Console — check `www.` too, Google matches host literally. Prod uses `https://www.commaplace.app/auth/google/callback`.
 
 ## Should Have
 

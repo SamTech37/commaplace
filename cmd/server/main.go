@@ -202,6 +202,12 @@ func loadConfig() config {
 		}
 		c.BaseURL = "http://localhost:" + host
 	}
+	// A scheme-less or trailing-slash BASE_URL yields a redirect_uri Google
+	// rejects with "Error 400: invalid_request". Normalize instead of failing.
+	c.BaseURL = strings.TrimRight(c.BaseURL, "/")
+	if !strings.Contains(c.BaseURL, "://") {
+		c.BaseURL = "https://" + c.BaseURL
+	}
 	if c.SMTPHost == "" {
 		c.Mailer = "stdout"
 	} else {
