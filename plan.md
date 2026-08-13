@@ -9,13 +9,13 @@
 - [/] **Step 0 — Render 後台設定**
   - [x] Blueprint 部署（`render.yaml`），自訂網域 commaplace.app 接上（www 301 導到 apex）（2026-08-13）
   - [ ] merge PR #9（CI + 減少動畫），開 Auto-Deploy
-  - [ ] 設 `PLAYTEST_LOGIN_KEY`，三人用 `/_dev/login?as=<handle>&key=<key>` 登入
+  - [x] 設 `PLAYTEST_LOGIN_KEY`，三人用 `/_dev/login?as=<handle>&key=<key>` 登入
   - [ ] 關 `SEED_DEV`（`render.yaml` 改 `"0"`），別再每次部署塞 alice/bob
   - [ ] 決定現有假資料砍掉重來還是留著。DB 還在可拋棄階段，砍掉最乾淨
 - [/] **Step 1 — 真登入**
   - [x] B. Google OAuth 通了（2026-08-13）。同 email 歸戶邏輯仍未實測
   - [ ] A. SMTP：申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式已完成，純設定。順帶完成下面「test Magic Link」
-- [ ] **Step 2 — DB 保命**：Render free Postgres 30 天到期整個刪掉（見 `.claude/budget-render.md`）。查 `comma-db` 到期日，要長期用就升 Basic-1gb（$19/mo），至少先設到期提醒
+- [x] **Step 2 — DB 保命**：已無此問題。Blueprint 本身就要付費方案，DB 跟著是付費的，沒有 free tier 30 天砍檔那回事（`.claude/budget-render.md` 的免費方案討論已過期）
 - **明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記、/random
 
 ### Google OAuth（2026-08-13 通了）

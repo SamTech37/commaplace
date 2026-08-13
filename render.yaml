@@ -1,7 +1,9 @@
 # Render Blueprint — one-click infra for a quick playtest deploy.
 # Dashboard: New + → Blueprint → pick this repo → Render reads this file.
-# Leave "plan" unset on both services so Render's UI prompts you to choose
-# Free tier (or Starter, charged against existing credit) at apply-time.
+# Blueprints are a paid-tier feature, so both the service and the database
+# are on paid plans — the free-tier caveats (database expiry, cold starts)
+# do not apply here. "plan" stays unset so Render's UI prompts for the
+# tier at apply-time.
 services:
   - name: comma
     type: web
