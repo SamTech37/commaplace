@@ -220,7 +220,6 @@
             <a href="/feed">{{.Nav.Feed}}</a>
             <a href="/graph">{{.Nav.Graph}}</a>
             <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
-            <a href="/login">{{.Nav.Login}}</a>
             {{end}}
           </div>
 
@@ -320,10 +319,13 @@
               <a href="/feed">{{.Nav.Feed}}</a>
               <a href="/graph">{{.Nav.Graph}}</a>
               <a href="/random">漫遊</a>
-              <a href="/login">{{.Nav.Login}}</a>
               {{end}}
             </div>
           </details>
+
+          {{if not .User}}
+          <a href="/login" class="nav-login">{{.Nav.Login}}</a>
+          {{end}}
         </nav>
       </header>
       <main class="content">{{block "content" .}}{{end}}</main>

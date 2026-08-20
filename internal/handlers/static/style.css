@@ -430,6 +430,35 @@ mark {
   display: none;
 }
 
+/* Login sits last in the bar and stays visible at every width — it is the
+   one nav item that never collapses into the mobile ≡ menu. */
+.nav-login {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 0.35rem;
+  padding: 0.32em 0.85em;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-pill);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    color var(--dur-fast) ease,
+    background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+.nav-login:hover {
+  color: var(--bg);
+  background: var(--text);
+  border-color: var(--text);
+  text-decoration: none;
+}
+
 .mobile-menu {
   display: none;
 }
@@ -468,6 +497,24 @@ mark {
   }
   .brand-name {
     display: none;
+  }
+  /* The 200px brand column is a floor the bar cannot shrink under; without
+     this the whole topbar overflows the viewport on a phone. */
+  .page-wide .topbar {
+    grid-template-columns: auto 1fr auto;
+  }
+}
+
+/* Very narrow: the search field yields first so the login pill keeps its
+   full label instead of being squeezed off the bar. */
+@media (max-width: 400px) {
+  /* Only when the pill is actually there — logged-in users keep search. */
+  .topbar:has(.nav-login) .search-form {
+    display: none;
+  }
+  .nav-login {
+    margin-left: 0.2rem;
+    padding: 0.32em 0.7em;
   }
 }
 
