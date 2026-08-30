@@ -105,6 +105,19 @@ func Excerpt(md string, n int) string {
 			s = strings.TrimLeft(s[4+idx+4:], "\r\n")
 		}
 	}
+	// drop a leading "# Title" heading: importers take the note title from it
+	// (handlers/import.go extractH1) and leave it in the body, so a preview
+	// that kept it would print the title twice.
+	{
+		t := strings.TrimLeft(s, "\r\n")
+		if strings.HasPrefix(t, "# ") {
+			if nl := strings.IndexByte(t, '\n'); nl >= 0 {
+				s = t[nl+1:]
+			} else {
+				s = ""
+			}
+		}
+	}
 	// strip code fences quickly
 	for {
 		i := strings.Index(s, "```")

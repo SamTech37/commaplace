@@ -3,7 +3,10 @@
 // easy to unit-test and re-use at save time for link extraction.
 package markdown
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // WikiLink is the parsed payload of [[...]].
 //
@@ -192,17 +195,9 @@ func ExtractInlineTags(body string) []string {
 		}
 	}
 	// blank out [[wikilinks]] so #anchors inside them aren't picked up
-	for {
-		i := strings.Index(s, "[[")
-		if i < 0 {
-			break
-		}
-		j := strings.Index(s[i+2:], "]]")
-		if j < 0 {
-			break
-		}
-		s = s[:i] + " " + s[i+2+j+2:]
-	}
+	s = StripWikiLinks(s)
+	// blank out URLs so #fragments aren't picked up
+	s = urlRe.ReplaceAllString(s, " ")
 	var out []string
 	seen := map[string]bool{}
 	for i := 0; i < len(s); {
@@ -234,6 +229,30 @@ func ExtractInlineTags(body string) []string {
 	}
 	return out
 }
+
+// StripWikiLinks replaces every [[...]] token with a space, dropping the link
+// text along with the brackets. Callers that want the label kept use
+// Excerpt instead.
+func StripWikiLinks(s string) string {
+	for {
+		i := strings.Index(s, "[[")
+		if i < 0 {
+			return s
+		}
+		j := strings.Index(s[i+2:], "]]")
+		if j < 0 {
+			return s
+		}
+		start := i
+		if start > 0 && s[start-1] == '!' {
+			start--
+		}
+		s = s[:start] + " " + s[i+2+j+2:]
+	}
+}
+
+// urlRe matches a bare http(s) URL up to the next whitespace.
+var urlRe = regexp.MustCompile(`https?://\S+`)
 
 // isAlnumByte reports whether c is an ASCII alphanumeric character.
 func isAlnumByte(c byte) bool {

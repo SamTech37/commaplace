@@ -262,12 +262,15 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 
 	if strings.HasPrefix(s, ">") {
 		var qb strings.Builder
-		for _, line := range strings.SplitN(s, "\n", 30) {
+		lines := strings.Split(s, "\n")
+		rest := ""
+		for i, line := range lines {
 			ln := strings.TrimSpace(line)
 			if strings.HasPrefix(ln, ">") {
 				qb.WriteString(strings.TrimSpace(strings.TrimPrefix(ln, ">")))
 				qb.WriteByte(' ')
 			} else if qb.Len() > 0 {
+				rest = strings.Join(lines[i:], "\n")
 				break
 			}
 		}
@@ -275,7 +278,8 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 		if runes := []rune(q); len(runes) > 200 {
 			q = string(runes[:200]) + "…"
 		}
-		return "quote", markdown.Excerpt(body, 160), nil, q, nil
+		// the quote renders in its own block above; excerpt picks up after it
+		return "quote", markdown.Excerpt(rest, 160), nil, q, nil
 	}
 
 	links := markdown.Extract(body)
@@ -296,7 +300,9 @@ func analyzeCardBody(body string) (variant, excerpt string, listItems []string, 
 				break
 			}
 		}
-		return "links", markdown.Excerpt(body, 160), nil, "", chips
+		// the links render as chips above; dropping them from the excerpt keeps
+		// the card from printing the same slugs twice
+		return "links", markdown.Excerpt(markdown.StripWikiLinks(body), 160), nil, "", chips
 	}
 
 	var bullets []string

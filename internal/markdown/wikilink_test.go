@@ -182,6 +182,11 @@ func TestExtractInlineTags(t *testing.T) {
 			[]string{"哲學"},
 		},
 		{
+			"url fragment is not a tag",
+			"see [x](https://ex.com/a/#frag) and https://y.io/b#other, but #real counts",
+			[]string{"real"},
+		},
+		{
 			"frontmatter skipped",
 			"---\ntags: [philosophy]\n---\n\n#logic is cool",
 			[]string{"logic"},
