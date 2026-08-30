@@ -18,7 +18,7 @@ import (
 
 var TourHandle = config.DefaultEmail(config.DefaultSite().Title).TourHandle
 const MakerHandle = "maker"
-const DemoHandle = "shawn"
+const DemoHandle = "shawn_demo"
 
 type TourNote struct {
 	Author    string // TourHandle or MakerHandle

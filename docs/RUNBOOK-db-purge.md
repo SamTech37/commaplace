@@ -73,9 +73,27 @@ Notes on writing one:
   those over a hand-maintained keep-list of real handles.
 - Match on `lower(handle)`, not `handle_ci` — the latter is only lowercase by
   convention, and a keep-list that silently misses is a deleted account.
-- Confirm every handle you intend to keep actually exists first. No credentials
-  needed: `curl -s -o /dev/null -w '%{http_code}' -L https://commaplace.app/<handle>`
-  returns 200 for a live profile, 404 otherwise.
+- Do not guess who is real from handles or from the live site. `curl`-ing
+  `/<handle>` proves nothing: real routes (`/admin`, `/feed`, `/graph`) return 200
+  without any such user existing, because the profile catch-all is matched last.
+  Query the restored dump instead — it is the only source that distinguishes a
+  seed account from a person:
+
+  ```sql
+  SELECT u.handle, u.email, count(n.id) AS notes
+  FROM users u LEFT JOIN notes n ON n.author_id = u.id
+  GROUP BY u.id, u.handle, u.email ORDER BY u.handle;
+  ```
+
+  On 2026-08-30 this caught two accounts that looked like seeds and were not
+  (`hankforwork2315`, `noshawn50` — real gmail addresses), and one that looked
+  real and was not (`shawn` is `ApplyDemo`'s seed; the actual person is
+  `noshawn50`). The dev DB shows none of this.
+- Renaming a seed account is safer than deleting it, but the guard constant has
+  to move with it. `ApplyDemo` skips on `SELECT 1 FROM users WHERE handle =
+  DemoHandle`, so renaming only the row makes the guard miss and grows a second
+  demo vault at the next boot. Links survive a rename (they resolve by UUID),
+  but `links.target_user_handle` records the old name and needs updating too.
 
 ## 4 — Deploy and verify
 

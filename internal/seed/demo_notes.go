@@ -1,4 +1,4 @@
-// Curated demo content for @shawn. Hand-edited; the dump-seed tool that
+// Curated demo content for @shawn_demo (seed.DemoHandle). Hand-edited; the dump-seed tool that
 // originally generated this file is on the pre-Postgres schema and no longer
 // works as-is.
 

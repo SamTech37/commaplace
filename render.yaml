@@ -24,7 +24,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: SEED_DEV
-        value: "1"
+        value: "0"
       # Public origin. Google OAuth derives its redirect URI from this
       # (BASE_URL + /auth/google/callback), and Google compares the host
       # literally — "www." counts, and no trailing slash. Apex is canonical

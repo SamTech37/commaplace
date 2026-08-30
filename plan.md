@@ -1,6 +1,6 @@
-# Plan
+# `Comma,` Dev Roadmap
 
-## 🌙 2026-07-24 overnight 自動開發成果（PR #10，2026-08-13 併入 main）
+## 🌙 2026-07-24 overnight 自動開發成果（PR#10，2026-08-13 併入 main）
 
 一次過把〈開發決定〉裡「✅ 要做、且不需外部帳號」的項目逐一做完、各自 build+test+瀏覽器實測+commit+push。全部 7 個 feature 已推上分支，`go test -p 1 ./...` 全綠。
 
@@ -16,7 +16,7 @@
 **追加打磨（第二輪）：**
 - **/random「漫遊」** — 隨機跳一篇筆記，nav 入口，切合 cross-vault rabbit-hole 主題。
 - **修 like 按鈕跳版 bug** — 按讚後 toggle 回傳的 fragment 用 `.heart` class、跟初始的 `.action-btn`（和 share/收藏 兄弟鈕）不一致而變樣；改成一律 `.action-btn`，順手清掉被孤立的 `.heart` CSS。
-- 查證：htmx-rules #9「loading indicator 未接」其實已接（feed sentinel 有動畫三點 + skeleton CSS），屬 stale 註記。
+- 查證：htmx-rules#9「loading indicator 未接」其實已接（feed sentinel 有動畫三點 + skeleton CSS），屬 stale 註記。
 
 **沒動（原因）：**
 - **Ko-fi 打賞** — 需要你先申請帳號拿連結（真人手動工作，見另一分支的清單）。
@@ -46,11 +46,17 @@
 
 - [/] **Step 0 — Render 後台設定**
   - [x] Blueprint 部署（`render.yaml`），自訂網域 commaplace.app 接上（www 301 導到 apex）（2026-08-13）
-  - [x] merge PR #9（CI + 減少動畫）
+  - [x] merge PR#9（CI + 減少動畫）
   - [ ] Render 後台開 Auto-Deploy（手動開關）
   - [x] 設 `PLAYTEST_LOGIN_KEY`，三人用 `/_dev/login?as=<handle>&key=<key>` 登入
-  - [ ] 關 `SEED_DEV`（`render.yaml` 改 `"0"`），別再每次部署塞 alice/bob
-  - [ ] 決定現有假資料砍掉重來還是留著。DB 還在可拋棄階段，砍掉最乾淨
+  - [x] 關 `SEED_DEV`（`render.yaml` 改 `"0"`），別再每次部署塞 alice/bob
+  - [ ] `ADMIN_HANDLE` 目前是 `sync: false`（後台手設，值為 `admin`），但 prod 根本沒有 `admin` 這個 user，等於沒人進得去 `/admin`。要用的話改成自己的 handle。（先前誤判：`curl /admin` 回 200 是因為 `/admin` 本來就是路由，不是 profile catch-all，不能拿來證明有這個帳號。）
+  - [/] 決定現有假資料砍掉重來還是留著 → **砍掉種子帳號，真人一律留著**。寫成 migration `007_purge_seed_users.sql`，在 Render 開機時用它自己的 `DATABASE_URL` 跑，本機不碰任何 prod 憑證。**尚未部署**
+    - 刪的條件是 email 網域 `@dev.local`（`seed.ApplyDev` 專用），不是手寫 handle 名單——名單漏一個就是誤刪真人帳號。實際刪掉 20 個 alice/bob/carol 之流。
+    - prod 上有兩個長得像種子、其實是真人的帳號：`hankforwork2315`、`noshawn50`（真 gmail）。只用「留 samkondori 跟 shawn」的名單會把他們連同帳號一起刪掉。這是拿真 prod dump 試跑才看到的，local dev DB 看不出來。
+    - `shawn`（`shawn@demo.local`）是 `ApplyDemo` 的種子帳號，不是真人 Shawn（真人是 `noshawn50`）。改名成 `shawn_demo` 把名字讓出來，`seed.DemoHandle` 同步改——ApplyDemo 的守衛是 `SELECT 1 FROM users WHERE handle = DemoHandle`，只改 DB 不改常數，下次開機會再長出第二份 demo vault。
+    - 連結靠 UUID，改名不斷鏈：改名前後 unresolved 都是 33/39，完全一樣。`links.target_user_handle` 一併改成 `shawn_demo`，免得 stub backfill 以後對不到人。
+  - [x] 備份流程：`.github/workflows/db-backup.yml`（手動觸發）pg_dump 成 artifact；下刀前的完整程序見 `docs/RUNBOOK-db-purge.md`。真的跑過一次：run 33297976251，還原進本機 `prodrestore`，24 users／206 notes／305 links 與 prod 完全對得起來；007 就是在那份複本上試跑的，不是在 dev DB
 - [/] **Step 1 — 真登入**
   - [x] B. Google OAuth 通了（2026-08-13）。同 email 歸戶邏輯仍未實測
   - [ ] A. SMTP：申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式已完成，純設定。順帶完成下面「test Magic Link」
