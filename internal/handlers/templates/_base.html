@@ -190,7 +190,7 @@
   <body>
     <div class="page{{if .PageClass}} {{.PageClass}}{{end}}">
       <header class="topbar">
-        <a class="brand" href="/">
+        <a class="brand" href="/" title="回到首頁">
           <img src="/assets/comma_mascot_logo.svg" class="brand-logo" alt="" />
           <span class="brand-name">{{.Site.Title}}</span>
         </a>
@@ -208,17 +208,21 @@
         <nav class="nav">
           <div class="nav-links">
             {{if .User}}
-            <a href="/write">{{.Nav.Write}}</a>
-            <a href="/feed">{{.Nav.Feed}}</a>
-            <a href="/graph">{{.Nav.Graph}}</a>
-            <a href="/me/calendar">{{.Nav.Calendar}}</a>
+            <a href="/write" title="寫一篇新筆記">{{.Nav.Write}}</a>
+            <a href="/feed" title="看大家的最新筆記">{{.Nav.Feed}}</a>
+            <a href="/graph" title="筆記之間的關係圖譜">{{.Nav.Graph}}</a>
+            <a href="/me/calendar" title="用月曆看自己的筆記"
+              >{{.Nav.Calendar}}</a
+            >
             <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
             <form method="POST" action="/logout" class="inline-form">
-              <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
+              <button type="submit" class="link-btn" title="登出目前帳號">
+                {{.Nav.Logout}}
+              </button>
             </form>
             {{else}}
-            <a href="/feed">{{.Nav.Feed}}</a>
-            <a href="/graph">{{.Nav.Graph}}</a>
+            <a href="/feed" title="看大家的最新筆記">{{.Nav.Feed}}</a>
+            <a href="/graph" title="筆記之間的關係圖譜">{{.Nav.Graph}}</a>
             <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
             {{end}}
           </div>
@@ -228,6 +232,7 @@
             id="theme-toggle"
             class="icon-btn"
             aria-label="切換主題"
+            title="切換深色／淺色主題"
           >
             <svg
               class="theme-icon theme-icon-sun"
@@ -303,28 +308,34 @@
           {{end}}
 
           <details class="action-menu mobile-menu">
-            <summary aria-label="選單">≡</summary>
+            <summary aria-label="選單" title="更多">≡</summary>
             <div class="mobile-menu-list action-menu-list">
               {{if .User}}
-              <a href="/write">{{.Nav.Write}}</a>
-              <a href="/feed">{{.Nav.Feed}}</a>
-              <a href="/graph">{{.Nav.Graph}}</a>
-              <a href="/me/calendar">{{.Nav.Calendar}}</a>
-              <a href="/random">漫遊</a>
+              <a href="/write" title="寫一篇新筆記">{{.Nav.Write}}</a>
+              <a href="/feed" title="大家的最新筆記">{{.Nav.Feed}}</a>
+              <a href="/graph" title="筆記之間的連結圖">{{.Nav.Graph}}</a>
+              <a href="/me/calendar" title="用月曆看自己的筆記"
+                >{{.Nav.Calendar}}</a
+              >
+              <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
               <div class="mobile-menu-sep"></div>
               <form method="POST" action="/logout" class="inline-form">
-                <button type="submit" class="link-btn">{{.Nav.Logout}}</button>
+                <button type="submit" class="link-btn" title="登出目前帳號">
+                  {{.Nav.Logout}}
+                </button>
               </form>
               {{else}}
-              <a href="/feed">{{.Nav.Feed}}</a>
-              <a href="/graph">{{.Nav.Graph}}</a>
-              <a href="/random">漫遊</a>
+              <a href="/feed" title="大家的最新筆記">{{.Nav.Feed}}</a>
+              <a href="/graph" title="筆記之間的連結圖">{{.Nav.Graph}}</a>
+              <a href="/random" title="隨機跳到一篇筆記">漫遊</a>
               {{end}}
             </div>
           </details>
 
           {{if not .User}}
-          <a href="/login" class="nav-login">{{.Nav.Login}}</a>
+          <a href="/login" class="nav-login" title="登入或註冊"
+            >{{.Nav.Login}}</a
+          >
           {{end}}
         </nav>
       </header>
