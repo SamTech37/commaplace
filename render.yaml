@@ -9,6 +9,9 @@ services:
     type: web
     runtime: docker
     dockerfilePath: ./Dockerfile
+    # Push to main ships it. This defaults off in the dashboard, which is why a
+    # merged migration sat on main doing nothing until someone deployed by hand.
+    autoDeploy: true
     envVars:
       - key: DATABASE_URL
         fromDatabase:

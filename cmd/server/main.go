@@ -43,7 +43,13 @@ func main() {
 			log.Fatalf("seed: %v", err)
 		}
 	}
-	if os.Getenv("SEED_DEV") == "1" {
+	// DEBUG gates this as well as SEED_DEV: a Blueprint does not re-apply
+	// render.yaml env vars on a code push, and a var once set in Render's
+	// dashboard stops tracking the file — so SEED_DEV alone cannot be turned
+	// off from this repo. DEBUG is unset on every deploy, which makes fake
+	// users structurally impossible in prod instead of a setting someone has
+	// to remember. Makefile's GO_ENV already sets both for local dev.
+	if os.Getenv("SEED_DEV") == "1" && cfg.Debug {
 		if err := seed.ApplyDev(context.Background(), d, handlers.RecomputeLinks); err != nil {
 			log.Fatalf("seed dev: %v", err)
 		}
