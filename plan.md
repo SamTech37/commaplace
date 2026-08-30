@@ -1,386 +1,166 @@
 # `Comma,` Dev Roadmap
 
-## 🌙 2026-07-24 overnight 自動開發成果（PR#10，2026-08-13 併入 main）
+## 現在的最高優先 — 三人內部發文 MVP
 
-一次過把〈開發決定〉裡「✅ 要做、且不需外部帳號」的項目逐一做完、各自 build+test+瀏覽器實測+commit+push。全部 7 個 feature 已推上分支，`go test -p 1 ./...` 全綠。
+三個團隊成員能在 https://commaplace.app 登入、發文、互相看到。其他一切先不管。功能夠了（CRUD、feed、wikilink、like 都能用），剩下的幾乎都是設定。
 
-**做完並驗證：**
-1. 本地端字體選項（note 頁 Aa popover：字級 + 宋/黑體）
-2. RSVP 快速閱讀器（note 頁 ⚡快速閱讀 overlay）
-3. 改 @handle（owner profile 表單 + `POST /settings/handle` + 測試）
-4. 連結區分 self/others（補上 backlinks 的自己/他人子區）
-5. 服務條款 + 隱私政策頁（`/terms` `/privacy` + footer）
-6. 讚與收藏分開（`saves` 表 migration 006 + 收藏鈕 + 測試）
-7. 前端簡繁三態切換 — 查證後發現**早已上線**，只是 checkbox stale；重新實測確認正常。
+- [ ] **SMTP** — 申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式早就寫完，純設定。目前靠 `PLAYTEST_LOGIN_KEY` + `/_dev/login?as=<handle>&key=<key>` 頂著
+- [ ] **magic link 實測** — 連同「同一支 gmail 走 magic link 與 Google OAuth 要歸戶給同一個人」。程式寫了，沒測過
+- [ ] 登入時提醒使用者他當初是用哪個管道註冊的（用 email 認人）
+- [ ] **`ADMIN_HANDLE`** 後台設成 `admin`，但 prod 沒有這個 user，等於沒人進得去 `/admin`。改成自己的 handle
+- [ ] **`BASE_URL` 改成 apex** `https://commaplace.app`，Console 補 `https://commaplace.app/auth/google/callback`
 
-**追加打磨（第二輪）：**
-- **/random「漫遊」** — 隨機跳一篇筆記，nav 入口，切合 cross-vault rabbit-hole 主題。
-- **修 like 按鈕跳版 bug** — 按讚後 toggle 回傳的 fragment 用 `.heart` class、跟初始的 `.action-btn`（和 share/收藏 兄弟鈕）不一致而變樣；改成一律 `.action-btn`，順手清掉被孤立的 `.heart` CSS。
-- 查證：htmx-rules#9「loading indicator 未接」其實已接（feed sentinel 有動畫三點 + skeleton CSS），屬 stale 註記。
+**明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記。
 
-**沒動（原因）：**
-- **Ko-fi 打賞** — 需要你先申請帳號拿連結（真人手動工作，見另一分支的清單）。
-- **migration 合併** — 資料庫破壞性操作，不適合無人監督的夜間自動跑；等你在場再做。
-- **Ctrl+F 內文搜尋 + line()/tag()/section() 運算子** — 運算子語意未定案（Obsidian 風格 DSL），需你確認規格再做，否則容易做錯方向。
-- **Tag 自動建標籤（純演算法）** — 中文無詞界，關鍵字抽取需選 n-gram/字典方案；範圍偏大，留待有你回饋時做。
-- **Dora mode** — 最大的一項；為避免夜間留下半成品，沒有起手。等你指定就做。
+### Render
 
-> 註：〈真人手動工作清單〉與完整〈開發決定〉在另一分支 `claude/manager-direction-plan-review-0zcjnb`（已推、未合併）。
+現況與重建計畫都在 `FRESH_START.md`：沒有任何 Blueprint 在管線上的服務，$17.15/mo，重建後 $13.20/mo。**現在什麼都不用做**，那份重建要三個人（網域、OAuth Console、Render 後台）到齊才動。
 
-**合併後修的（2026-08-13，commit `e0b44e3`）：**
-- `handleRE` 放行 1 字用戶名，錯誤訊息卻寫 2–30；regex 與 input `pattern` 一起收緊。
-- 閱讀選項的 `aria-pressed` 只有 JS 上得了，JS 掛掉就全部沒有選中態；改成 server HTML 就帶。
-- `.rsvp-close` 只有字大小，遠低於 44px 觸控目標，而 overlay 只剩 Esc 可退。
-- 改用戶名表單放在 `<p>` 裡，但 `<details>` 是 block，parser 會提前關掉段落 → meta 行留一個孤兒 `·`，表單被踢出該行。改用 `<div>`。
-- `.handle-form`、`.rsvp-speed` 只寫 `display:flex` 沒寫方向，被全域 `form`/`label` 的 `flex-direction: column` 蓋掉，排成直的。兩處都補上 `row`。
-  後兩項 diff 看不出來，是實際開瀏覽器才發現的。
+已完成：Blueprint 部署、自訂網域（apex 為主，www 301 導過去）、Auto-Deploy 開著、`SEED_DEV=0`、`PLAYTEST_LOGIN_KEY`、`.github/workflows/ci.yml` 測試閘、`db-backup.yml` 手動 pg_dump。破壞性操作的完整程序見 `docs/RUNBOOK-db-purge.md`。
 
-**注意：`/me/saved` 會從空的開始。** migration 006 只建表不搬資料，之前存在 `likes` 的收藏不會帶過來。要帶的話：
-`INSERT INTO saves SELECT user_id, note_id, created_at FROM likes ON CONFLICT DO NOTHING;`
+種子帳號已清乾淨（migration 007/008，prod 9 個 migration 全上）。刪的條件是 email 網域 `@dev.local`，不是手寫 handle 名單——名單漏一個就是誤刪真人。`hankforwork2315`、`noshawn50` 長得像種子但是真人；`shawn` 反而是 `ApplyDemo` 的種子，已改名 `shawn_demo`（`seed.DemoHandle` 要一起改，否則守衛失效會再長一份 demo vault）。這些只有拿真 prod dump 試跑才看得到，dev DB 看不出來。
 
-## 三人內部發文 MVP（2026-07-20 — 現在的最高優先）
+### Google OAuth
 
-**目標：三個團隊成員能在正式站（https://commaplace.app）登入、發文、互相看到。其他一切先不管。**
+redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`），Google 逐字比對，`www.` 有無算兩個 host。後台手改的 env var 會蓋掉 `render.yaml`。`Error 400: invalid_request` 就去看 `redirect_uri=` 那串。
 
-功能本身夠了（CRUD、feed、wikilink、like 都能用）。卡住的是登入，以及正式站塞滿假資料。剩下的幾乎都是設定，不是寫程式。
+現在能登入是靠運氣：apex 才是主網域，但 `BASE_URL` 指著 www。`oauth_state` cookie 沒有 `Domain`、只綁 apex；Google 把人送到 www 的 callback，www 301 回 apex 時**有帶 query string**，cookie 才送得出去。哪天那個 301 不保留 query，登入就掛 `invalid OAuth state`。這是上面「`BASE_URL` 改成 apex」那項要修的。
 
-- [/] **Step 0 — Render 後台設定**
-  - [x] Blueprint 部署（`render.yaml`），自訂網域 commaplace.app 接上（www 301 導到 apex）（2026-08-13）
-  - [x] merge PR#9（CI + 減少動畫）
-  - [ ] Render 後台開 Auto-Deploy（手動開關）
-  - [x] 設 `PLAYTEST_LOGIN_KEY`，三人用 `/_dev/login?as=<handle>&key=<key>` 登入
-  - [x] 關 `SEED_DEV`（`render.yaml` 改 `"0"`），別再每次部署塞 alice/bob
-  - [ ] `ADMIN_HANDLE` 目前是 `sync: false`（後台手設，值為 `admin`），但 prod 根本沒有 `admin` 這個 user，等於沒人進得去 `/admin`。要用的話改成自己的 handle。（先前誤判：`curl /admin` 回 200 是因為 `/admin` 本來就是路由，不是 profile catch-all，不能拿來證明有這個帳號。）
-  - [/] 決定現有假資料砍掉重來還是留著 → **砍掉種子帳號，真人一律留著**。寫成 migration `007_purge_seed_users.sql`，在 Render 開機時用它自己的 `DATABASE_URL` 跑，本機不碰任何 prod 憑證。**尚未部署**
-    - 刪的條件是 email 網域 `@dev.local`（`seed.ApplyDev` 專用），不是手寫 handle 名單——名單漏一個就是誤刪真人帳號。實際刪掉 20 個 alice/bob/carol 之流。
-    - prod 上有兩個長得像種子、其實是真人的帳號：`hankforwork2315`、`noshawn50`（真 gmail）。只用「留 samkondori 跟 shawn」的名單會把他們連同帳號一起刪掉。這是拿真 prod dump 試跑才看到的，local dev DB 看不出來。
-    - `shawn`（`shawn@demo.local`）是 `ApplyDemo` 的種子帳號，不是真人 Shawn（真人是 `noshawn50`）。改名成 `shawn_demo` 把名字讓出來，`seed.DemoHandle` 同步改——ApplyDemo 的守衛是 `SELECT 1 FROM users WHERE handle = DemoHandle`，只改 DB 不改常數，下次開機會再長出第二份 demo vault。
-    - 連結靠 UUID，改名不斷鏈：改名前後 unresolved 都是 33/39，完全一樣。`links.target_user_handle` 一併改成 `shawn_demo`，免得 stub backfill 以後對不到人。
-  - [x] 備份流程：`.github/workflows/db-backup.yml`（手動觸發）pg_dump 成 artifact；下刀前的完整程序見 `docs/RUNBOOK-db-purge.md`。真的跑過一次：run 33297976251，還原進本機 `prodrestore`，24 users／206 notes／305 links 與 prod 完全對得起來；007 就是在那份複本上試跑的，不是在 dev DB
-- [/] **Step 1 — 真登入**
-  - [x] B. Google OAuth 通了（2026-08-13）。同 email 歸戶邏輯仍未實測
-  - [ ] A. SMTP：申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式已完成，純設定。順帶完成下面「test Magic Link」
-- [x] **Step 2 — DB 保命**：已無此問題。Blueprint 本身就要付費方案，DB 跟著是付費的，沒有 free tier 30 天砍檔那回事（`.claude/budget-render.md` 的免費方案討論已過期）
-- **明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記
-
-### Google OAuth（2026-08-13 通了）
-
-redirect URI 整串是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`），Google 逐字比對，`www.` 有無算兩個 host。後台手改過的 env var 會蓋掉 `render.yaml`。`Error 400: invalid_request` 就是看 `redirect_uri=` 那串對不對。
-
-實測（2026-08-13 curl）：**apex `commaplace.app` 才是主網域，`www` 301 導到 apex**。但 `BASE_URL` 設的是 www，所以現在能登入是靠運氣：`oauth_state` cookie 沒有 `Domain`，只綁 apex；Google 把人送到 www 的 callback，www 301 回 apex 時**有帶著 query string**，cookie 才送得出去。哪天那個 301 不保留 query，登入就掛 `invalid OAuth state`。
-
-- [ ] `BASE_URL` 改成 apex `https://commaplace.app`，Console 加 `https://commaplace.app/auth/google/callback`。少一跳，也不再依賴 301 的行為
-- [ ] `render.yaml` 的 `GOOGLE_CLIENT_ID` 是舊的（`...jvkl14nv...`，線上跑的是 `...gvmbdlsl...`）。重跑 Blueprint 會換掉 OAuth client，那支的 Console 不見得註冊了這些 callback
-
-## Next Step
-- [x] review and merge changes from `branch/killer`
-- [/] 測試 Google OAuth 登入功能
-	- [x] 正式站登入走得通（2026-08-13，見上面「Google OAuth 部署設定」）
-	- [ ] 要能提醒使用者他當初用哪個管道註冊的（用 email 認人）
-	- [ ] magic link 跟同一支 gmail 登入要歸戶給同一個人。程式碼寫了，沒實測過
-- [ ] test this so called "Magic Link" feature and ensure that SMTP actually works and sends mail.
-  - stopgap in place: `PLAYTEST_LOGIN_KEY` env var unlocks `/_dev/login?as=<handle>&key=<key>` on a deployed instance without `DEBUG`, so testers can log in before real SMTP is wired up
-- [x] need random / suprise-me / I'm feeling lucky button or page — shipped: `GET /random` 303→隨機一篇已發佈筆記（空則退回 /feed），nav 加「漫遊」入口。`random.go`。
-
-- [x] minimal deployment to Render — **LIVE** at https://commaplace.app (www 301 導到 apex；Render 預設網域 `comma-c8h6.onrender.com` 仍可用)
-  - Dockerfile builds the Go binary, `docker-compose.yml` for local Postgres, `render.yaml` Blueprint, env vars in `.env.example`/README. Blueprint 部署 + 自訂網域 commaplace.app 完成 2026-08-13。
-- [ ] CI/CD pipeline (not yet established — currently manual)
-  - Render DOES auto-deploy on push to the connected branch (Vercel-style): enable Auto-Deploy on the service, push to `main` → Render rebuilds + ships.
-  - But Render has **no built-in test gate** like Vercel checks. Render's "Pre-Deploy Command" runs *after* build, *before* traffic-switch — usable for migrations, weak as a test gate (a failure there blocks the deploy but burns a build). Idiomatic split: **GitHub Actions runs `go build` + `go test` on PR/push (the gate); Render auto-deploys on merge to `main` (the deploy).**
-  - [x] `.github/workflows/ci.yml` added: `go build` + `go test` (with a Postgres 17 service container so the DB-backed tests actually run instead of skipping) on PR + push to `main`.
-  - TODO: turn on Render Auto-Deploy (dashboard toggle, manual).
-
-> Navigation, Exploration, Interaction.
+---
 
 ## Must Have
 
-- [x] CRUD — 筆記的基本增刪改查。
-	- [x] progressive load (not pagination) of data
-- [x] wikilink caveats
-  - [x] embed
-  - [x] empty links? — same item as the already-checked "need to handle empty links (stubs)" in [[# some concerns]] below, tracked twice; resolved.
-  - [x] duplicated note names? — structurally resolved by design: per-author `UNIQUE(author_id, slug_ci)` dedup + explicit `@user` syntax for cross-vault links means no global-namespace collision is possible.
-- [x] linking, tagging, mentioning, referencing anything must be through uuid, not the entity name itself.
-  - **Rationale:** robustness. Natural-language names and slugs (👎) are not a reliable basis for linkage; UUID is the only sound approach for dynamic hypertext. Authoring is still by name (`[[@user/note]]`), but resolution stores a UUID edge (`links.resolved_target_id`) — that edge is the source of truth.
-  - **Status:** confirmed (audit 2026-07-05): `recomputeLinks`/`backfillStubLinks` store `resolved_target_id`; `loadBacklinksSplit`/`loadOutgoingSplit`/`buildResolverForNote` all join on that UUID, never handle+slug — renames don't break links. Regression tests added in `link_regression_test.go` (stub backfill through the real edit flow, cross-vault rename safety, backlink/outgoing visibility filtering, fan-in). Also fixed a real bug the audit found: the actual editor path (autosave → publish) skipped the stub-backfill step that `/write`/import already had, so a link to a not-yet-existing note never resolved if the target was created through the normal editor — `autosaveNote` now backfills too.
-  - **Note:** `.claude/CLAUDE.md`'s sitemap description of `internal/external` (Obsidian Publish/Quartz crawler) was stale — that package doesn't exist in the repo; cross-vault linking between commaplace users is entirely the `links` table above, no separate mechanism. Sitemap fixed 2026-07-06 (also re-synced routes/schema/handler list, which had drifted well beyond just this).
-- [ ] address all of these: [[# some concerns]]
-- [ ] 搜尋 — 精確比對、模糊搜尋（仿 Obsidian Ctrl+O）、向量語意搜尋（候選 [sqlite-vector](https://github.com/sqliteai/sqlite-vector)、[pgvector](https://github.com/pgvector/pgvector)）。
-  - [x] ctrl + O search title — shipped as Cmd+K fuzzy note-title palette (`c0dc24e`), not Ctrl+O, precisely to dodge the browser-hotkey conflict below
-  - [ ] ctrl + F search body, and those operators: line(), tag(), section()…
-  - [x] or different keymaps to avoid conflict with browser hotkeys
-- [ ] Meta App — 同一份資料多種呈現，並有類似 Obsidian Search & GraphView 的查詢力。
-	- **Launch-gating views: timeline + dora mode.** Everything else below is post-launch backlog (calendar + embed have since shipped to main — not part of this gate).
-	- [x] list / grid / masonry (wall)
-	- [/] graph (sorta) → note should be like cards
-		- [x] graph 不要「點兩下」
-    - [x] global graph
-		- [x] local graph
-	- [ ] **timeline (linear) — LAUNCH-GATING**
-    - [ ] horizontal or vertical? 
-	- [ ] **dora mode — LAUNCH-GATING.** wiki exploring but better (star-graph, spotlight on current focus node, switch focus)
-	- [ ] canvas (like sticky notes on a bulletin board or whiteboard) — backlog
-    - [ ] like graph view but not shaky and dynamic, only static draggables
-	  - [ ] kanban? — backlog
-	- [x] [[RSVP reader]] — shipped: ⚡快速閱讀 overlay on note pages (`rsvp.js`), latin words whole + CJK per-char, play/pause/speed/progress.
-	- [x] calendar (date view) — shipped to main (`4868ecc`)
-	- [ ] ~~tree (?)~~ https://pbellon.github.io/tractatus-tree/#/
-- [ ] Tag page 文字雲功能 (on/off of course), based on how many times the tag is used
-- [ ] add Small Caps to our design
-- [x] 好的資料模型 — 已改用 Postgres（UUID PK、link 表用 ID 解析），見 `.claude/postgres-railway-rebuild-spec.md`；GraphDB vs SQL、是否走 GraphQL 待評估。
-	- [x] ~~postgres > 100 users 再考慮~~
-- [x] new backend architecture: postgres DB service 已換完，serverless worker 評估後否決（單一 Go binary on Render，理由見 spec 的 Design decisions），`flyio` sucks 🛫 2026-06-16 📅 2026-06-20
-- [ ] 逆向 Obsidian 的殺手功能 — 
-  - [x] 例如 [obsidian-flavored markdown](https://obsidian.md/help/syntax)
-  - [ ] others… check [Home - Developer Documentation](https://docs.obsidian.md/Home)
-- [ ] 單篇筆記與整個 vault 的一鍵匯出 — 
-  - [x] simple download .md, .zip
-  - [x] copy-to-clipboard
-  - [x] specialized direct import to obsidian: 參考 [Obsidian URI](https://obsidian.md/help/uri)。— shipped `obsidian://` open-in-Obsidian link (`c3af349` + 2 encoding fixes)
-- [x] 簡單的上傳與編輯。
-  - [x] empty slate
-  - [x] or start from a markdown
-  - [x] better writing UX see [[editor-medium-style-spec.md]] 
-- [/] send a bunch of markdowns to keep the local internal links of a users vault, and start adding external links to other users' online notes.
-  - [x] internal link preservation across a batch — already handled generically: `saveNote` backfills any stub link (`resolved_target_id IS NULL`) the moment the target note is created (`notes.go:488-496`), so order doesn't matter across the batch import (`cdc3f8d`).
-  - [ ] authoring `[[@user/note]]` cross-vault links during bulk import — not a thing yet, separate from preservation.
-- [/] 權限與授權管控 (permissions/authz)
-  - **MVP = all-public.** Only axis is draft vs published; everything published is world-readable. No private notes at launch. Author-only edit/delete stays.
-  - **Not blockers, keep on the radar:** *private* (vault-only) notes and *unlisted* (link-only, hidden from feed/search/graph) tiers — planned, post-launch.
-- [x] 管理後台（SQLite or postgres 都不附，要自己做）。
-  - [ ] 需要實際試用看看
-- [ ] 付費牆管理 (payment handling)
-  - **Stripe is out:** no US company + geopolitical friction blocks direct Stripe.
-  - Doesn't gate launch. Launch free, validate the cross-vault rabbit-hole thesis with real users, add payments once someone shows willingness to pay. The blocker is demand, not the integration.
-  - When needed: Merchant-of-Record (MoR). The MoR is the legal seller of record — handles entity, global tax/VAT, pays out to you. No US presence required.
-    - Candidates: **Paddle**, **Lemon Squeezy**, **Gumroad** (all MoR, indie-friendly).
-    - Taiwan-local alternative (needs a TW business entity): **ECPay** (綠界), **NewebPay** (藍新), **TapPay** — native TW methods (信用卡/ATM/超商).
-    - ⚠️ VERIFY Taiwan **seller/payout eligibility** on each platform's supported-countries page before committing — this changes and is unverified.
-  - Decision: launch free + lightweight tips/donations now, full MoR paywall later. Tips are also the willingness-to-pay signal that says when to build the real paywall.
-  - **Tips/donations vendor (no company needed):** **Ko-fi** or **Buy Me a Coffee** — both take one-time tips, route through their own PayPal/Stripe, payout to a TW bank, zero/low platform cut, just embed a link/button. Recommended over a raw PayPal.me button because [Unverified] Taiwan PayPal accounts have historically had receiving/withdrawal restrictions — verify before relying on bare PayPal.
-  - Full paywall (later) = Merchant-of-Record, see candidates above.
-  - paid features and incentives: 
-    - can have private/unlisted notes (drafts are only kept 3~7 days)
-    - can have more images
-    - can recurse deeper into nested embeds
-    - can have "unlimited" playlist/collections, instead of just two, "likes" & "later"
-- [ ] Dev workflow & engineering best-practices
-  - [x] KEEP CLAUDE.MD LEAN
-  - [x] explore -> plan -> run 
-  - [x] start using skills/commands
-  - [x] use the Harness, build validation hooks (deterministic behavior over probabilistic tuning)
-  - [ ] TDD: define clear, concrete deliverables; give clear validation criteria
-  - [ ] `/goal` also cool
-- [x] `/random` page take people to a random node — `GET /random`（見 Next Step 的「漫遊」入口）。
-- [x] share button, webshare api, open graph, … — shipped: note-page share icon (`navigator.share` + clipboard/toast fallback), real `og:description`/`og:image`/`og:url` + `twitter:card` on note.html, see `.claude/share-og-spec.md`
-- [/] 面向華語用戶，所以中文 UI/UX 要做好
-  - Audit (2026-07-05): most user-facing flows already Chinese; found a cluster of English-only strings (admin pages, `search.html`, `saved.html`, editor toolbar bits) and translated the clearly-missable ones directly (no framework) — `write.html`, `note.html`, `feed.html`, `search.html`, `saved.html`, `avatar_builder.html` alt text, `cmeditor.js`/`copy.js` status text. Left `admin_dashboard.html`/`admin_reports.html` English (internal-only tool, not reader-facing).
-  - **i18n framework decision: not needed yet.** No locale-switching mechanism exists (checked go.mod/codebase — none). Rough scope if ever built: low hundreds of hardcoded strings across ~20 templates. 繁簡 (Traditional/Simplified) OpenCC conversion is a separate, unrelated concern (character-variant conversion within Chinese, not English↔Chinese) with no shared plumbing — see 繁簡轉換 below.
-- [x] 服務條款、隱私政策、… — `/terms` + `/privacy` server-rendered (v0 繁中草稿), linked from a new site footer, both handles reserved. 正式上線前需法務校訂。
+- [x] CRUD、progressive load
+- [x] wikilink：embed、stub、同名處理（per-author `UNIQUE(author_id, slug_ci)` + `@user` 語法，全域撞名不可能發生）
+- [x] **連結一律走 UUID，不走名字**。`links.resolved_target_id` 是唯一真實來源，改名不斷鏈；`link_regression_test.go` 守著。順手抓到真 bug：編輯器路徑（autosave → publish）漏了 stub backfill，`/write` 跟 import 有做，`autosaveNote` 現在也補上了
+- [ ] 搜尋
+  - [x] Cmd+K 模糊標題（不是 Ctrl+O，避開瀏覽器熱鍵）
+  - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格
+- [ ] **Meta App** — 同一份資料多種呈現，有 Obsidian Search / GraphView 等級的查詢力
+  - [x] list / grid / masonry、global + local graph（單擊即跳）、calendar、RSVP 快速閱讀
+  - [ ] **timeline（linear）— 卡上線**。橫的還直的？
+  - [ ] **dora mode — 卡上線**。star-graph，聚光燈打在當前節點，可換焦點
+  - [ ] canvas（靜態可拖曳的便利貼牆，不要 graph 那種會抖的）、kanban — backlog
+- [ ] Tag page 文字雲（可關），依使用次數
+- [ ] design 加 Small Caps
+- [x] 資料模型 / 後端架構 — Postgres（UUID PK、link 表用 ID 解析）、單一 Go binary on Render，serverless 否決。理由見 `docs/DECISIONS.md` 3 與 6
+- [ ] 逆向 Obsidian 的殺手功能 — obsidian-flavored markdown 做了，其餘翻 [Developer Documentation](https://docs.obsidian.md/Home)
+- [x] 匯出 — .md / .zip 下載、複製到剪貼簿、`obsidian://` 一鍵開啟
+- [x] 上傳與編輯 — 空白起手、從 markdown 起手、Medium 風格編輯器
+- [ ] 批次匯入
+  - [x] 內部連結跨批次保留 — `saveNote` 在目標筆記一出現就 backfill stub link，順序無所謂
+  - [ ] 匯入時撰寫 `[[@user/note]]` 跨 vault 連結 — 還沒有這回事，跟「保留」是兩件事
+- [ ] 權限
+  - **MVP 全公開**，只有草稿 vs 已發布，作者本人才能改刪
+  - private（僅自己）與 unlisted（有連結才看得到、不進 feed/search/graph）留到上線後。見 `docs/DECISIONS.md` 7
+- [x] 管理後台 — [ ] 還沒實際試用過
+- [ ] 付費牆
+  - **Stripe out**：沒有美國公司。不卡上線，先免費跑，等有人表現出付費意願再做——瓶頸是需求不是串接
+  - 真要做就走 Merchant-of-Record（Paddle / Lemon Squeezy / Gumroad），台灣本地選項 ECPay / NewebPay / TapPay 需要公司實體。⚠️ 每家的台灣賣家/出金資格都要先查，會變
+  - 先上 Ko-fi 或 Buy Me a Coffee 式的打賞（不用公司），順便當付費意願的訊號。需要你先去申請帳號拿連結
+  - 付費項目構想：private/unlisted 筆記（免費版草稿只留 3~7 天）、更多圖、更深的巢狀 embed、無限收藏清單（免費只有「喜歡」跟「稍後」兩個）
+- [ ] Dev workflow
+  - [x] CLAUDE.md 保持精簡、explore → plan → run、skills/commands、驗證 hook（要確定性行為，不要機率性調參）
+  - [ ] TDD：明確可驗收的交付物與驗證條件
+  - [ ] `/goal` 也不錯
+- [x] `/random`「漫遊」、分享鈕 + Open Graph、繁中 UI
+- [x] `/terms` + `/privacy`（v0 繁中草稿，上線前需法務校訂）
 
-
-## Tech Stack & Frontend Direction
-
-Decision record (architecture review 2026-06-20, 3 agents + 4 lib evaluations). 3 founders: one backend, two design/product who will keep pushing richer UI. So the question isn't "least JS now", it's what survives feature #20 without a React rewrite.
-
-### Server / rendering — keep as is
-- Go `net/http` (1.22 patterns) + stdlib `html/template` + `//go:embed` → **single static binary, no build tooling.** Not changing it.
-- Postgres via `pgx/v5` (README was stale, said SQLite — fixed). FTS = `tsvector`+GIN.
-
-### htmx — keep, adopt the native patterns we're missing
-- Vendored `htmx.min.js` + hand-written `hx-*` attributes is what the htmx docs themselves recommend.
-- Rejected: `htmgo` (full framework rewrite off stdlib, max lock-in) and `donseba/go-htmx` (wraps ~10 lines of header reads we already do).
-- One wheel we reinvented: replace the `?partial=1` query param with the native `HX-Request` header (`r.Header.Get("HX-Request")`).
-- **Adopt incrementally as features need them** (all native, zero deps): OOB swaps (`hx-swap-oob`), `HX-Trigger` response header (decoupled toasts/events), `hx-indicator`+view-transitions (FOUC fix), `hx-boost`.
-
-### Alpine.js — adopt (vendored, no build step)
-- For the client-side state the design/product founders will want: popovers, multi-step UI, optimistic toggles, persisted prefs via `$persist`.
-- htmx for the server-driven 90%, Alpine for the stateful 10%.
-- One vendored `alpine.min.js` + `defer` in `_base.html`. Single binary intact.
-- **Roll in incrementally, not big-bang:** first the feed layout-restore script, then the wiki-autocomplete popup state (the worst hand-rolled state machine, cmeditor.js). Leave EasyMDE (editor core) and the canvas graph alone — Alpine doesn't help either.
-
-### templ — defer
-- Type-safe Go templates (JSX-like, compiles `.templ`→`.go`). Attractive for a JS/TS-primary team, and would catch the silent `map[string]any` template-bag typos at compile time.
-- Cost today: adds a `templ generate` codegen step → breaks the "no build tooling" property and complicates `go:embed` (embed generated Go, not `.html`). Both Go reviewers said no *at current size* (18 templates).
-- Sequencing: do not migrate to templ *before* the Meta-App view-substrate refactor — that's a double migration. Refactor in stdlib first, let the shared component boundary (`NoteListView`) stabilize, *then* templ is a mechanical port of one clean component instead of 18 ad-hoc templates.
-- Adopt when templates exceed ~25, OR a second founder starts writing templates regularly, OR the view-substrate refactor has landed and we want the shared card components type-checked. Revisit then.
-
-### Typed template structs — templ's main win, without templ
-- Replace the loose `map[string]any` template data bags with typed structs per page — most of templ's type-safety, zero toolchain cost.
-- **Decision (2026-07-05):** do this *as prep for* the Meta-App view-substrate refactor, not instead of it — typed structs make that refactor itself safer (compiler catches field-name/type mistakes during the `feedItem`/`profileNote`/`searchHit` → `feedCard` consolidation) without paying for a templ build step yet. Full templ adoption stays gated on the trigger above; re-audited 2026-07-05 and neither condition has fired (still 18 registered templates, refactor still not started).
-
-### Code-organization debt
-- `notes.go` is 800 lines (CRUD + link resolution + backlinks + stats). Split into `notes.go` / `links.go` / `notestats.go`. This is why "which file is the main logic" has no answer today.
-- Card-type duplication (`feedItem`/`profileNote`/`searchHit` + 5 scan loops) → collapse to `feedCard` in the Meta-App view-substrate refactor (see spec).
-
-### Fonts / CJK delivery
-
-**Now (shipped):** self-hosted, unicode-range-split Source Han Serif **TC** via `cn-font-split` (668 woff2 chunks + generated `@font-face` CSS in `static/fonts/tc/`). Browser fetches only chunks with on-page glyphs (~3.6MB/dense page, cached) instead of the 19.7MB monolith. Originals kept in `fonts-src/` (out of `go:embed`). Self-hosted = single static binary, no external dep, no Google. **SC not split yet** — re-run cn-font-split when simplified-Chinese ships (`fonts-src/README.md`).
-
-Chunking isn't automatic: the browser can't subset a remote monolithic font, so the split must be precomputed by a tool. CDNs (Google/Adobe/Fontsource) do it on their server. Self-hosting means we own that step. W3C Incremental Font Transfer (IFT) would automate it, but isn't deployed yet.
-
-Scaling ceiling: each extra self-hosted CJK family ≈ +34MB binary, +668 files. One reading serif is fine; a multi-font **picker** (sans + serif + weights + SC variants) would bloat the binary (~155MB / ~2,700 files for 4 families). Per-page egress stays bounded (user loads one font), but repo/binary size doesn't.
-
-**Options when we add more fonts (don't embed family #2 — switch delivery):**
-- **jsDelivr + Fontsource** (recommended non-Google) — serves Noto Sans/Serif CJK already unicode-range-chunked. jsDelivr is a neutral open-source CDN (no Google tracking). Zero binary weight, cross-site browser cache, N families ~free.
-- **Google Fonts CSS API** — most automatic, best-tuned chunking, but external dep + Google privacy (user finds distasteful). Fallback if jsDelivr insufficient.
-- **System sans is already free** — UI chrome uses `-apple-system…sans-serif`; system CJK sans (PingFang / MS YaHei / Noto Sans) needs no download. The *downloaded* font is the reading serif (the differentiator) — we may never need a downloaded CJK sans.
-- Keep the single self-hosted serif now. When the font picker ships (Should-Have, post-launch), move CJK webfonts to jsDelivr/Fontsource instead of embedding a 2nd 34MB family. Family #2 is the line not to cross; swapping to the CDN is a ~10-min change.
-
-## Dev & Testing
-
-### Claude Code + Browser Debugger Tool
-
-https://code.claude.com/docs/zh-TW/chrome
-
-
-Log in without email at `/_dev/login?as=alice` (creates user if needed).
-
-### Google OAuth Local Testing
-
-Google OAuth requires real credentials — there is no mock mode. Steps:
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials
-2. Create OAuth 2.0 Client ID → Web application
-3. Add authorized redirect URI: `http://localhost:8080/auth/google/callback`
-4. Copy Client ID and Client Secret into `.claude/CLAUDE.md` (gitignored)
-5. Run:
-   ```bash
-   GOOGLE_CLIENT_ID=xxx GOOGLE_CLIENT_SECRET=yyy make dev
-   ```
-6. The "Continue with Google" button appears on `/login` only when both vars are set.
-
-**Debugging OAuth failures:**
-- `invalid OAuth state` → state cookie expired (>5 min between start and callback) or browser blocked cookies
-- `token exchange` error → wrong client secret, or redirect URI doesn't exactly match what's in Google Console
-- `no email in Google userinfo` → scopes missing; ensure `openid` and `email` are listed
-- `Error 400: invalid_request` → read the `redirect_uri=` in the error. No scheme means `BASE_URL` is scheme-less; otherwise it isn't registered in the Console (`www.` counts).
+**中文 UI 現況**：使用者流程幾乎都中文了；`admin_dashboard.html` / `admin_reports.html` 刻意留英文（內部工具）。i18n 框架**還不需要**——沒有語言切換機制，真要做約是 20 個模板裡數百條字串。繁簡轉換是另一回事（中文內部的字形轉換），沒有共用管線。
 
 ## Should Have
 
-- [x] 明暗主題
-- [x] 繁簡轉換。
-  - [x] 後端搜尋互通：opencc s2t/t2s，已接入 `/search`、wiki-link 與 tag 的 autocomplete（`searchVariants`/`likeAnyVariant`，見 `internal/handlers/search.go`）。
-  - [x] 前端顯示切換：topbar 三態鈕 原→简→繁（`static/opencc-toggle.js` + vendored `opencc.min.js`），2026-07-05 上線。
-  - [x] [GitHub - BYVoid/OpenCC: Library for conversion between Traditional and Simplified Chinese · GitHub](https://github.com/BYVoid/OpenCC)
-- [ ] 思源宋體（or 源漾明體、源流明體）
-  - [x] https://github.com/adobe-fonts/source-han-serif
-  - [ ] https://github.com/ButTaiwan/genyo-font
-  - [ ] that's serif, for sans serif go with 思源 or 源流黑體
-- [x] 本地端字體選項 fontsize, serif or sans serif, simple stuff（參考 Zotero local view options or gitbooks）。— shipped: note 頁 Aa popover（字級 小/中/大、字體 宋體/黑體），`--reader-scale` 乘上既有 `--fs-*` token，localStorage + pre-paint，`reader.js`。
-- [x] 減少動畫設定 (reduce-motion toggle) — shipped per the design below, as a topbar icon button (動, next to the theme toggle) instead of a checkbox to match the existing 原/简 toggle pattern. One deviation from the design: at 0.001ms Chromium never fires `transitionend` (rounds to 0 → no transition event), so reveal.js's clip-path cleanup can't be relied on in reduced mode — solved with `clip-path: none !important` on `[data-reveal]` in both reduced contexts, which also neutralizes the inline pre-reveal clip. Verified headless (toggle + OS `prefers-reduced-motion`): animations instant, no stuck-clipped elements, persists across reload pre-paint, no console errors.
-
-### Reduce motion — design (frontend only)
-
-Covers the `.content` `pageFadeIn` CSS keyframe (style.css ~198-210) and the `[data-reveal]` scroll-reveal system (`reveal.js` + style.css ~166-195), including the htmx afterSwap/beforeSwap inline opacity fade in `reveal.js` ~79-90. Single on/off toggle, `localStorage` only — no `users` DB column, no new route/handler. (Original draft mirrored the `users.theme` DB-column pattern; unnecessary here — this preference has no reason to sync across devices, unlike dark/light mode, and a one-time flash of full motion on first load elsewhere is low-stakes.)
-
-- **`style.css`** (append near the existing `pageFadeIn`/`[data-reveal]` rules, ~line 210):
-
-  ```css
-  @media (prefers-reduced-motion: reduce) {
-    .content { animation: none; }
-    [data-reveal] { transition-duration: 0.001ms; }
-  }
-  html[data-motion="reduced"] .content {
-    animation: none;
-    transition-duration: 0.001ms !important; /* beats reveal.js's inline
-      transition set on every htmx swap (content.style.transition = "opacity
-      0.15s ease") — without !important the htmx page-fade ignores this toggle */
-  }
-  html[data-motion="reduced"] [data-reveal] {
-    transition-duration: 0.001ms; /* near-zero, not none/0 — reveal.js listens
-      for transitionend on clip-path to clean up inline styles after the
-      reveal; a transition that never actually transitions never fires it */
-  }
-  ```
-
-  `.content`'s keyframe animation has no completion listener, so `animation: none` is fine there; `[data-reveal]`'s transition does have one (the clip-path cleanup in `reveal.js`), so it needs a non-zero-but-tiny duration instead, or the cleanup never fires and leaves elements clipped.
-
-- **`_base.html`**: inline script near the top (same place the existing theme FOUC-avoidance IIFE lives):
-  ```js
-  (function () {
-    var v = null;
-    try { v = localStorage.getItem("motion"); } catch (e) {}
-    if (v === "reduced") document.documentElement.setAttribute("data-motion", "reduced");
-  })();
-  ```
-  Add a checkbox reachable from the nav (simplest: next to `#theme-toggle`, or a small `<details>` popover — no new page/route needed). On change:
-  ```js
-  var reduced = checkbox.checked;
-  var html = document.documentElement;
-  if (reduced) html.setAttribute("data-motion", "reduced");
-  else html.removeAttribute("data-motion");
-  try { localStorage.setItem("motion", reduced ? "reduced" : "normal"); } catch (e) {}
-  ```
-
-Verification: DevTools Rendering tab → emulate `prefers-reduced-motion: reduce` with no explicit toggle set → page fade + feed reveal instant, no stuck-clipped elements, no console errors. Check the toggle → animations off immediately, persists across reload (attribute re-applied pre-paint by the inline script). htmx nav (feed → note) → `.content` opacity flip instant, not a visible 0.15s fade. Uncheck → animations return.
-- [x] tag merging issue? 應該多用大家在用的 tag 吧 (based on number of usages of that tag, show that when picking tag, easy) — `#` autocomplete (editor) 與 feed 的標籤搜尋都已改成依使用次數排序並顯示計數
-  - A3. 標籤 chips
-  - [x] 有小計數（e.g. 「#音樂 12」）— `GetTagSuggest` 現在回傳 `#tag  N`
-  - [x] tag picker UX: autocomplete sorted by usage count desc — done (both editor `#` popup and feed tag-search picker, shared `GetTagSuggest` endpoint)
-  - [ ] tag picker UX (remaining): picking an existing tag should be the path of least resistance; creating a brand-new tag must be a deliberate, visually separate last step (not just hitting enter on free text) — goal is to stop X/FB-style tag spam (emphasis/color-coding instead of categorization) without banning new tags outright. Not implemented — current autocomplete lets Enter insert arbitrary free-typed text with no existing/new distinction.
-- [ ] mirroring should be easy
-  - [ ] 已有經營 blog 的人如何一鍵同步過來？
-  - [ ] 又分 normal blog vs. densely linked hypertext blog
-- [ ] 維持個人 vault 內部結構之外，為什麼應該跟 Comma 上的人互動？ Because connection with others is the whole point?
+- [x] 明暗主題、減少動畫、本地端字體選項（Aa popover：字級 + 宋/黑體）
+- [x] 繁簡轉換 — 後端搜尋互通（opencc s2t/t2s 接進 `/search`、wiki-link、tag autocomplete）＋ 前端 原→简→繁 三態鈕
+- [ ] 字體 — 思源宋體已上（見下方 CJK 交付）；黑體待選：[genyo-font](https://github.com/ButTaiwan/genyo-font)、思源或源流黑體
+- [ ] **tag picker 剩下的**：選現成標籤要是阻力最小的路，開新標籤必須是刻意、視覺上分開的最後一步，不能是在自由輸入框按 Enter。目標是擋掉 X/FB 那種把標籤當強調色用的濫用，但不禁止開新標籤。**還沒做**——現在 Enter 就能塞任意自由文字，完全沒有「現有 vs 新建」的區別
+  - [x] 依使用次數排序並顯示計數（編輯器 `#` popup 與 feed 標籤搜尋共用 `GetTagSuggest`）
+- [ ] 一鍵鏡像 — 已經在經營 blog 的人怎麼同步過來？普通 blog 與密集連結的 hypertext blog 又是兩種做法
+- [ ] 維持個人 vault 內部結構之外，為什麼該跟 Comma 上的人互動？
 
 ## Could Have
 
-- [x] 圖片支援 — note image upload (1/note, bytea, dedicated route, same pattern as avatar PNG)。
-  - [ ] consider raising limit to 1–10 images/note: cost stays O(1) per note (constant cap, not O(n) content), complexity stays manageable; schema option: `note_images` table with CHECK/trigger enforcing max 10 rows per note_id.
-- [ ] Library page: 優質公有領域文本，like Project Gutenberg
+- [x] 圖片支援（1 張/篇，bytea）
+  - [ ] 放寬到 1–10 張：成本仍是每篇 O(1)（固定上限，不隨內容成長）；schema 用 `note_images` 表加 CHECK/trigger 限 10 列
+- [ ] Library page：優質公有領域文本，像 Project Gutenberg
 
 ## Won't Have
 
-- 影片（含短影音）。
-- PDF。
-- AI 整合。
+影片（含短影音）、PDF、AI 整合。
 
-## Scaling Issues
+---
 
-- [x] ~~現況 — SQLite 單檔當 DB，需要一台 24/7 不掉資料的專屬機（用 [Fly.io](https://fly.io/)）。~~ 已換 Postgres，這項已成過去式。
-- [x] 計畫 — DB 換 hosted Postgres，但用 Render 不是 Neon；Go server 維持單一 binary 部署在 Render，不走 Vercel serverless（理由見 `.claude/postgres-railway-rebuild-spec.md` Design decisions）。
-  - [ ] or perhaps cloudflare 全家桶（未評估，仍開放）
-- [ ] DDoS issues
-- [ ] concurrent users issue
-  - [ ] writing queue?
-  - [ ] reading?
+## Tech Stack
 
-### Benchmark findings (2026-06-20, local `benchmark` DB, 100 users × 1000 notes = 100K notes / 300K note_tags / 100K resolved links)
+架構決策的來龍去脈在 `docs/DECISIONS.md`，這裡只記還沒做的。
 
-Method: seeded a dedicated `benchmark` Postgres DB (separate from dev/test/prod), `EXPLAIN ANALYZE` on the hot query paths. Numbers are local single-query (no concurrency); treat as relative, not absolute prod latency.
+- **Server**：Go `net/http` + `html/template` + `go:embed`，單一靜態 binary，不加 build 步驟。Postgres via `pgx/v5`，FTS 用 `tsvector`+GIN
+- **htmx**：vendored + 手寫 `hx-*`。已用原生 `HX-Request` header（不是 `?partial=1`）。OOB swap、`HX-Trigger`、`hx-indicator`、`hx-boost` 有需要再逐個接，別預先鋪
+- **Alpine.js**：要接，vendored 無 build。先接 feed 版型記憶，再接 wiki autocomplete 的 popup 狀態（`cmeditor.js` 那個手刻狀態機最爛）。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
+- **templ**：想要，但別在 Meta-App view substrate 重構**之前**做，否則同樣 18 個模板要遷兩次
 
-| Query                                                                | @100K       | Verdict                                                                                                                  |
-| -------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Feed (recommended, `idx_notes_feed`)                                 | **0.07 ms** | Flat vs 200 rows — partial index does index-scan-stop-at-LIMIT, never sorts 90K. Index holds at forecast scale. |
-| **Tag-chips aggregate** (`loadTopTagChips`, runs on EVERY feed load) | **~40 ms**  | 🔴 **Only real bottleneck.** HashAggregate over full note_tags⋈notes join. Grows with table.                             |
-| Tag page (sort after join)                                           | ~21 ms      | 🟡 Slowest page, tolerable, watch.                                                                                       |
-| Backlinks (`idx_links_resolved`)                                     | fast        | Bitmap scan, fine.                                                                                                       |
-| FTS                                                                  | n/a         | Test invalid (every seeded body matched the term); re-test with varied corpus.                                           |
+### 待還的技術債
 
-- Feed architecture holds at the 100K forecast. The index/N+1 changes from the arch review are unmeasurable at the current 200-row scale, but correct going forward: feed stays O(LIMIT), not O(N).
-- [ ] **Tag-chips fix (when it bites, not now — 40 ms is fine today):** it changes slowly, so cache it (Render Key Value / in-process TTL map) or drop it off the synchronous feed render. Don't optimize until it's on the measured hot path for real traffic. See "speed up tags" options below.
-- [ ] **Concurrency untested** — single-query SQL ≠ concurrent load. Needs an HTTP load tool (k6 / vegeta) against the running binary: connection-pool saturation, write contention. Separate exercise.
-- Reproduce: `benchmark` DB lives in the local docker postgres; reseed script in session notes. DBs: prod (Render), `commaplace` (dev), `benchmark` (load), `commaplace_test` (tests).
+- [ ] `notes.go` 800 行（CRUD + link resolution + backlinks + stats）拆成 `notes.go` / `links.go` / `notestats.go`。「主要邏輯在哪個檔案」今天沒有答案就是因為這個
+- [ ] `feedItem` / `profileNote` / `searchHit` 三個卡片型別 + 5 個 scan loop 收斂成一個 `feedCard`，跟 Meta-App view substrate 重構一起做
+- [ ] 把 `map[string]any` 模板資料袋換成每頁一個 typed struct — templ 的主要好處，不用付 build 成本，而且能讓上面那個重構本身更安全
 
-# Some Concerns (Iterative)
+### CJK 字體交付
 
-- [ ] migrations: in early dev stage it's fine to squash and reset the DB periodically; keep the schema clean, not precious
-	- [x] what does migration means? we can afford to drop the db anytime now, why are we accumulating techdebt now already? — resolved: no production data existed, so the Postgres rebuild shipped as a clean rip-and-replace with no migration/rollback tooling (see `.claude/postgres-railway-rebuild-spec.md`).
-	- [ ] **TODO: squash `internal/db/migrations/001_init.sql`…`005_*.sql` into one file before beta launch.** Once real user data exists this squash-anytime freedom ends (per the "Revisit when" in Decision 3, `docs/DECISIONS.md`) — do it while the DB is still disposable, not after.
-- [x] liked and saved should be separated — shipped: `saves` table (migration 006) + `POST /api/save` toggle + 收藏 button on notes, independent of the like heart; `/me/saved` now reads `saves` not `likes`. Covered by `saves_test.go`.
-  - [x] e.g. don't like a post but want to save for later, or like a post but don't want to visit later.
-  - [ ] 收藏清單、playlist 管理（多清單）— 目前是單一收藏清單；multi-playlist 仍待做。
-- [x] distinctions
-  - [x] inbound/outbound links — 這篇連到的筆記（outbound）vs 引用了這篇筆記的人（inbound），note 頁已分兩區。
-  - [x] linked by self or by others — inbound/outbound 皆再分「同個 vault（自己）」vs「其他人」子區（2026-07-24 補上 backlinks 的 self/others 標籤）。
-- [x] can users change their `@handle`? — shipped: owner profile「改用戶名」表單 → `POST /settings/handle`，驗證 URL-safe 格式、拒絕保留字與重複（handle_ci），連結靠 UUID 不斷鏈。`settings_test.go`。
-	- uuid should handle all the linkage already, so probably it'll be fine to permit changes
-- [x] maybe no "folders"? how to organize notes of a user? collection via tags and just pure linking from notes? why bother with folders? — resolved: folders removed from product, `folder_path` column dropped entirely in the Postgres rebuild.
-- [x] need to handle empty links (stubs) like wikipedia or obsidian does. 
-- [x] need quick reply to others note
-- [x] feed page card view doesn't render markdown correctly. all returned HTML should not contain un-rendered markdown, except for the editing "textarea" of writing pages/sections
-- [x] user avatar image: use dicebear or Hank's NFT-like Weedie.
-- [x] auto-save draft causing empty-title-empty-body drafts to pile up — root cause found (2026-07-05): `/write` inserts a fresh empty draft row on every page load; `sweepOrphanDrafts` only prunes them opportunistically on a later `/write` visit (7-day cutoff), not on a schedule. Didn't change the sweep cadence (out of scope, revisit only if still a problem); shipped a manual escape hatch instead — bulk-delete-drafts feature (checkbox multi-select on the profile drafts tab, `POST /api/notes/bulk-delete`, soft-delete, drafts-only).
-- [x] 個人頁把自己的 email 印在 profile 上（2026-08-13 移除）。只有本人看得到（`{{if .IsSelf}}`），沒外洩，但也沒理由印。`profile.html` 的 `<span>{{.Email}}</span>` 跟 `profile.go` 的 `data["Email"]` 一起刪掉。email 只剩 `/admin` 看得到
-- [x] publish guard sometimes wrongly blocked a titled note from publishing — two real bugs found+fixed (2026-07-05): (1) client-side, a failed autosave (e.g. a slug collision) didn't stop the publish click, so the server still held the old/empty title when `PublishNote` ran its check (`cmeditor.js` `save()` now rejects on failure); (2) server-side, an emoji/punctuation-only title made `kebabSlug` return `""`, so the slug stayed at its `draft-*` seed value forever, which the publish guard blocks (`PatchNote` now falls back to a non-`draft-` slug in that case).
+思源宋體 TC 自架，`cn-font-split` 切成 668 個 woff2 chunk，瀏覽器只抓頁面上有的字（密集中文頁 ~3.6MB，原本 19.7MB）。原始檔在 `fonts-src/`（不進 `go:embed`）。**簡體還沒切**，等簡中支援時重跑。
+
+天花板：每多一個自架 CJK 字族 ≈ +34MB binary、+668 檔案。字體選擇器（4 個字族 ≈ 155MB / 2,700 檔）就是那條線。**不要 embed 第二個字族**——改用 jsDelivr + Fontsource（中立開源 CDN，非 Google，本來就切好了），約 10 分鐘的事。UI chrome 用系統 sans，本來就不用下載。
+
+## Dev & Testing
+
+`/_dev/login?as=alice` 免 email 登入（不存在就建）。瀏覽器除錯：https://code.claude.com/docs/zh-TW/chrome
+
+### Google OAuth 本機測試
+
+沒有 mock 模式，要真憑證。Console → APIs & Services → Credentials → 建 OAuth 2.0 Client ID（Web application）→ 加 redirect URI `http://localhost:8080/auth/google/callback` → `GOOGLE_CLIENT_ID=xxx GOOGLE_CLIENT_SECRET=yyy make dev`。兩個變數都在，`/login` 才會出現「Continue with Google」。
+
+失敗對照：
+
+| 症狀 | 原因 |
+| --- | --- |
+| `invalid OAuth state` | state cookie 過期（start 到 callback 超過 5 分鐘）或瀏覽器擋 cookie |
+| `token exchange` error | client secret 錯，或 redirect URI 跟 Console 不是逐字相同 |
+| `no email in Google userinfo` | scope 少了，要有 `openid` 跟 `email` |
+| `Error 400: invalid_request` | 讀錯誤訊息裡的 `redirect_uri=`。沒有 scheme 表示 `BASE_URL` 缺 `https://`；有的話就是 Console 沒註冊（`www.` 算數） |
+
+## Scaling
+
+- [x] Postgres on Render，Go server 單一 binary，不走 serverless
+- [ ] Cloudflare 全家桶（未評估，仍開放）
+- [ ] DDoS
+- [ ] 並發：寫入佇列？讀取？
+
+### Benchmark（2026-06-20，本機 `benchmark` DB，100 users × 1000 notes = 100K notes / 300K note_tags / 100K resolved links）
+
+單一查詢、無並發，看相對值不是絕對延遲。
+
+| 查詢 | @100K | 判讀 |
+| --- | --- | --- |
+| Feed（`idx_notes_feed`） | **0.07 ms** | 跟 200 列一樣快——partial index 掃到 LIMIT 就停，不會排序 90K。撐得住預估規模 |
+| **Tag chips**（`loadTopTagChips`，**每次 feed 都跑**） | **~40 ms** | **唯一真瓶頸**。整個 note_tags⋈notes join 做 HashAggregate，隨表成長 |
+| Tag page | ~21 ms | 最慢的頁，可接受，盯著 |
+| Backlinks（`idx_links_resolved`） | 快 | bitmap scan，沒問題 |
+| FTS | n/a | 測試無效（每篇 seed 內文都命中），要換多樣語料重測 |
+
+- [ ] **Tag chips 的修法（等它真的痛再做，40 ms 現在無所謂）**：它變得很慢，所以快取（Render Key Value 或 in-process TTL map），或乾脆移出 feed 的同步渲染路徑
+- [ ] **並發沒測過** — 單查詢 SQL ≠ 並發負載。要用 k6 / vegeta 打真的 binary，看連線池飽和與寫入爭用
+
+DB 們：prod（Render）、`commaplace`（dev）、`benchmark`（壓測）、`commaplace_test`（測試）。
+
+## Some Concerns
+
+- [ ] **上線前把 `001_init.sql`…`009_*.sql` 壓成一個檔**。趁 DB 還能隨便丟的時候做，有真用戶就沒這個自由了（`docs/DECISIONS.md` 3 的 "Revisit when"）
+- [x] 讚與收藏分開 — `saves` 表（migration 006）。**`/me/saved` 從空的開始**，006 只建表沒搬資料。要帶的話：`INSERT INTO saves SELECT user_id, note_id, created_at FROM likes ON CONFLICT DO NOTHING;`
+  - [ ] 多清單 / playlist 管理 — 目前只有單一收藏清單
+- [x] 連結分區 — outbound（這篇連到誰）vs inbound（誰引用這篇），各自再分「自己的 vault」vs「其他人」
+- [x] 改 `@handle` — 連結靠 UUID 不斷鏈
+- [x] 沒有資料夾，用 tag + 連結組織（`folder_path` 欄位已整個刪掉）
+- [x] stub 連結、快速回覆、feed 卡片正確渲染 markdown、頭像產生器
+- [x] autosave 堆積空草稿 — 根因是 `/write` 每次載入都插一列空草稿，而 `sweepOrphanDrafts` 只在下次有人訪問 `/write` 時順手清（7 天門檻），沒有排程。沒改清理節奏（範圍外），改成給手動出口：個人頁草稿分頁可多選批次刪除
+- [x] publish guard 誤擋有標題的筆記 — 兩個真 bug：(1) autosave 失敗（例如 slug 撞名）不會擋下發布點擊，server 端還握著舊的空標題；(2) 純 emoji/標點的標題讓 `kebabSlug` 回傳空字串，slug 就永遠卡在 `draft-*`，而 publish guard 正是擋這個
+- [x] 個人頁不再印自己的 email（本來就只有本人看得到，但也沒理由印）
