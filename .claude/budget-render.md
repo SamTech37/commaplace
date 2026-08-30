@@ -1,29 +1,41 @@
 # Render Hosting Budget — commaplace
 
-Source: Render pricing (render.com/pricing, read 2026-06-20) + this session's
-egress audit. Figures may change — re-verify before relying.
+Source: Render pricing (render.com/pricing) + this session's egress audit.
+Postgres numbers re-derived 2026-08-30 from the actual August invoice. Figures
+may change — re-verify before relying.
 
 ## Verdict
 $10–100/mo for an always-on hobby/passion deploy is **sane, not insane**. Real
-floor ≈ **$26/mo** (~$9 each across 3 founders). You live in the $26–51 band until
-real traffic.
+floor ≈ **$13/mo** (~$4.50 each across 3 founders).
 
-## Two corrections to prior assumptions
+## Corrections to prior assumptions
 - **No-sleep does NOT need Pro.** The **Starter web instance ($7/mo)** already
   never sleeps — kills the 30 s cold start for $7, not $85 (Pro instance) or $25
   (Pro *workspace* = team governance, unrelated to uptime).
 - **Free Postgres expires after 30 days** — prod needs paid PG from day one.
+- **Postgres compute and storage bill separately** (Render's flexible plans).
+  The 2026-06-20 version of this file priced the *legacy bundled* plans —
+  "Basic-1gb $19/mo" — and that single stale line is where its $26 floor came
+  from. Storage is **$0.30/GB/month**, prorated to the second, and you pick the
+  size independently of the instance type.
 
 ## Minimum always-on stack
 | Component | Tier | $/mo |
 |-----------|------|------|
-| Web service | Starter (no sleep, 0.5 CPU / 512 MB) | 7 |
-| Postgres | Basic-1gb (0.5 CPU / 1 GB, 100 conns) | 19 |
-| **Floor** | (Hobby workspace $0) | **26** |
+| Web service | Starter (no sleep, 0.5 CPU / 512 MB) | 7.00 |
+| Postgres compute | Basic-256mb ($0.0081/hr on the invoice) | 5.91 |
+| Postgres storage | 1 GB @ $0.30/GB/mo | 0.30 |
+| **Floor** | (Hobby workspace $0) | **≈13.20** |
 | + Key Value (cache, optional) | Starter (256 MB) | +10 |
-| **With cache** | | **36** |
 
-Headroom: Standard web ($25) + Basic-4gb PG ($75) = ~$100 = serious capacity.
+Sanity check: Render's own write-up puts starter web + basic-256mb at "about
+$13/month before bandwidth and storage growth" — same number.
+
+**Storage only grows.** Render never shrinks a disk, so an oversized one is
+permanent until you rebuild the database. The August invoice was $4.46/mo for a
+15 GB disk holding 10 MB — 15x the floor's whole storage line, for nothing.
+Provision small and turn **Storage Autoscaling on**; it grows at ~90% full to
+the next 5 GB multiple, with a 12-hour cooldown between increases.
 
 ## Bandwidth (the real risk)
 - Included: **5 GB Hobby / 25 GB Pro**, then overage.

@@ -1,20 +1,30 @@
-# Render Blueprint — infra for the live deploy.
+# Render Blueprint — DESCRIPTIVE ONLY. Nothing currently syncs this file.
 #
-# NEVER "New + → Blueprint" again. That creates a *second* Blueprint record
-# instead of syncing the existing one; the names below are already taken, so
-# Render silently suffixes the copies (comma-c8h6, comma-db-c8h6) and bills
-# for both. It has happened three times — see the deleted comma-c8h6 that ran
-# 156 hours. To apply a change: push to main, or hit Sync on the existing
-# Blueprint in the dashboard.
+# As of 2026-08-30 no Blueprint manages the live stack. The one that exists
+# (Comma, exs-d95i5au7r5hc73eet4s0) is paused with auto-sync off and owns no
+# resources; prod deploys come from the service's own autoDeploy, straight off
+# the GitHub webhook. So this file documents what is running — it does not
+# provision it.
 #
-# Plans are pinned. Leaving "plan" unset makes Render pick at apply-time, so a
-# stray apply came up on a different instance type than prod. Changing a value
-# here changes the bill on the next sync.
+# BEFORE connecting a Blueprint to this repo, read FRESH_START.md. Creating one
+# while the names below are taken does NOT adopt those resources: Render's
+# creation flow suffixes the copies (comma-c8h6, comma-db-c8h6-c8h6) and then
+# bills for a silent parallel stack. That has happened three times.
+#
+# Two behaviours worth knowing before editing anything here:
+#   1. A sync never deletes, it reconciles — deleting a Blueprint-owned resource
+#      while auto-sync is on means the next push rebuilds it.
+#   2. `name` is the match key and is immutable on an existing resource, so
+#      renaming one here reads as "create a new one". It renames nothing.
+#
+# The 15 GB database disk below holds 10 MB and costs $4.38/mo. Render cannot
+# shrink a disk, so the fix is a rebuild, not an edit — FRESH_START.md.
 services:
   - name: comma
     type: web
     runtime: docker
     plan: starter
+    region: oregon
     dockerfilePath: ./Dockerfile
     # Push to main ships it. This defaults off in the dashboard, which is why a
     # merged migration sat on main doing nothing until someone deployed by hand.
@@ -22,7 +32,6 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          # Must match the databases: name below exactly, suffix and all.
           name: comma-db-c8h6
           property: connectionString
       # Render assigns a dynamic PORT by default; pin both sides instead of
@@ -42,6 +51,10 @@ services:
       # (www 301s to it), but the value below stays on www because that is
       # what the Console currently has registered. To move to the apex,
       # register https://commaplace.app/auth/google/callback first.
+      #
+      # Live prod has this without the scheme, set by hand in the dashboard.
+      # The scheme is required — a scheme-less value broke Google OAuth in
+      # August; loadConfig now repairs it at boot.
       - key: BASE_URL
         value: https://www.commaplace.app
       # Google OAuth. The client ID is public (it ships in the consent-page
@@ -63,15 +76,16 @@ services:
         sync: false
 
 databases:
-  # The suffix is not a typo. The live database is literally named
-  # comma-db-c8h6, and a database name is immutable on Render. While this said
-  # "comma-db" the Blueprint matched nothing, so every sync planned to CREATE a
-  # database instead of adopting the running one:
-  #   render blueprints validate  →  plan.databases: [comma-db], totalActions: 3
-  #   with the name below         →  totalActions: 1
+  # The suffix is not a typo — the live database is named comma-db-c8h6. It was
+  # born suffixed because `comma-db` was taken at creation, and a database name
+  # cannot be changed afterwards.
   - name: comma-db-c8h6
     plan: basic-256mb
+    region: oregon
     postgresMajorVersion: "17"
-    # diskSizeGB is deliberately unset: the live DB was provisioned at 15GB
-    # (~$4.4/mo for near-zero data) and Render cannot shrink a disk in place.
-    # Fixing that means a new database + dump/restore, not an edit here.
+    # Deliberately NOT declaring diskSizeGB. The live disk is 15 GB; a Blueprint
+    # cannot shrink it, and naming a smaller number here would be a lie that
+    # never takes effect. FRESH_START.md covers replacing it with a 1 GB disk.
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
