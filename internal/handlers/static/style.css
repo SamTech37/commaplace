@@ -261,6 +261,8 @@ html[data-motion="reduced"] [data-reveal] {
 .brand-logo {
   height: 96px;
   width: auto;
+  /* Squeezing the brand's grid track must not squash the mascot's aspect. */
+  flex-shrink: 0;
   display: block;
 }
 .brand-name {
@@ -271,6 +273,16 @@ html[data-motion="reduced"] [data-reveal] {
   margin: 0;
   flex: 1;
   max-width: 26rem;
+  /* Spell the direction out: the global `form { flex-direction: column }` would
+     otherwise stack the palette button under the input. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+/* Desktop has the real input; the icon is the mobile entry point.
+   Scoped past `.icon-btn { display: inline-flex }`, which is defined later. */
+.search-form .palette-btn {
+  display: none;
 }
 .search-form input {
   width: 100%;
@@ -374,15 +386,7 @@ mark {
   opacity: 1;
   transform: translate(-50%, 0);
 }
-.icon-btn .theme-icon {
-  display: none;
-}
-#theme-toggle[data-theme-current="dark"] .theme-icon-moon {
-  display: block;
-}
-#theme-toggle[data-theme-current="light"] .theme-icon-sun {
-  display: block;
-}
+#theme-toggle,
 #script-toggle,
 #motion-toggle {
   font-family: var(--font-sans);
@@ -485,32 +489,76 @@ mark {
   background: var(--bg-2);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 800px) {
   .nav-links {
     display: none;
   }
   .mobile-menu {
     display: inline-flex;
   }
-  .search-form {
-    max-width: 10rem;
-  }
   .brand-name {
     display: none;
   }
+
+  /* Bar and mascot shrink together so the comic overflow survives:
+     76/48 = 1.58, matching the desktop 96/60 = 1.6. */
+  .topbar {
+    height: 48px;
+    gap: 0.5rem;
+  }
+  .brand-logo {
+    height: 76px;
+  }
+
   /* The 200px brand column is a floor the bar cannot shrink under; without
      this the whole topbar overflows the viewport on a phone. */
   .page-wide .topbar {
     grid-template-columns: auto 1fr auto;
+    grid-template-rows: 48px;
+    gap: 0.5rem;
+  }
+  .page-wide .topbar .search-form {
+    max-width: none;
+  }
+
+  /* No room for a usable text field; the icon opens the Cmd+K palette instead.
+     flex-end parks it beside the other icons in both the flex topbar and the
+     1fr grid track of .page-wide. */
+  .search-form {
+    justify-content: flex-end;
+  }
+  .search-form input {
+    display: none;
+  }
+  .search-form .palette-btn {
+    display: inline-flex;
+  }
+
+  .nav {
+    gap: 0.25rem;
+  }
+  .icon-btn,
+  .mobile-menu summary,
+  .nav .avatar {
+    width: 36px;
+    height: 36px;
   }
 }
 
-/* Very narrow: the search field yields first so the login pill keeps its
-   full label instead of being squeezed off the bar. */
+/* Very narrow: shrink the bar once more rather than drop anything off it. */
 @media (max-width: 400px) {
-  /* Only when the pill is actually there — logged-in users keep search. */
-  .topbar:has(.nav-login) .search-form {
-    display: none;
+  .topbar {
+    height: 44px;
+  }
+  .brand-logo {
+    height: 70px;
+  }
+  /* Six controls plus the mascot do not fit at 36px below ~400px. */
+  .icon-btn,
+  .mobile-menu summary,
+  .nav .avatar {
+    width: 32px;
+    height: 32px;
   }
   .nav-login {
     margin-left: 0.2rem;
@@ -960,6 +1008,23 @@ button.secondary:hover {
   position: relative;
   overflow: hidden;
 }
+
+/* Phones keep 雙欄 (per DESIGN_PROMPTS); tighter padding is what buys back the
+   content width at ~170px per card. */
+@media (max-width: 600px) {
+  /* The top-8 chips are right there; the suggest input is the wider-screen
+     escape hatch to everything outside them. */
+  .tag-search-wrap {
+    display: none;
+  }
+  .feed-shell .masonry {
+    column-gap: 10px;
+  }
+  .masonry-card {
+    margin-bottom: 10px;
+    padding: 0.85em 0.9em 0.7em;
+  }
+}
 html[data-theme="dark"] .masonry-card {
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.5),
@@ -1266,10 +1331,13 @@ html[data-theme="dark"] .masonry-card:hover {
   }
   .feed-sidebar {
     position: static;
+    /* Grid items default to min-width: auto, which would let the nowrap chip
+       row stretch the track and overflow the page instead of scrolling. */
+    min-width: 0;
   }
 }
 
-/* ── Feed tabs (vertical inside sidebar, horizontal as fallback) ────────── */
+/* ── Feed tabs (vertical inside the sidebar; horizontal under 800px) ────── */
 .feed-tabs {
   display: flex;
   flex-direction: column;
@@ -1337,6 +1405,41 @@ html[data-theme="dark"] .masonry-card:hover {
   background: var(--text);
   color: var(--bg);
   border-color: var(--text);
+}
+
+/* Sidebar is a full-width row under 800px: tabs and chips lie down so the
+   cards are not pushed a screenful down the page. */
+@media (max-width: 800px) {
+  .feed-tabs {
+    flex-direction: row;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .feed-tab {
+    padding: 0.5em 0.75em;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+  .feed-tab.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--text);
+  }
+  .filter-chips {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .filter-chips::-webkit-scrollbar {
+    display: none;
+  }
+  /* nowrap flex children still shrink; chips must keep their intrinsic width. */
+  .filter-chip {
+    flex: 0 0 auto;
+  }
 }
 
 /* ── Backlinks ──────────────────────────────────────────────────────────── */

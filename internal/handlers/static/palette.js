@@ -133,4 +133,14 @@
       open();
     }
   });
+
+  // Topbar search icon (the only way in on mobile, where the input is hidden).
+  // This script is deferred, so the DOM is already parsed.
+  const paletteBtn = document.getElementById('palette-btn');
+  if (paletteBtn) {
+    paletteBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      open();
+    });
+  }
 })();
