@@ -1,6 +1,33 @@
 # `Comma,` Dev Roadmap
 
-## 現在的最高優先 — 三人內部發文 MVP
+## 下一步 — Meta-App view substrate，直接用 templ 寫
+
+規格：`.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`（v0 已上線，這是 v1）。
+
+**現況就是反 DRY 的樣板**：四個卡片型別（`feedItem`、`feedCard`、`profileNote`、`searchHit`）、七個 scan loop、**五個**版面各自手刻 `.note-card` 清單（`feed`、`tag`、`search`、`profile`、`saved`——規格只寫了四個，漏掉 `saved`）。加一個版面要改五個地方，所以沒人加；excerpt 處理也各是各的。
+
+**做完長這樣**：一份資料來源、多種呈現。四（五）個 handler 變成只產查詢的薄殼，共用一個 `NoteListView{ Cards, Layout, OlderURL, Empty }`，版面切換鈕與 `?layout=` 到處都有。之後加 timeline / canvas / calendar / dora 是註冊一個 renderer，不是開一個新頁面——那才是 Meta-App 真正的意思，也是 timeline 跟 dora 這兩個卡上線的項目一直沒動的原因。
+
+**graph 那半邊已經是這樣了，照抄就好。** `/api/graph` 是**一個** endpoint 吃 `?user=` / `?tag=` 篩選（`graph.go:55` `GetGraphData`），`GetGraph` / `GetUserGraph` / `GetTagGraph` 只是三個薄殼負責渲染頁面。全域、標籤、使用者圖回傳同一個形狀，所以加一種圖不用開新 handler。清單那半邊反過來——五個 handler、五份模板、四個卡片型別。要抄的樣板不用發明，就在 `graph.go`。
+
+一句話講完：**UI 是狀態的函數**。substrate 應該按**資料形狀**切，不是按頁面切。今天只有兩種形狀——筆記清單、筆記關聯圖——圖已經統一了，清單還沒。
+
+**用 templ 直接寫，不要先用 stdlib 重構一次再遷移**（`docs/DECISIONS.md` 5）。這個重構本來就是把 18 個模板重排，遷兩次等於白做一次。templ 是 Go 工具（`go install`、`go.mod` 釘版本、`templ generate` 產 `.go`），把產生的 `.go` commit 進去，部署還是純 `go build`——不違反「部署路徑不加 build 步驟」（`docs/DECISIONS.md` 1）。順帶把 `map[string]any` 資料袋的無聲 typo 變成編譯期錯誤。
+
+順序：
+
+1. `templ generate` 接上 air 的 dev loop，先遷一個模板驗證流程 → 驗證：`make watch` 改 `.templ` 會重編，`go build ./...` 綠
+2. 抽出共用 view（toggle + 三種版面 + 三個卡片模板），定義 `NoteListView` → 驗證：`/feed` 行為與現在完全相同
+3. 五個版面逐一接上去，一次一個，每個都有測試 → 驗證：每頁都有切換鈕、無限捲動維持當前版面、沒有生 markdown 外洩
+4. 砍掉 `feedItem` / `profileNote` / `searchHit` 與多餘的 scan loop → 驗證：`grep` 不到，測試全綠
+
+**每一步都要盯 N+1。** 把五個 handler 收斂成共用 view 的時候最容易長出來——共用的卡片元件想多要一個欄位（作者頭像、標籤、讚數），最省事的寫法就是每張卡各查一次。查詢次數必須跟卡片數無關；不確定就 `EXPLAIN ANALYZE`。我們是按用量付費的。
+
+**不在這一輪**：graph 併進版面列表（先留在自己的頁）、排序控制、版面偏好存 DB（維持 localStorage）、timeline / canvas / kanban。
+
+**待決**：偏好是全站共用一把 `feed.layout`，還是每個版面各自記？（單一比較簡單；分開的話使用者可以 profile 用清單、feed 用瀑布流。）
+
+## MVP 設定收尾 — 三人內部發文
 
 三個團隊成員能在 https://commaplace.app 登入、發文、互相看到。其他一切先不管。功能夠了（CRUD、feed、wikilink、like 都能用），剩下的幾乎都是設定。
 
@@ -38,6 +65,7 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
   - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格
 - [ ] **Meta App** — 同一份資料多種呈現，有 Obsidian Search / GraphView 等級的查詢力
   - [x] list / grid / masonry、global + local graph（單擊即跳）、calendar、RSVP 快速閱讀
+  - [ ] **2-hop graph** — 目前 local graph 只有直接的 inlink/outlink（一跳）。兩跳才看得到「朋友的朋友」那層結構，也是 dora mode 真正需要的資料。`/api/graph` 已經是單一 endpoint 吃篩選，加一個 `?hops=` 比開新 handler 合理
   - [ ] **timeline（linear）— 卡上線**。橫的還直的？
   - [ ] **dora mode — 卡上線**。star-graph，聚光燈打在當前節點，可換焦點
   - [ ] canvas（靜態可拖曳的便利貼牆，不要 graph 那種會抖的）、kanban — backlog
@@ -45,6 +73,8 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 - [ ] design 加 Small Caps
 - [x] 資料模型 / 後端架構 — Postgres（UUID PK、link 表用 ID 解析）、單一 Go binary on Render，serverless 否決。理由見 `docs/DECISIONS.md` 3 與 6
 - [ ] 逆向 Obsidian 的殺手功能 — obsidian-flavored markdown 做了，其餘翻 [Developer Documentation](https://docs.obsidian.md/Home)
+  - [vscode-markdown-preview-enhanced](https://github.com/shd101wyy/vscode-markdown-preview-enhanced) 實作了很相近的一套功能，比較簡單但夠穩，可以直接讀它怎麼做（[DeepWiki](https://deepwiki.com/shd101wyy/vscode-markdown-preview-enhanced)）
+  - Obsidian 的 `app.js` 沒混淆，反編譯就看得到——真的要對齊行為時的最後手段
 - [x] 匯出 — .md / .zip 下載、複製到剪貼簿、`obsidian://` 一鍵開啟
 - [x] 上傳與編輯 — 空白起手、從 markdown 起手、Medium 風格編輯器
 - [ ] 批次匯入
@@ -57,7 +87,7 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 - [ ] 付費牆
   - **Stripe out**：沒有美國公司。不卡上線，先免費跑，等有人表現出付費意願再做——瓶頸是需求不是串接
   - 真要做就走 Merchant-of-Record（Paddle / Lemon Squeezy / Gumroad），台灣本地選項 ECPay / NewebPay / TapPay 需要公司實體。⚠️ 每家的台灣賣家/出金資格都要先查，會變
-  - 先上 Ko-fi 或 Buy Me a Coffee 式的打賞（不用公司），順便當付費意願的訊號。需要你先去申請帳號拿連結
+  - [ ] **先擺一顆 Buy Me a Coffee 鈕**（或 Ko-fi，都不用公司）。不用等付費牆，這是最小的付費意願訊號。卡在你先去申請帳號拿連結——拿到就是加一個連結的事
   - 付費項目構想：private/unlisted 筆記（免費版草稿只留 3~7 天）、更多圖、更深的巢狀 embed、無限收藏清單（免費只有「喜歡」跟「稍後」兩個）
 - [ ] Dev workflow
   - [x] CLAUDE.md 保持精簡、explore → plan → run、skills/commands、驗證 hook（要確定性行為，不要機率性調參）
@@ -68,6 +98,8 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 
 **中文 UI 現況**：使用者流程幾乎都中文了；`admin_dashboard.html` / `admin_reports.html` 刻意留英文（內部工具）。i18n 框架**還不需要**——沒有語言切換機制，真要做約是 20 個模板裡數百條字串。繁簡轉換是另一回事（中文內部的字形轉換），沒有共用管線。
 
+**各華語區的名字**（構想，未定案）：台灣「逗陣」、中國「逗知」、港澳「佬逗」、新馬待想、海外華僑維持 **Comma,**。這跟繁簡切換是同一件事的兩面——同一個站按讀者所在地換字形也換名字。真要做的話，站名就不能寫死在模板裡，得跟繁簡三態鈕走同一條路。
+
 ## Should Have
 
 - [x] 明暗主題、減少動畫、本地端字體選項（Aa popover：字級 + 宋/黑體）
@@ -76,7 +108,9 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 - [ ] **tag picker 剩下的**：選現成標籤要是阻力最小的路，開新標籤必須是刻意、視覺上分開的最後一步，不能是在自由輸入框按 Enter。目標是擋掉 X/FB 那種把標籤當強調色用的濫用，但不禁止開新標籤。**還沒做**——現在 Enter 就能塞任意自由文字，完全沒有「現有 vs 新建」的區別
   - [x] 依使用次數排序並顯示計數（編輯器 `#` popup 與 feed 標籤搜尋共用 `GetTagSuggest`）
 - [ ] 一鍵鏡像 — 已經在經營 blog 的人怎麼同步過來？普通 blog 與密集連結的 hypertext blog 又是兩種做法
+  - 抄 [obsidian-clipper](https://github.com/obsidianmd/obsidian-clipper)：開源，抓網頁轉乾淨 markdown 的部分正是「從既有 blog 匯入」缺的那塊，不用自己寫爬蟲跟正文抽取
 - [ ] 維持個人 vault 內部結構之外，為什麼該跟 Comma 上的人互動？
+  - THE WHOLE PREMISE AND VALUE PROPOSITION IS COMMUNITY. COMMA: THINK TOGETHER WITH US.
 
 ## Could Have
 
@@ -95,15 +129,16 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 架構決策的來龍去脈在 `docs/DECISIONS.md`，這裡只記還沒做的。
 
 - **Server**：Go `net/http` + `html/template` + `go:embed`，單一靜態 binary，不加 build 步驟。Postgres via `pgx/v5`，FTS 用 `tsvector`+GIN
+- **GraphQL / GraphDB：不用，問題不成立。** GraphQL 解的是「JSON client 過度或不足抓取」，我們的 handler 回的是 HTML fragment，沒有那個 client。GraphDB 解的是深度不定的遍歷，我們的圖查詢是有界的（一跳，之後兩跳），`links` 表加索引就夠——benchmark 裡 backlinks 走 bitmap scan 本來就快。真的要無界遍歷再回來看，別為了名字裡有 graph 就換資料庫
 - **htmx**：vendored + 手寫 `hx-*`。已用原生 `HX-Request` header（不是 `?partial=1`）。OOB swap、`HX-Trigger`、`hx-indicator`、`hx-boost` 有需要再逐個接，別預先鋪
 - **Alpine.js**：要接，vendored 無 build。先接 feed 版型記憶，再接 wiki autocomplete 的 popup 狀態（`cmeditor.js` 那個手刻狀態機最爛）。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
-- **templ**：想要，但別在 Meta-App view substrate 重構**之前**做，否則同樣 18 個模板要遷兩次
+- **templ**：跟 Meta-App view substrate 重構**一起**做，見最上面的「下一步」。不要先用 stdlib 重構一次再遷 templ，那是同樣 18 個模板遷兩次
 
 ### 待還的技術債
 
 - [ ] `notes.go` 800 行（CRUD + link resolution + backlinks + stats）拆成 `notes.go` / `links.go` / `notestats.go`。「主要邏輯在哪個檔案」今天沒有答案就是因為這個
-- [ ] `feedItem` / `profileNote` / `searchHit` 三個卡片型別 + 5 個 scan loop 收斂成一個 `feedCard`，跟 Meta-App view substrate 重構一起做
-- [ ] 把 `map[string]any` 模板資料袋換成每頁一個 typed struct — templ 的主要好處，不用付 build 成本，而且能讓上面那個重構本身更安全
+- [ ] `feedItem` / `profileNote` / `searchHit` 三個卡片型別 + 7 個 scan loop 收斂成一個 `feedCard` — 「下一步」的第 4 步
+- [x] ~~`map[string]any` 換成 typed struct~~ — templ 直接給了型別安全的元件，這項被「下一步」吸收掉了
 
 ### CJK 字體交付
 
