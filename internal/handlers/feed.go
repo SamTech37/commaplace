@@ -125,7 +125,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, ol
 		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
 		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
 		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
@@ -153,7 +153,7 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, ta
 		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
 		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
 		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_handle != u.handle)
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)
 		FROM notes n
 		JOIN users u   ON u.id = n.author_id
 		JOIN follows f ON f.followed_id = n.author_id

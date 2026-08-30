@@ -258,3 +258,35 @@ func TestEmojiOnlyTitlePublish(t *testing.T) {
 		t.Fatalf("PublishNote with emoji-only title: status %d body=%s", pw.Code, pw.Body)
 	}
 }
+
+// TestStubSurvivesTargetRename guards the hole the shawn -> shawn_demo prod
+// rename exposed: links recorded the target's *handle*, so renaming a user
+// stranded every inbound stub addressed to the old name — backfillStubLinks
+// could never match again. Identity is the user's uuid; the handle is a label.
+func TestStubSurvivesTargetRename(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	alice := mkUser(t, s, "alice")
+	bob := mkUser(t, s, "bob")
+
+	// alice points at a note bob has not written yet -> one stub link.
+	if _, err := s.saveNote(ctx, alice, "alice", "intro", "Intro", "see [[@bob/futurenote]]", nil); err != nil {
+		t.Fatalf("save alice/intro: %v", err)
+	}
+	if r, u := countResolved(t, s); r != 0 || u != 1 {
+		t.Fatalf("after intro: resolved=%d unresolved=%d, want 0/1", r, u)
+	}
+
+	// bob renames himself through the real endpoint. Same row, same uuid.
+	if rec := postHandle(t, s, bob, "bobby"); rec.Code != http.StatusSeeOther {
+		t.Fatalf("rename bob->bobby: status %d body=%s", rec.Code, rec.Body)
+	}
+
+	// bob writes the note alice was waiting on. The stub must resolve.
+	if _, err := s.saveNote(ctx, bob, "bobby", "futurenote", "Futurenote", "hello", nil); err != nil {
+		t.Fatalf("save bobby/futurenote: %v", err)
+	}
+	if r, u := countResolved(t, s); r != 1 || u != 0 {
+		t.Fatalf("after the renamed user creates the target: resolved=%d unresolved=%d, want 1/0", r, u)
+	}
+}

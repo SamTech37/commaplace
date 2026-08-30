@@ -505,7 +505,7 @@ func (s *Server) saveNote(ctx context.Context, authorID uuid.UUID, authorHandle,
 		return uuid.UUID{}, err
 	}
 
-	if err := backfillStubLinks(ctx, tx, noteID, authorHandle, slug); err != nil {
+	if err := backfillStubLinks(ctx, tx, noteID, authorID, slug); err != nil {
 		return uuid.UUID{}, err
 	}
 
@@ -529,23 +529,38 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, sourceA
 		if targetHandle == "" {
 			targetHandle = sourceAuthorHandle
 		}
-		var resolved *uuid.UUID
-		var found uuid.UUID
-		err := tx.QueryRowContext(ctx, `
-			SELECT n.id FROM notes n
-			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = $1 AND n.slug = $2`,
-			targetHandle, l.Slug,
-		).Scan(&found)
-		if err == nil {
-			resolved = &found
-		} else if !errors.Is(err, sql.ErrNoRows) {
+		// The target *user* almost always exists even when the target note
+		// does not, so the edge is stored as a uuid and survives a rename.
+		// A link to a handle nobody owns leaves it NULL.
+		var targetUserID *uuid.UUID
+		var uid uuid.UUID
+		switch err := tx.QueryRowContext(ctx,
+			`SELECT id FROM users WHERE handle_ci = lower($1)`, targetHandle,
+		).Scan(&uid); {
+		case err == nil:
+			targetUserID = &uid
+		case errors.Is(err, sql.ErrNoRows):
+		default:
 			return err
 		}
+		var resolved *uuid.UUID
+		var found uuid.UUID
+		if targetUserID != nil {
+			switch err := tx.QueryRowContext(ctx,
+				`SELECT id FROM notes WHERE author_id = $1 AND slug = $2`,
+				*targetUserID, l.Slug,
+			).Scan(&found); {
+			case err == nil:
+				resolved = &found
+			case errors.Is(err, sql.ErrNoRows):
+			default:
+				return err
+			}
+		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO links(source_note_id, target_user_handle, target_slug, raw_target, resolved_target_id)
+			INSERT INTO links(source_note_id, target_user_id, target_slug, raw_target, resolved_target_id)
 			VALUES($1, $2, $3, $4, $5)`,
-			sourceID, targetHandle, l.Slug, l.Raw, resolved,
+			sourceID, targetUserID, l.Slug, l.Raw, resolved,
 		); err != nil {
 			return err
 		}
@@ -556,13 +571,13 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, sourceA
 // backfillStubLinks resolves any link row still waiting (resolved_target_id
 // IS NULL) for the (handle, slug) that noteID just started answering to —
 // covers both a brand-new note and a slug change on an existing one.
-func backfillStubLinks(ctx context.Context, tx *sql.Tx, noteID uuid.UUID, handle, slug string) error {
+func backfillStubLinks(ctx context.Context, tx *sql.Tx, noteID uuid.UUID, authorID uuid.UUID, slug string) error {
 	_, err := tx.ExecContext(ctx, `
 		UPDATE links SET resolved_target_id = $1
 		WHERE resolved_target_id IS NULL
-		  AND target_user_handle = $2
+		  AND target_user_id = $2
 		  AND target_slug = $3`,
-		noteID, handle, slug,
+		noteID, authorID, slug,
 	)
 	return err
 }
@@ -697,7 +712,15 @@ func (s *Server) autosaveNote(ctx context.Context, noteID uuid.UUID, authorHandl
 	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
 		return err
 	}
-	if err := backfillStubLinks(ctx, tx, noteID, authorHandle, slug); err != nil {
+	// Stubs are matched by the author's uuid, and this path only carries the
+	// handle; the note itself is the cheapest place to get the id.
+	var authorID uuid.UUID
+	if err := tx.QueryRowContext(ctx,
+		`SELECT author_id FROM notes WHERE id = $1`, noteID,
+	).Scan(&authorID); err != nil {
+		return err
+	}
+	if err := backfillStubLinks(ctx, tx, noteID, authorID, slug); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -768,6 +791,9 @@ func isUniqueViolation(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
+// resolverKey identifies a link by what the author typed, not by who it points
+// at. A target's handle can change while the body text does not, so the key is
+// built from the typed (user, slug) rather than the target's current identity.
 func resolverKey(vaultHandle string, l markdown.WikiLink) string {
 	h := l.User
 	if h == "" {
@@ -810,7 +836,7 @@ func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []
 func (s *Server) buildResolverForNote(ctx context.Context, vaultHandle string, sourceID uuid.UUID) markdown.Resolver {
 	resolved := map[string]markdown.ResolvedTarget{}
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT l.target_user_handle, l.target_slug, u.handle, n.slug, n.title
+		SELECT l.raw_target, u.handle, n.slug, n.title
 		FROM links l
 		JOIN notes n ON n.id = l.resolved_target_id
 		JOIN users u ON u.id = n.author_id
@@ -818,12 +844,19 @@ func (s *Server) buildResolverForNote(ctx context.Context, vaultHandle string, s
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
-			var typedHandle, typedSlug string
+			var raw string
 			var rt markdown.ResolvedTarget
-			if err := rows.Scan(&typedHandle, &typedSlug, &rt.Handle, &rt.Slug, &rt.Title); err != nil {
+			if err := rows.Scan(&raw, &rt.Handle, &rt.Slug, &rt.Title); err != nil {
 				break
 			}
-			resolved[typedHandle+"\x00"+typedSlug] = rt
+			// raw_target is the payload between [[ and ]] exactly as authored,
+			// so re-parsing it reproduces the key the renderer will look up —
+			// no stored copy of anyone's handle required.
+			typed, ok := markdown.ParseLink(raw)
+			if !ok {
+				continue
+			}
+			resolved[resolverKey(vaultHandle, typed)] = rt
 		}
 	}
 	return func(l markdown.WikiLink) *markdown.ResolvedTarget {

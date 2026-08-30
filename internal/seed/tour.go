@@ -90,7 +90,8 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = $2 AND target_slug = $3`,
+			  AND target_user_id = (SELECT id FROM users WHERE handle_ci = lower($2))
+			  AND target_slug = $3`,
 			nid, DemoHandle, n.Slug,
 		); err != nil {
 			return err
@@ -309,7 +310,8 @@ func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, 
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = $2 AND target_slug = $3`,
+			  AND target_user_id = (SELECT id FROM users WHERE handle_ci = lower($2))
+			  AND target_slug = $3`,
 			nid, n.Author, n.Slug,
 		); err != nil {
 			return err

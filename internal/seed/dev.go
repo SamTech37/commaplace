@@ -76,7 +76,8 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE links SET resolved_target_id = $1
 			WHERE resolved_target_id IS NULL
-			  AND target_user_handle = $2 AND target_slug = $3`,
+			  AND target_user_id = (SELECT id FROM users WHERE handle_ci = lower($2))
+			  AND target_slug = $3`,
 			nid, handle, slug,
 		); err != nil {
 			return uuid.UUID{}, err
