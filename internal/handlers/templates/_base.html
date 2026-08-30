@@ -53,12 +53,19 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
     {{end}}
+    <!-- Newsreader and IBM Plex Mono were downloaded on every page load but
+         never rendered a glyph: no font-family in style.css names either one
+         (--font-serif is Source Han Serif + system fallbacks, --font-sans and
+         --font-mono are pure system stacks). Commented out rather than deleted
+         in case a later design pass wants them back — but see DECISIONS.md 2,
+         which avoids Google as a font host on purpose.
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    -->
     <link
       rel="icon"
       type="image/svg+xml"
