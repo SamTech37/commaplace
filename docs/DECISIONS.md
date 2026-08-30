@@ -196,6 +196,37 @@ folders fight the densely-linked model; collections emerge from links.
 
 ---
 
+## 9 — Destructive DB changes go through a dump + a migration (2026-08-30)
+
+**Decision.** Destructive prod SQL is written as a numbered file in
+`internal/db/migrations/` and preceded by a verified dump — never typed into an
+ad-hoc psql session.
+
+**Context.** Wiping the playtest seed data (plan.md Step 0) first looked like a
+dashboard-and-terminal chore: fetch the external DB URL, run DELETEs by hand,
+flip `SEED_DEV` in Render's UI. Every step of that is manual, unreviewable, and
+unrepeatable at the 封測 → 公測 cutover.
+
+**Why.** The migration runner already applies files once, transactionally, on
+Render at boot with the injected `DATABASE_URL`. So the destructive statements
+never leave the deploy, no prod credential lands on a laptop, and exactly what
+ran is in git. The dump half is `.github/workflows/db-backup.yml`; "verified"
+means restored into a scratch DB, because an unrestored dump is a guess.
+Procedure: `RUNBOOK-db-purge.md`.
+
+**Cost / when it's a shackle.** A purge needs a deploy, so it is not instant, and
+the file also runs against dev and test DBs (harmless for seed purges — they
+reseed). One irreducibly manual bit remains: the `PROD_DATABASE_URL` repo secret,
+since a credential cannot live in git. Render's internal `dpg-*-a` hostname is
+unreachable outside their network, so the external URL is the only option.
+
+**Revisit when.** Real user data exists and a purge needs to be surgical or
+reversible mid-flight — then this wants a proper maintenance job with a dry-run
+mode, not a one-way migration. This entry is the concrete answer to Decision 3's
+"add versioned migrations + rollback *before* the first real users."
+
+---
+
 ## Template (copy for a new entry)
 
 **Decision.**

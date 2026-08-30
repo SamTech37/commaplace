@@ -46,6 +46,7 @@ See @.claude/htmx-rules.md for htmx guidelines
 See @README.md for what the project does, where things live, and how work gets done.
 See @docs/DESIGN_PROMPTS.md for visual design direction (colors, radii, spacing, animation) — read before writing any CSS
 See @docs/DECISIONS.md for the why/when-to-break-it behind past architecture calls (build tooling, DB, htmx/Alpine/templ, fonts)
+See @docs/RUNBOOK-db-purge.md before any destructive change to the live DB (wipes, migration squashes, 封測→公測) — dump first, purge via a migration, never ad-hoc psql
 
 ---
 

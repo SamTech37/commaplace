@@ -1,0 +1,60 @@
+# Rescue-before-nuke. Dumps prod Postgres to a downloadable artifact.
+#
+# Run it from the Actions tab ("Run workflow") before any destructive
+# migration, and once a week on its own so there is always a recent one.
+#
+# Needs one repo secret: PROD_DATABASE_URL — Render dashboard → comma-db →
+# Connections → "External Database URL" (the internal dpg-*-a hostname only
+# resolves inside Render's network, so it cannot be used from a runner).
+#
+# Restore:
+#   pg_restore --clean --if-exists -d "$TARGET_DATABASE_URL" commaplace-<sha>.dump
+# Restore into a scratch DB and diff before pointing prod at it.
+name: DB backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1" # Mondays 04:17 UTC
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      # pg_dump refuses to dump a server newer than itself, and the runner
+      # image ships an older client than Render's Postgres 17 — so use the
+      # matching client from the same image docker-compose.yml pins.
+      - name: pg_dump
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          if [ -z "$PROD_DATABASE_URL" ]; then
+            echo "PROD_DATABASE_URL secret is not set" >&2
+            exit 1
+          fi
+          docker run --rm -e PGURL="$PROD_DATABASE_URL" -v "$PWD:/out" \
+            postgres:17-alpine \
+            sh -c 'pg_dump --format=custom --no-owner --no-acl "$PGURL" > /out/prod.dump'
+          ls -l prod.dump
+          test -s prod.dump
+
+      - name: Row counts
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          docker run --rm -e PGURL="$PROD_DATABASE_URL" postgres:17-alpine \
+            psql "$PGURL" -c "
+              SELECT 'users' t, count(*) FROM users
+              UNION ALL SELECT 'notes', count(*) FROM notes
+              UNION ALL SELECT 'note_images', count(*) FROM note_images
+              UNION ALL SELECT 'links', count(*) FROM links
+              UNION ALL SELECT 'likes', count(*) FROM likes
+              UNION ALL SELECT 'saves', count(*) FROM saves
+              UNION ALL SELECT 'follows', count(*) FROM follows
+              ORDER BY 1"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prod-dump-${{ github.run_id }}
+          path: prod.dump
+          retention-days: 90
