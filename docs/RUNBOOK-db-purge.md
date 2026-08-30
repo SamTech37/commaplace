@@ -9,7 +9,8 @@ unrestored dump is a guess.
 
 ## 1 — Take the dump
 
-GitHub → Actions → **DB backup** → Run workflow. It also runs weekly on its own.
+GitHub → Actions → **DB backup** → Run workflow. Manual trigger only; once real
+users exist, add a `schedule:` to the workflow so a recent dump always exists.
 
 The job prints per-table row counts before uploading. Write those numbers down;
 step 4 checks against them. The artifact `prod-dump-<run_id>` holds `prod.dump`
