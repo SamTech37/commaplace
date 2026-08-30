@@ -1,13 +1,20 @@
-# Render Blueprint — one-click infra for a quick playtest deploy.
-# Dashboard: New + → Blueprint → pick this repo → Render reads this file.
-# Blueprints are a paid-tier feature, so both the service and the database
-# are on paid plans — the free-tier caveats (database expiry, cold starts)
-# do not apply here. "plan" stays unset so Render's UI prompts for the
-# tier at apply-time.
+# Render Blueprint — infra for the live deploy.
+#
+# NEVER "New + → Blueprint" again. That creates a *second* Blueprint record
+# instead of syncing the existing one; the names below are already taken, so
+# Render silently suffixes the copies (comma-c8h6, comma-db-c8h6) and bills
+# for both. It has happened three times — see the deleted comma-c8h6 that ran
+# 156 hours. To apply a change: push to main, or hit Sync on the existing
+# Blueprint in the dashboard.
+#
+# Plans are pinned. Leaving "plan" unset makes Render pick at apply-time, so a
+# stray apply came up on a different instance type than prod. Changing a value
+# here changes the bill on the next sync.
 services:
   - name: comma
     type: web
     runtime: docker
+    plan: starter
     dockerfilePath: ./Dockerfile
     # Push to main ships it. This defaults off in the dashboard, which is why a
     # merged migration sat on main doing nothing until someone deployed by hand.
@@ -15,7 +22,8 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: comma-db
+          # Must match the databases: name below exactly, suffix and all.
+          name: comma-db-c8h6
           property: connectionString
       # Render assigns a dynamic PORT by default; pin both sides instead of
       # relying on dynamic interpolation (Blueprint spec has no clean way to
@@ -55,5 +63,15 @@ services:
         sync: false
 
 databases:
-  - name: comma-db
+  # The suffix is not a typo. The live database is literally named
+  # comma-db-c8h6, and a database name is immutable on Render. While this said
+  # "comma-db" the Blueprint matched nothing, so every sync planned to CREATE a
+  # database instead of adopting the running one:
+  #   render blueprints validate  →  plan.databases: [comma-db], totalActions: 3
+  #   with the name below         →  totalActions: 1
+  - name: comma-db-c8h6
+    plan: basic-256mb
     postgresMajorVersion: "17"
+    # diskSizeGB is deliberately unset: the live DB was provisioned at 15GB
+    # (~$4.4/mo for near-zero data) and Render cannot shrink a disk in place.
+    # Fixing that means a new database + dump/restore, not an edit here.
