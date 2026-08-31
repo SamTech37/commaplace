@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 
 	"commonplace/internal/auth"
-	"commonplace/internal/markdown"
 )
 
 func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
@@ -137,8 +136,9 @@ func profileEmpty(tab string) templ.Component {
 // see notes_view.templ). Unpublished drafts are included only when the
 // viewer is the author themselves.
 func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]feedCard, int64, error) {
-	query := `SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, n.published_at
+	query := `SELECT ` + noteCardColumns + `
 		FROM notes n
+		JOIN users u ON u.id = n.author_id
 		WHERE n.author_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL`
 	args := []any{authorID}
 	isSelf := viewerID == authorID
@@ -158,28 +158,14 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
-
-	var out []feedCard
-	for rows.Next() {
-		var (
-			c           feedCard
-			slug, body  string
-			publishedAt sql.NullInt64
-		)
-		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &publishedAt); err != nil {
-			return nil, 0, err
-		}
-		// AuthorHandle deliberately left unset: it's always this profile's own
-		// handle, redundant on your own vault page (listCard omits it when empty).
-		c.URL = noteURL(handle, slug)
-		c.UpdatedRel = relativeTime(c.UpdatedAt)
-		c.IsDraft = !publishedAt.Valid
-		c.Excerpt = markdown.Excerpt(body, 150)
-		out = append(out, c)
-	}
-	if err := rows.Err(); err != nil {
+	out, err := scanCards(rows)
+	if err != nil {
 		return nil, 0, err
+	}
+	// AuthorHandle blanked: it's always this profile's own handle, redundant
+	// on your own vault page (listCard omits it when empty).
+	for i := range out {
+		out[i].AuthorHandle = ""
 	}
 	var nextCursor int64
 	if len(out) == 20 {

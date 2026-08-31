@@ -129,14 +129,11 @@ func feedEmpty(tagFilter string) templ.Component {
 func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, older int64, limit int) ([]feedCard, error) {
 	args := []any{}
 	q := strings.Builder{}
-	q.WriteString(`
-		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
-		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)
+	fmt.Fprintf(&q, `
+		SELECT %s
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`, noteCardColumns)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
@@ -157,15 +154,12 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, ol
 func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, tagFilter string, older int64, limit int) ([]feedCard, error) {
 	args := []any{viewerID}
 	q := strings.Builder{}
-	q.WriteString(`
-		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
-		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)
+	fmt.Fprintf(&q, `
+		SELECT %s
 		FROM notes n
 		JOIN users u   ON u.id = n.author_id
 		JOIN follows f ON f.followed_id = n.author_id
-		WHERE f.follower_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+		WHERE f.follower_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`, noteCardColumns)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
@@ -215,54 +209,77 @@ func attachTagsToCards(ctx context.Context, db *sql.DB, cards []feedCard) {
 	}
 }
 
-func scanCards(rows *sql.Rows) ([]feedCard, error) {
+// noteCardColumns is the canonical column list every note-listing query
+// selects (feed/tag/profile/hover-preview — everything except search, whose
+// ts_headline snippet is a genuinely different shape). One list, so a query
+// can't drift out of sync with what scanCards scans. Requires
+// "FROM notes n JOIN users u ON u.id = n.author_id" in scope.
+const noteCardColumns = `n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle, n.published_at,
+	(SELECT COUNT(*) FROM likes WHERE note_id = n.id),
+	(SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
+	(SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)`
+
+// noteRow is the plain data one noteCardColumns row carries — no UI shaping.
+// toCard is the one place that turns it into the feedCard the templ layer
+// renders (variant classification, thumbnail pick): data and its view are
+// fetched together but adapted in a separate, explicit step.
+type noteRow struct {
+	ID           uuid.UUID
+	Title        string
+	Slug         string
+	Body         string
+	UpdatedAt    int64
+	AuthorHandle string
+	PublishedAt  sql.NullInt64
+	LikeCount    int
+	LinkCount    int
+	CrossCount   int
+}
+
+func scanNoteRows(rows *sql.Rows) ([]noteRow, error) {
 	defer rows.Close()
-	var out []feedCard
+	var out []noteRow
 	for rows.Next() {
-		var (
-			c      feedCard
-			slug   string
-			body   string
-			handle string
-		)
-		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle,
-			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
+		var n noteRow
+		if err := rows.Scan(&n.ID, &n.Title, &n.Slug, &n.Body, &n.UpdatedAt, &n.AuthorHandle, &n.PublishedAt,
+			&n.LikeCount, &n.LinkCount, &n.CrossCount); err != nil {
 			return nil, err
 		}
-		c.AuthorHandle = handle
-		c.URL = noteURL(handle, slug)
-		c.UpdatedRel = relativeTime(c.UpdatedAt)
-		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
-		c.ImageURL = markdown.FirstImageURL(body)
-		out = append(out, c)
+		out = append(out, n)
 	}
 	return out, rows.Err()
 }
 
-// scanListCards scans notes into feedCards for the "list" layout (tag/saved
-// — plain title/excerpt/meta rows, no variant classification, image, tags,
-// or counts; none of that renders in listCard). Row shape: id, title, slug,
-// body_md, updated_at, handle.
-func scanListCards(rows *sql.Rows) ([]feedCard, error) {
-	defer rows.Close()
-	var out []feedCard
-	for rows.Next() {
-		var (
-			c      feedCard
-			slug   string
-			body   string
-			handle string
-		)
-		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle); err != nil {
-			return nil, err
-		}
-		c.AuthorHandle = handle
-		c.URL = noteURL(handle, slug)
-		c.UpdatedRel = relativeTime(c.UpdatedAt)
-		c.Excerpt = markdown.Excerpt(body, 150)
-		out = append(out, c)
+// toCard adapts one noteRow into a feedCard. This is the UI-shaping step
+// (masonry variant/quote/list/thumbnail) — it never runs inside the SQL scan.
+func (n noteRow) toCard() feedCard {
+	c := feedCard{
+		NoteID:       n.ID,
+		Title:        n.Title,
+		URL:          noteURL(n.AuthorHandle, n.Slug),
+		AuthorHandle: n.AuthorHandle,
+		UpdatedAt:    n.UpdatedAt,
+		UpdatedRel:   relativeTime(n.UpdatedAt),
+		IsDraft:      !n.PublishedAt.Valid,
+		LikeCount:    n.LikeCount,
+		LinkCount:    n.LinkCount,
+		CrossCount:   n.CrossCount,
 	}
-	return out, rows.Err()
+	c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(n.Body)
+	c.ImageURL = markdown.FirstImageURL(n.Body)
+	return c
+}
+
+func scanCards(rows *sql.Rows) ([]feedCard, error) {
+	noteRows, err := scanNoteRows(rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]feedCard, len(noteRows))
+	for i, n := range noteRows {
+		out[i] = n.toCard()
+	}
+	return out, nil
 }
 
 // analyzeCardBody picks a card variant by the body's structural signal.

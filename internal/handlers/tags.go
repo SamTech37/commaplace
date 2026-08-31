@@ -76,12 +76,13 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		args[i] = v
 	}
 	q := strings.Builder{}
-	q.WriteString(`
-		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle
+	fmt.Fprintf(&q, `
+		SELECT %s
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		JOIN users u ON u.id = n.author_id
-		WHERE (` + strings.Join(clauses, " OR ") + `) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+		WHERE (%s) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`,
+		noteCardColumns, strings.Join(clauses, " OR "))
 	if older > 0 {
 		args = append(args, older)
 		fmt.Fprintf(&q, ` AND n.updated_at < $%d`, len(args))
@@ -93,7 +94,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	cards, err := scanListCards(rows)
+	cards, err := scanCards(rows)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
