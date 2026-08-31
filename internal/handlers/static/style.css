@@ -1706,6 +1706,33 @@ html[data-theme="dark"] .masonry-card:hover {
 html[data-theme="dark"] .ac-popup {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
+
+/* ── Hover link preview — the feed's masonry card in a popup shell ─────── */
+.link-preview-card {
+  position: fixed;
+  z-index: 300;
+  width: min(360px, 90vw);
+  max-height: min(420px, 70vh);
+  overflow: hidden;
+  border-radius: var(--r-card);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+html[data-theme="dark"] .link-preview-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.link-preview-card .masonry-card {
+  margin: 0;
+}
+/* The card ships with [data-reveal] for the feed's scroll animation. Nothing
+   scrolls it into view here, so show it outright. */
+.link-preview-card [data-reveal] {
+  opacity: 1;
+  clip-path: none;
+}
+/* No lift on hover — this card *is* the hover state. */
+.link-preview-card .masonry-card:hover {
+  transform: none;
+}
 .ac-popup ul {
   list-style: none;
   padding: 0.4em;

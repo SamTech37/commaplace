@@ -75,7 +75,7 @@ func LoadPages() (*Pages, error) {
 	}
 	// Partials are standalone fragments (no _base.html wrapper) used for
 	// HTMX swap responses — e.g. infinite-scroll feed batches.
-	partialNames := []string{"feed_partial"}
+	partialNames := []string{"feed_partial", "_note_preview"}
 
 	p := &Pages{
 		cache:    make(map[string]*template.Template, len(pageNames)),

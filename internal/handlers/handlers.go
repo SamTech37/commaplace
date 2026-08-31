@@ -76,6 +76,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/follow", s.PostFollow)
 
 	// Wiki autocomplete
+	mux.HandleFunc("GET /api/preview/{user}/{slug}", s.GetNotePreview)
 	mux.HandleFunc("GET /api/wiki/suggest", s.GetWikiSuggest)
 	mux.HandleFunc("GET /api/tags/suggest", s.GetTagSuggest)
 
