@@ -73,8 +73,6 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	attachTagsToCards(r.Context(), s.DB, cards)
-
 	title := pageTitle("搜尋")
 	if q != "" {
 		title = pageTitle(q + " · 搜尋")
@@ -84,8 +82,9 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 		Scope:          scope,
 		ViewerLoggedIn: viewer != nil,
 		View: NoteListView{
-			Cards: cards,
-			Empty: emptyText("沒有符合的結果。"),
+			Cards:  cards,
+			Layout: "list",
+			Empty:  emptyText("沒有符合的結果。"),
 		},
 	}))
 }

@@ -114,10 +114,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 	args := []any{u.ID}
 	q := strings.Builder{}
 	q.WriteString(`
-		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u2.handle, sv.created_at,
-		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u2.id)
+		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u2.handle, sv.created_at
 		FROM saves sv
 		JOIN notes n  ON n.id = sv.note_id
 		JOIN users u2 ON u2.id = n.author_id
@@ -144,8 +141,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 			handle string
 			saved  int64
 		)
-		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle, &saved,
-			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
+		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle, &saved); err != nil {
 			rows.Close()
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -153,8 +149,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 		c.AuthorHandle = handle
 		c.URL = noteURL(handle, slug)
 		c.UpdatedRel = relativeTime(c.UpdatedAt)
-		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
-		c.ImageURL = markdown.FirstImageURL(body)
+		c.Excerpt = markdown.Excerpt(body, 150)
 		cards = append(cards, c)
 		lastSaveCreatedAt = saved
 	}
@@ -163,7 +158,6 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	attachTagsToCards(r.Context(), s.DB, cards)
 
 	var olderURL string
 	if len(cards) == pageCfg.FeedPageSize {
@@ -174,6 +168,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 
 	view := NoteListView{
 		Cards:    cards,
+		Layout:   "list",
 		OlderURL: olderURL,
 		Empty:    emptyText("還沒有收藏。在筆記頁按「＋ 收藏」即可加入這裡。"),
 	}

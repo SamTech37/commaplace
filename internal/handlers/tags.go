@@ -77,10 +77,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 	q := strings.Builder{}
 	q.WriteString(`
-		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
-		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)
+		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		JOIN users u ON u.id = n.author_id
@@ -96,12 +93,11 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	cards, err := scanCards(rows)
+	cards, err := scanListCards(rows)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	attachTagsToCards(r.Context(), s.DB, cards)
 
 	var olderURL string
 	if len(cards) == pageCfg.FeedPageSize {
@@ -113,6 +109,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 
 	view := NoteListView{
 		Cards:    cards,
+		Layout:   "list",
 		OlderURL: olderURL,
 		Empty:    emptyText("#" + tag + " 還沒有筆記。"),
 	}

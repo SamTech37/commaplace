@@ -239,6 +239,32 @@ func scanCards(rows *sql.Rows) ([]feedCard, error) {
 	return out, rows.Err()
 }
 
+// scanListCards scans notes into feedCards for the "list" layout (tag/saved
+// — plain title/excerpt/meta rows, no variant classification, image, tags,
+// or counts; none of that renders in listCard). Row shape: id, title, slug,
+// body_md, updated_at, handle.
+func scanListCards(rows *sql.Rows) ([]feedCard, error) {
+	defer rows.Close()
+	var out []feedCard
+	for rows.Next() {
+		var (
+			c      feedCard
+			slug   string
+			body   string
+			handle string
+		)
+		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle); err != nil {
+			return nil, err
+		}
+		c.AuthorHandle = handle
+		c.URL = noteURL(handle, slug)
+		c.UpdatedRel = relativeTime(c.UpdatedAt)
+		c.Excerpt = markdown.Excerpt(body, 150)
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 // analyzeCardBody picks a card variant by the body's structural signal.
 // Rules (first match wins):
 //   - starts with ">"           -> quote

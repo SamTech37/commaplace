@@ -61,6 +61,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 	view := NoteListView{
 		Cards:    recent,
+		Layout:   "list",
 		OlderURL: profileOlderURL(profile.Handle, nextCursor, tab),
 		Empty:    profileEmpty(tab),
 	}
@@ -136,10 +137,7 @@ func profileEmpty(tab string) templ.Component {
 // see notes_view.templ). Unpublished drafts are included only when the
 // viewer is the author themselves.
 func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]feedCard, int64, error) {
-	query := `SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, n.published_at,
-		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
-		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM n.author_id)
+	query := `SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, n.published_at
 		FROM notes n
 		WHERE n.author_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL`
 	args := []any{authorID}
@@ -169,22 +167,20 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 			slug, body  string
 			publishedAt sql.NullInt64
 		)
-		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &publishedAt,
-			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
+		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &publishedAt); err != nil {
 			return nil, 0, err
 		}
-		c.AuthorHandle = handle
+		// AuthorHandle deliberately left unset: it's always this profile's own
+		// handle, redundant on your own vault page (listCard omits it when empty).
 		c.URL = noteURL(handle, slug)
 		c.UpdatedRel = relativeTime(c.UpdatedAt)
 		c.IsDraft = !publishedAt.Valid
-		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
-		c.ImageURL = markdown.FirstImageURL(body)
+		c.Excerpt = markdown.Excerpt(body, 150)
 		out = append(out, c)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
 	}
-	attachTagsToCards(r.Context(), db, out)
 	var nextCursor int64
 	if len(out) == 20 {
 		nextCursor = out[len(out)-1].UpdatedAt

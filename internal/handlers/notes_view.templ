@@ -18,10 +18,12 @@ type NoteListView struct {
 
 // cardRenderers maps a layout name to the component that renders one card in
 // that layout. Adding a layout later is one function + one entry here — no
-// handler changes. Only "masonry" is registered today; nothing in this repo
-// builds a toggle UI for it yet (see plan.md's Meta-App view substrate note).
+// handler changes. Two are registered: "masonry" (feed, hover-preview — the
+// only surface that was ever masonry before this substrate existed) and
+// "list" (tag/search/saved/profile — plain rows, same as before).
 var cardRenderers = map[string]func(feedCard) templ.Component{
 	"masonry": masonryCard,
+	"list":    listCard,
 }
 
 // renderCards renders every card in view.Cards through view.Layout's
@@ -84,15 +86,40 @@ templ notesFragment(view NoteListView) {
 	@notesSentinelOOB(view.OlderURL)
 }
 
-templ masonryCard(c feedCard) {
+// listCard is a plain title/excerpt/meta row — the layout every list-shaped
+// surface (tag/search/saved/profile) used before this substrate existed;
+// masonry is feed's alone (and the hover-preview it shares a card with).
+templ listCard(c feedCard) {
 	if c.IsDraft {
-		<div class="masonry-card-draft">
-			<input type="checkbox" class="draft-select" name="ids" value={ c.NoteID.String() } aria-label="選取這篇草稿"/>
-			@masonryCardLink(c)
+		<div class="note-card-row">
+			<input type="checkbox" name="ids" value={ c.NoteID.String() } aria-label="選取這篇草稿"/>
+			@listCardLink(c)
 		</div>
 	} else {
-		@masonryCardLink(c)
+		@listCardLink(c)
 	}
+}
+
+templ listCardLink(c feedCard) {
+	<a class="note-card" href={ templ.URL(c.URL) } data-reveal>
+		<div class="note-title">{ c.Title }</div>
+		if c.SnippetHTML != nil {
+			<div class="note-excerpt">@c.SnippetHTML</div>
+		} else if c.Excerpt != "" {
+			<div class="note-excerpt">{ c.Excerpt }</div>
+		}
+		<div class="note-foot">
+			if c.AuthorHandle != "" {
+				<span class="meta-handle">{ "@" + c.AuthorHandle }</span> · { c.UpdatedRel }
+			} else {
+				{ c.UpdatedRel }
+			}
+		</div>
+	</a>
+}
+
+templ masonryCard(c feedCard) {
+	@masonryCardLink(c)
 }
 
 templ masonryCardLink(c feedCard) {
