@@ -77,7 +77,7 @@ internal/seed/tour.go — Onboarding tour notes (SEED_TOUR=1)
 
 ```
 handlers.go — Routes() mux, gzip + cache-control middleware, GetCatchAll (profile/note/assets)
-render.go — Server struct (DB/Auth/Pages/BaseURL/...), render(), renderPartial(), template funcs
+render.go — Server struct (DB/Auth/BaseURL/...), chrome()/renderPage()/renderFragment()/pageTitle()
 auth.go — /login, /auth/{token}, /auth/google[+/callback], /logout, /me, /_dev/login
 notes.go — CRUD + saveNote/recomputeLinks/loadBacklinksSplit/loadOutgoingSplit/absoluteNoteURL
 note_image.go — GET/POST /api/notes/{id}/image, resolveOGImage (og:image fallback)
@@ -104,12 +104,24 @@ avatar_compose.go — PNG composition from part IDs + skin color
 
 ## Templates & Static (internal/handlers/)
 
+`html/template` is gone entirely — every page is `templ` (github.com/a-h/templ).
+`go tool templ generate` (pinned as a Go tool dependency in go.mod, no global
+install) turns `*.templ` into `*_templ.go`; the generated `.go` is committed
+(not gitignored) so the deploy path stays pure `go build` — see
+`docs/DECISIONS.md` 5. `make watch` runs `templ generate` before each rebuild
+(`.air.toml`).
+
 ```
-templates/_base.html — Layout: nav, head/meta defaults, footer, theme toggle
-templates/{login,write,edit,import,import_batch,note,note_stub,profile}.html
-templates/{feed,feed_partial,graph,search,tag,saved,calendar,onboarding,error}.html
-templates/avatar_builder.html — Part picker
-templates/admin_{dashboard,reports}.html
+layout.templ — Layout component: nav, head/meta defaults, footer, theme toggle (was _base.html)
+notes_view.templ — NoteListView + feedCard + cardRenderers registry (one entry today: "masonry").
+                    Shared by feed/tag/search/profile/saved/preview — one data source, one rendering.
+                    Adding a layout later = one func(NoteListView) templ.Component + one registry line.
+{feed,tag,search,profile,saved}_page.templ — one page per list surface; each builds
+                                              its own header chrome, then embeds @notesView(view)
+notes_pages.templ — write, note, note_stub
+{admin,avatar_builder,calendar_page,graph_page,import_page,import_batch_page,
+ login,legal,onboarding,error_content}.templ — the rest, one page (or two, for
+ import/import_batch and admin's two views) per file
 static/style.css — Mobile-first, dark/light, design tokens in :root
 static/{cmeditor,graph,copy,share,tagsearch,palette,reveal,opencc-toggle,import-batch}.js
 static/htmx.min.js, d3-force.min.js, easymde.min.{js,css}, opencc.min.js — vendored

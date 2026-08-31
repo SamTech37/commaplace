@@ -144,6 +144,13 @@ bigger surface. Adopt the native patterns (out-of-band swaps, `HX-Trigger`,
 
 ## 5 — Adopt Alpine.js; templ held back only by sequencing (2026-06-20)
 
+**templ half done 2026-08-31.** All 19 pages ported from `html/template` to
+`templ` in the same pass as the Meta-App view substrate (`NoteListView` +
+`feedCard` + a `cardRenderers` registry), exactly as this entry called for —
+one migration, not two. `internal/handlers/*.templ` + generated
+`*_templ.go` (committed), `_base.html`/`templates/` deleted outright. The
+Alpine.js half of this decision is untouched — still not adopted, still open.
+
 **Decision.** Alpine.js (vendored, no build step) for the richer client-side state
 the design/product founders will want — htmx for the server-driven 90%, Alpine for
 the stateful 10%. **templ is wanted, not blocked.** It's held back *only* by

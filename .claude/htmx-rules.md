@@ -8,16 +8,23 @@ Distilled from htmx.org/docs (htmx **2.0.4**, vendored) + an audit of this repo
    htmx sends `HX-Request: true` automatically on every AJAX request.
 
 2. **Same URL serves full vs partial → set `Vary: HX-Request`.**
-   Done in `render.go` `Render` + `RenderPartial`. Without it, a CDN/browser can
+   Done in `render.go` `renderPage`/`renderFragment` (templ, not html/template
+   as of 2026-08-31 — see `docs/DECISIONS.md` 5). Without it, a CDN/browser can
    cache a fragment and serve it as a full page (or vice-versa).
 
-3. **Partials live in `Pages.partials` (no `_base.html`). Full pages in `Pages.cache`.**
-   Returning a full `<html>…</html>` to an htmx request is the #1 anti-pattern.
+3. **Partials render a bare templ component (no `Layout` wrapper) via
+   `renderFragment`; full pages wrap the same component in `Layout` via
+   `renderPage`.** Returning a full `<html>…</html>` to an htmx request is the
+   #1 anti-pattern.
 
-4. **Infinite scroll pattern (feed):**
-   - sentinel: `hx-trigger="revealed"`, `hx-target=".feed-items"`, `hx-swap="beforeend"`
+4. **Infinite scroll pattern (feed/tag/saved/profile — one shared component,
+   `notesView`/`notesFragment` in `internal/handlers/notes_view.templ`):**
+   - sentinel: `hx-trigger="revealed"`, `hx-target=".notes-items"`, `hx-swap="beforeend"`
    - partial response: new cards + an OOB sentinel
-     (`hx-swap-oob="outerHTML"` with stable `id="feed-sentinel"`)
+     (`hx-swap-oob="outerHTML"` with stable `id="notes-sentinel"`)
+   - `/search` opts out (no cursor pagination — `ts_rank` ordering has no cheap
+     cursor; `NoteListView.OlderURL` stays `""`, `notesView` renders the end
+     marker instead of a sentinel)
 
 5. **Self-replacing fragments (like / follow / report):**
    `hx-target="this" hx-swap="outerHTML"`; handler returns HTML that re-includes

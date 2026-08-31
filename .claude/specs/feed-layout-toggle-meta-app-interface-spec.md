@@ -1,8 +1,10 @@
 # Feed Layout Toggle — Spec
 
-> **Status: v0 SHIPPED** (commit pending on `main`). See "v0 — as built" below for
-> deviations from the original plan. v1 scope (universal view interface) starts at the
-> bottom of this file.
+> **Status: v0 shipped, then partly reverted; v1 substrate done, toggle UI deliberately
+> deferred.** See "v0 — as built" below for the original deviations, then the
+> "Update 2026-08-31" note right after it for what changed since. v1 scope
+> (universal view interface) starts further down the file; "v1 — as built"
+> immediately under that header covers what actually happened.
 
 ## Goal
 
@@ -38,6 +40,15 @@ Done checklist:
 - [x] Infinite scroll propagates active layout param
 - [x] Clean (no raw markdown) previews across all layouts
 - [x] Image thumbnail in masonry only
+
+**Update 2026-08-31.** All of the above stopped being true sometime after this
+was written — a later commit, `014ed21` ("masonry-only cards with shadow lift
++ meta hierarchy"), reverted `/feed` to masonry-only. No toggle, no `list`/
+`grid`, no `feed.layout` in `localStorage` (verified: no such key in any
+static JS, `feed.html` at the time only rendered `masonry_card`). This spec
+was never updated to say so — found by reading `git log` against the live
+code during the v1 work below, not from this document. Treat every claim
+above as **historical** (what v0 shipped, once), not current state.
 
 ---
 
@@ -160,6 +171,52 @@ Note: masonry reuses the same `.entry` card HTML as `cards`. Only the container 
 ----
 
 # v1 — Universal View Interface (the meta-app)
+
+## v1 — as built (2026-08-31)
+
+Shipped alongside the `html/template` → `templ` migration (`docs/DECISIONS.md`
+5), not before it, per that decision's own sequencing call. Reality diverged
+from the plan below in one deliberate way and matched it in the rest:
+
+- **No toggle UI, on purpose.** The "list ✅ / grid ✅" table below was already
+  false by the time this work started (see the v0 update above) — the
+  question wasn't "which layout to ship" but "make adding one cheap." Built
+  the pluggable half (`cardRenderers map[string]func(feedCard)
+  templ.Component` in `internal/handlers/notes_view.templ`, one entry
+  registered: `"masonry"`) and stopped there — a toggle with one option is
+  dead chrome. Adding `list`/`grid`/anything else later is one function + one
+  registry line, no handler changes; still zero surfaces expose a switcher.
+- **`NoteListView{ Cards, Layout, OlderURL, Empty }`** — built as scoped,
+  `Empty` typed `templ.Component` (not `string`) so a surface can embed a real
+  link in its empty state (feed's "寫第一篇" stayed clickable).
+- **All five surfaces, not four** — this spec's own "Critical files" list
+  below only names `{feed,tags,search,profile}.go`; `plan.md` separately
+  flagged the spec forgot `saved` (`/me/saved`). Converted it too, plus a
+  sixth consumer this spec doesn't mention at all: `preview.go`'s
+  `/api/preview/{user}/{slug}` hover-preview endpoint, which shares the same
+  `feedCard`/`masonryCard` rendering.
+- **Pagination added, not just layout.** `tag`/`saved` were hard `LIMIT
+  200`/`LIMIT 50` with no "load more" before this — real `updated_at`/
+  `created_at` cursor pagination added (feed's exact pattern), since giving
+  them the shared infinite-scroll component only makes sense if there's
+  something to scroll to. `search` explicitly did not get this (`ts_rank`
+  ordering has no cheap cursor) — stays capped, no sentinel.
+- **One infinite-scroll mechanism, not two.** Profile had its own bespoke
+  self-`outerHTML`-swap sentinel, different from feed's OOB-append pattern —
+  unified on feed's (see `.claude/htmx-rules.md` 4). Found in the process:
+  profile's HX-Request branch was calling `RenderPartial(..., "profile",
+  ...)` against a partial name that was never registered — a live 500,
+  uncaught by any test, fixed as a side effect of the rewrite.
+- **A real bug fixed while porting `search.html`, unrelated to layout:**
+  `search.go`'s snippet field was raw `template.HTML` around Postgres
+  `ts_headline` output — `ts_headline` doesn't escape the surrounding text,
+  only inserts `<mark>` tags, so a note body containing HTML-looking text
+  would execute unescaped for anyone whose search matched it. Fixed with a
+  helper that escapes everything except the `<mark>` delimiters.
+- Open questions 1–4 below: **Q1** (one `localStorage` pref vs per-surface) is
+  moot with no toggle built. **Q2** (drafts-tab vs toggle ordering) N/A, same
+  reason. **Q3** (masonry thumbnails everywhere) — yes, resolved as scoped,
+  every surface shows them now. **Q4** (per-surface empty text) — done.
 
 **Goal:** a pluggable **view substrate** — one data source (a note query), many
 view renderers. Not just unifying the four list pages; that's step 1. The end

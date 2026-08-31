@@ -1,31 +1,18 @@
 # `Comma,` Dev Roadmap
 
-## 下一步 — Meta-App view substrate，直接用 templ 寫
+## Meta-App view substrate + templ — 已完成（2026-08-31）
 
-規格：`.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`（v0 已上線，這是 v1）。
+規格：`.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`「v1 — as built」有完整記錄，這裡只留摘要，細節去那邊看。
 
-**現況就是反 DRY 的樣板**：四個卡片型別（`feedItem`、`feedCard`、`profileNote`、`searchHit`）、七個 scan loop、**五個**版面各自手刻 `.note-card` 清單（`feed`、`tag`、`search`、`profile`、`saved`——規格只寫了四個，漏掉 `saved`）。加一個版面要改五個地方，所以沒人加；excerpt 處理也各是各的。
+四步都做了，一次到位：templ 工具鏈接上 air 的 dev loop（`go get -tool` 釘版本，不用另外 `go install`；`.air.toml` 的 `cmd` 先跑 `templ generate` 再 build）；`NoteListView{ Cards, Layout, OlderURL, Empty }` + `feedCard` + `cardRenderers` registry 定義在 `internal/handlers/notes_view.templ`；六個消費者都接上去——`feed`/`tag`/`search`/`profile`/`saved`（規格漏掉的 `saved` 補上了）加上規格完全沒提到的 `preview.go`（`/api/preview/{user}/{slug}` hover 預覽，本來就吃同一顆 `masonry_card`）；`feedItem`/`profileNote`/`searchHit` 三個型別、七個 scan loop、`Pages`/`LoadPages`/`ParseFS`、整個 `templates/` 目錄全刪了，`grep` 乾淨。不只清單那五個模板——19 個模板一次全轉 templ，不留 html/template 尾巴（跟原計畫「遷一個模板驗證流程」不同，那個只是拿來證明 air+templ 迴圈能動，動完發現一次做完比留著兩套系統共存久一點更省事）。
 
-**做完長這樣**：一份資料來源、多種呈現。四（五）個 handler 變成只產查詢的薄殼，共用一個 `NoteListView{ Cards, Layout, OlderURL, Empty }`，版面切換鈕與 `?layout=` 到處都有。之後加 timeline / canvas / calendar / dora 是註冊一個 renderer，不是開一個新頁面——那才是 Meta-App 真正的意思，也是 timeline 跟 dora 這兩個卡上線的項目一直沒動的原因。
+**沒做的，刻意的：** 版面切換鈕跟 `?layout=` 沒做。registry 只註冊一種 layout（`masonry`），加新的是一個 `func(NoteListView) templ.Component` +一行 registry，不用碰 handler——這就是「UI 是狀態的函數」要的東西，但目前沒人要多一種版面，先不生只有一個選項的切換鈕。上面「待決」的問題（`feed.layout` 全站共用還是分開存）因此還沒有到要決定的時候。
 
-**graph 那半邊已經是這樣了，照抄就好。** `/api/graph` 是**一個** endpoint 吃 `?user=` / `?tag=` 篩選（`graph.go:55` `GetGraphData`），`GetGraph` / `GetUserGraph` / `GetTagGraph` 只是三個薄殼負責渲染頁面。全域、標籤、使用者圖回傳同一個形狀，所以加一種圖不用開新 handler。清單那半邊反過來——五個 handler、五份模板、四個卡片型別。要抄的樣板不用發明，就在 `graph.go`。
+**順便修的兩個真 bug，不是重構順帶壞掉、是重構順帶發現：** 搜尋摘要的 XSS——`ts_headline` 輸出直接當 `template.HTML` 印出去，筆記內文只要長得像 HTML 就會在搜到的人畫面上原樣執行；profile 的 infinite-scroll 端點本來就是壞的，`RenderPartial` 查一個從沒註冊過的 partial name，會 500，沒有測試蓋到過。
 
-一句話講完：**UI 是狀態的函數**。substrate 應該按**資料形狀**切，不是按頁面切。今天只有兩種形狀——筆記清單、筆記關聯圖——圖已經統一了，清單還沒。
+**多做的（規格裡就有寫，這次一起做掉）：** `tag`/`saved` 加了真游標分頁（原本 `LIMIT 200`/`50` 到底，沒有「載入更多」）；三種 infinite-scroll 寫法統一成 feed 那套 OOB sentinel（profile 原本是另一套 self-outerHTML-swap）。`search` 沒加分頁——`ts_rank` 排序沒有便宜的游標，維持原樣不生假分頁。
 
-**用 templ 直接寫，不要先用 stdlib 重構一次再遷移**（`docs/DECISIONS.md` 5）。這個重構本來就是把 18 個模板重排，遷兩次等於白做一次。templ 是 Go 工具（`go install`、`go.mod` 釘版本、`templ generate` 產 `.go`），把產生的 `.go` commit 進去，部署還是純 `go build`——不違反「部署路徑不加 build 步驟」（`docs/DECISIONS.md` 1）。順帶把 `map[string]any` 資料袋的無聲 typo 變成編譯期錯誤。
-
-順序：
-
-1. `templ generate` 接上 air 的 dev loop，先遷一個模板驗證流程 → 驗證：`make watch` 改 `.templ` 會重編，`go build ./...` 綠
-2. 抽出共用 view（toggle + 三種版面 + 三個卡片模板），定義 `NoteListView` → 驗證：`/feed` 行為與現在完全相同。`_note_preview.html` 也吃 `masonry_card`，它跟 `feed.html` 的 parse 配對要一起搬（`render.go:96`）
-3. 五個版面逐一接上去，一次一個，每個都有測試 → 驗證：每頁都有切換鈕、無限捲動維持當前版面、沒有生 markdown 外洩
-4. 砍掉 `feedItem` / `profileNote` / `searchHit` 與多餘的 scan loop → 驗證：`grep` 不到，測試全綠
-
-**每一步都要盯 N+1。** 把五個 handler 收斂成共用 view 的時候最容易長出來——共用的卡片元件想多要一個欄位（作者頭像、標籤、讚數），最省事的寫法就是每張卡各查一次。查詢次數必須跟卡片數無關；不確定就 `EXPLAIN ANALYZE`。我們是按用量付費的。
-
-**不在這一輪**：graph 併進版面列表（先留在自己的頁）、排序控制、版面偏好存 DB（維持 localStorage）、timeline / canvas / kanban。
-
-**待決**：偏好是全站共用一把 `feed.layout`，還是每個版面各自記？（單一比較簡單；分開的話使用者可以 profile 用清單、feed 用瀑布流。）
+**盯過 N+1：** 六個消費者共用同一批 helper（`scanCards`/`attachTagsToCards`），查詢數沒有隨卡片數變多。
 
 ## MVP 設定收尾 — 三人內部發文
 
@@ -66,7 +53,7 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
   - [x] Cmd+K 模糊標題（不是 Ctrl+O，避開瀏覽器熱鍵）
   - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格
 - [ ] **Meta App** — 同一份資料多種呈現，有 Obsidian Search / GraphView 等級的查詢力
-  - [x] list / grid / masonry、global + local graph（單擊即跳）、calendar、RSVP 快速閱讀
+  - [x] masonry（list/grid 曾經上線又被 `014ed21` revert 掉，見 spec 的 v0 update；substrate 現在是 pluggable registry，加回 list/grid 是一個 func + 一行 registry，還沒人要）、global + local graph（單擊即跳）、calendar、RSVP 快速閱讀
   - [ ] **2-hop graph** — 目前 local graph 只有直接的 inlink/outlink（一跳）。兩跳才看得到「朋友的朋友」那層結構，也是 dora mode 真正需要的資料。`/api/graph` 已經是單一 endpoint 吃篩選，加一個 `?hops=` 比開新 handler 合理
   - [ ] **timeline（linear）— 卡上線**。橫的還直的？
   - [ ] **dora mode — 卡上線**。star-graph，聚光燈打在當前節點，可換焦點
@@ -130,17 +117,17 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 
 架構決策的來龍去脈在 `docs/DECISIONS.md`，這裡只記還沒做的。
 
-- **Server**：Go `net/http` + `html/template` + `go:embed`，單一靜態 binary，不加 build 步驟。Postgres via `pgx/v5`，FTS 用 `tsvector`+GIN
+- **Server**：Go `net/http` + `templ`（`html/template` 已於 2026-08-31 全部換掉，見下）+ `go:embed`，單一靜態 binary，不加 build 步驟。Postgres via `pgx/v5`，FTS 用 `tsvector`+GIN
 - **GraphQL / GraphDB：不用，問題不成立。** GraphQL 解的是「JSON client 過度或不足抓取」，我們的 handler 回的是 HTML fragment，沒有那個 client。GraphDB 解的是深度不定的遍歷，我們的圖查詢是有界的（一跳，之後兩跳），`links` 表加索引就夠——benchmark 裡 backlinks 走 bitmap scan 本來就快。真的要無界遍歷再回來看，別為了名字裡有 graph 就換資料庫
 - **htmx**：vendored + 手寫 `hx-*`。已用原生 `HX-Request` header（不是 `?partial=1`）。OOB swap、`HX-Trigger`、`hx-indicator`、`hx-boost` 有需要再逐個接，別預先鋪
 - **Alpine.js**：要接，vendored 無 build。先接 feed 版型記憶，再接 wiki autocomplete 的 popup 狀態（`cmeditor.js` 那個手刻狀態機最爛）。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
-- **templ**：跟 Meta-App view substrate 重構**一起**做，見最上面的「下一步」。不要先用 stdlib 重構一次再遷 templ，那是同樣 18 個模板遷兩次
+- [x] ~~**templ**：跟 Meta-App view substrate 重構**一起**做~~ — 2026-08-31 做完了，見最上面「Meta-App view substrate + templ — 已完成」
 
 ### 待還的技術債
 
 - [ ] `notes.go` 800 行（CRUD + link resolution + backlinks + stats）拆成 `notes.go` / `links.go` / `notestats.go`。「主要邏輯在哪個檔案」今天沒有答案就是因為這個
-- [ ] `feedItem` / `profileNote` / `searchHit` 三個卡片型別 + 7 個 scan loop 收斂成一個 `feedCard` — 「下一步」的第 4 步
-- [x] ~~`map[string]any` 換成 typed struct~~ — templ 直接給了型別安全的元件，這項被「下一步」吸收掉了
+- [x] ~~`feedItem` / `profileNote` / `searchHit` 三個卡片型別 + 7 個 scan loop 收斂成一個 `feedCard`~~ — 2026-08-31 做完了
+- [x] ~~`map[string]any` 換成 typed struct~~ — templ 直接給了型別安全的元件，這項被上面的 Meta-App view substrate 工作吸收掉了
 
 ### CJK 字體交付
 

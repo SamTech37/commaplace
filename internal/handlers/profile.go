@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -117,11 +118,11 @@ func profileOlderURL(handle string, nextCursor int64, tab string) string {
 	if nextCursor == 0 {
 		return ""
 	}
-	url := "/" + handle + "?older=" + strconv.FormatInt(nextCursor, 10)
+	href := "/" + handle + "?older=" + strconv.FormatInt(nextCursor, 10)
 	if tab != "" {
-		url += "&tab=" + tab
+		href += "&tab=" + url.QueryEscape(tab)
 	}
-	return url
+	return href
 }
 
 func profileEmpty(tab string) templ.Component {

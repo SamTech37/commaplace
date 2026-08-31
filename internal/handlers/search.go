@@ -73,6 +73,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	attachTagsToCards(r.Context(), s.DB, cards)
 
 	title := pageTitle("搜尋")
 	if q != "" {
