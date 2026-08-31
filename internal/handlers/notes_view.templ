@@ -72,11 +72,22 @@ templ notesView(view NoteListView) {
 	if len(view.Cards) == 0 {
 		<p class="note-meta">@view.Empty</p>
 	} else {
-		<div class="masonry notes-items">
+		<div class={ notesItemsClass(view.Layout) }>
 			@renderCards(view)
 		</div>
 		@notesSentinel(view.OlderURL)
 	}
+}
+
+// notesItemsClass picks the card-container class, matching renderCards'
+// own fallback rule exactly (unrecognized/empty Layout defaults to
+// masonry): "masonry" lays cards out in CSS columns (feed/preview); "list"
+// is a plain vertical stack — .note-card is block-level, no column CSS.
+func notesItemsClass(layout string) string {
+	if layout == "list" {
+		return "notes-items"
+	}
+	return "masonry notes-items"
 }
 
 // notesFragment is the HTMX infinite-scroll response: new cards appended via
