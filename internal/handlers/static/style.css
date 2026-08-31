@@ -3223,6 +3223,38 @@ dialog.palette::backdrop {
 .calendar-nav:hover { color: var(--text); }
 .calendar-today { margin-left: auto; font-size: var(--fs-sm); color: var(--text-3); text-decoration: none; }
 .calendar-today:hover { color: var(--text); }
+.calendar-view-toggle {
+  display: flex;
+  flex-direction: row;
+  gap: 0.4em;
+  margin: 0 0 1.25rem;
+}
+.calendar-view-tab {
+  padding: 0.35em 0.9em;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  font-family: var(--font-sans);
+  transition:
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    background var(--dur-fast) ease;
+}
+.calendar-view-tab:hover { color: var(--text); border-color: var(--border-2); text-decoration: none; }
+.calendar-view-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+.timeline { display: flex; flex-direction: column; gap: 1.5rem; }
+.timeline-group { display: flex; flex-direction: row; gap: 1rem; align-items: baseline; }
+.timeline-date {
+  flex: 0 0 auto;
+  width: 3.2rem;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  font-family: var(--font-sans);
+}
+.timeline-cards { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

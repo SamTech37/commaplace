@@ -252,10 +252,19 @@ func scanNoteRows(rows *sql.Rows) ([]noteRow, error) {
 
 // toCard adapts one noteRow into a feedCard. This is the UI-shaping step
 // (masonry variant/quote/list/thumbnail) — it never runs inside the SQL scan.
+// untitledDraftLabel stands in for a draft's empty title everywhere a card
+// renders one — only drafts can have an empty title (PublishNote requires
+// one), so this never masks a real published note.
+const untitledDraftLabel = "（空白）"
+
 func (n noteRow) toCard() feedCard {
+	title := n.Title
+	if title == "" {
+		title = untitledDraftLabel
+	}
 	c := feedCard{
 		NoteID:       n.ID,
-		Title:        n.Title,
+		Title:        title,
 		URL:          noteURL(n.AuthorHandle, n.Slug),
 		AuthorHandle: n.AuthorHandle,
 		UpdatedAt:    n.UpdatedAt,

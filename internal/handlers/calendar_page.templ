@@ -12,22 +12,49 @@ templ calendarPage(props calendarPageProps) {
 				<a class="calendar-today" href="/me/calendar">今天</a>
 			}
 		</header>
-		<div class="calendar-grid">
-			for _, name := range props.DayNames {
-				<div class="calendar-dayname">{ name }</div>
-			}
-			for _, day := range props.Days {
-				<div class={ calendarCellClass(day) }>
-					<div class="calendar-cell-day">{ fmt.Sprint(day.Day) }</div>
-					if len(day.Notes) > 0 {
-						<ul class="calendar-cell-notes">
-							for _, n := range day.Notes {
-								<li><a href={ templ.URL(n.URL) } title={ n.Title }>{ n.Title }</a></li>
-							}
-						</ul>
-					}
+		<div class="calendar-view-toggle">
+			<a class={ "calendar-view-tab", templ.KV("active", props.View == "calendar") } href={ templ.URL(props.CalendarURL) }>月曆</a>
+			<a class={ "calendar-view-tab", templ.KV("active", props.View == "timeline") } href={ templ.URL(props.TimelineURL) }>時間軸</a>
+		</div>
+		if props.View == "timeline" {
+			@timelineView(props.Groups)
+		} else {
+			<div class="calendar-grid">
+				for _, name := range props.DayNames {
+					<div class="calendar-dayname">{ name }</div>
+				}
+				for _, day := range props.Days {
+					<div class={ calendarCellClass(day) }>
+						<div class="calendar-cell-day">{ fmt.Sprint(day.Day) }</div>
+						if len(day.Notes) > 0 {
+							<ul class="calendar-cell-notes">
+								for _, n := range day.Notes {
+									<li><a href={ templ.URL(n.URL) } title={ n.Title }>{ n.Title }</a></li>
+								}
+							</ul>
+						}
+					</div>
+				}
+			</div>
+		}
+	</div>
+}
+
+templ timelineView(groups []timelineGroup) {
+	if len(groups) == 0 {
+		<p class="note-meta">這個月還沒有筆記。</p>
+	} else {
+		<div class="timeline">
+			for _, g := range groups {
+				<div class="timeline-group">
+					<div class="timeline-date">{ g.DateLabel }</div>
+					<div class="timeline-cards">
+						for _, c := range g.Cards {
+							@listCard(c)
+						}
+					</div>
 				</div>
 			}
 		</div>
-	</div>
+	}
 }
