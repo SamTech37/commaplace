@@ -24,7 +24,7 @@
         <a class="note-card" href="{{.URL}}">
           <div class="note-title">{{.Title}}</div>
           <div class="note-excerpt">{{.Snippet}}</div>
-          <div class="note-foot">@{{.AuthorHandle}} · {{.UpdatedRel}}</div>
+          <div class="note-foot"><span class="meta-handle">@{{.AuthorHandle}}</span> · {{.UpdatedRel}}</div>
         </a>
       {{end}}
     {{else}}

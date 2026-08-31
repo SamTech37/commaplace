@@ -70,7 +70,7 @@ func DefaultNav() Nav {
 		Graph:    "圖譜",
 		Login:    "登入",
 		Logout:   "登出",
-		Calendar: "曆",
+		Calendar: "月曆",
 	}
 }
 

@@ -69,8 +69,8 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
   - [ ] **timeline（linear）— 卡上線**。橫的還直的？
   - [ ] **dora mode — 卡上線**。star-graph，聚光燈打在當前節點，可換焦點
   - [ ] canvas（靜態可拖曳的便利貼牆，不要 graph 那種會抖的）、kanban — backlog
-- [ ] Tag page 文字雲（可關），依使用次數
-- [ ] design 加 Small Caps
+- [x] Tag page 文字雲（可關），依使用次數 — 是**相關標籤**雲（與當前標籤同篇出現的），不是全站標籤。全站雲會隨標籤語彙無上限成長，而且那個聚合本來就是最慢的查詢（見下方 benchmark）；「跟這個標籤一起出現的是什麼」也才是有用的問題，點下去就進入那個標籤自己的雲。範圍外的標籤走標籤搜尋
+- [x] design 加 Small Caps — 用 Alegreya SC（獨立的 small-caps 字族，小寫碼位畫的是真的小型大寫，cap height 的 78%），不是 `font-variant-caps`：思源宋體沒有 `smcp`（fontTools 驗過），瀏覽器只會拿大寫縮放合成，正是 Butterick 說不要的假貨。走 jsDelivr（`docs/DECISIONS.md` 2），Latin-only `unicode-range`，只用在作者 handle 一種角色
 - [x] 資料模型 / 後端架構 — Postgres（UUID PK、link 表用 ID 解析）、單一 Go binary on Render，serverless 否決。理由見 `docs/DECISIONS.md` 3 與 6
 - [ ] 逆向 Obsidian 的殺手功能 — obsidian-flavored markdown 做了，其餘翻 [Developer Documentation](https://docs.obsidian.md/Home)
   - [vscode-markdown-preview-enhanced](https://github.com/shd101wyy/vscode-markdown-preview-enhanced) 實作了很相近的一套功能，比較簡單但夠穩，可以直接讀它怎麼做（[DeepWiki](https://deepwiki.com/shd101wyy/vscode-markdown-preview-enhanced)）

@@ -69,6 +69,9 @@
     "Times New Roman", Georgia, serif;
   --font-mono:
     "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Real small capitals, for author handles. Falls through to --font-serif for
+     anything Alegreya SC doesn't cover (all CJK). */
+  --font-smallcaps: "Alegreya SC", var(--font-serif);
 
   /* Type scale — every font-size maps to one of these; never literal px */
   --fs-2xs: 0.6875rem; /* 11px — mono micro-labels */
@@ -122,6 +125,27 @@ body {
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Alegreya SC is a separate small-capitals family — its lowercase codepoints
+   draw small capitals at 78% of cap height (H=646, h=505, o=507 units), which
+   is the delivery model Butterick recommends. font-variant-caps was not an
+   option: Source Han Serif ships no `smcp` table (GSUB: aalt calt ccmp dlig
+   fwid hist hwid liga ljmo locl pwid ruby tjmo vert vjmo vrt2), so per MDN the
+   browser would synthesize the glyphs from capitals — the exact counterfeit
+   that advice warns against.
+
+   jsDelivr, not Google Fonts, per DECISIONS.md 2. The Latin-only unicode-range
+   means a page with no Latin text never fetches it. */
+@font-face {
+  font-family: "Alegreya SC";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/@fontsource/alegreya-sc@5.3.0/files/alegreya-sc-latin-400-normal.woff2")
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2013-2014,
+    U+2018-201A, U+201C-201E, U+2022, U+2039-203A;
 }
 
 .page {
@@ -1130,9 +1154,17 @@ html[data-theme="dark"] .masonry-card:hover {
   flex-wrap: wrap;
   font-family: var(--font-sans);
 }
-.card-meta .meta-handle {
+/* Handles are the one role that gets small caps. Butterick: use them
+   sparingly, letterspace them, leave kerning on. Weight stays 400 — the face
+   ships only that, and a synthesized bold would undo the point of using a real
+   small-caps font. */
+.meta-handle,
+.author-bar .author-name {
+  font-family: var(--font-smallcaps);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  font-kerning: normal;
   color: var(--text);
-  font-weight: 600;
 }
 .card-meta .meta-spacer {
   flex: 1;
@@ -1442,6 +1474,69 @@ html[data-theme="dark"] .masonry-card:hover {
   }
 }
 
+/* ── Tag page: related-tag cloud ────────────────────────────────────────── */
+/* The inline margin that used to sit on tag.html's <h1>. */
+.tag-title {
+  margin-bottom: 0.25em;
+}
+.tag-cloud {
+  margin: 0 0 2rem;
+}
+.tag-cloud > summary {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0.6em;
+}
+.tag-cloud > summary::-webkit-details-marker {
+  display: none;
+}
+.tag-cloud > summary::before {
+  content: "▾ ";
+}
+.tag-cloud:not([open]) > summary::before {
+  content: "▸ ";
+}
+.tag-cloud > summary:hover {
+  color: var(--text-2);
+}
+.tag-cloud-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em 0.85em;
+}
+.cloud-tag {
+  color: var(--text-2);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  line-height: 1.25;
+  transition: color var(--dur-fast) ease;
+}
+.cloud-tag:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+/* Five steps off the type scale; count is in the title, not on screen. */
+.cloud-s1 {
+  font-size: var(--fs-xs);
+}
+.cloud-s2 {
+  font-size: var(--fs-sm);
+}
+.cloud-s3 {
+  font-size: var(--fs-base);
+}
+.cloud-s4 {
+  font-size: var(--fs-md);
+}
+.cloud-s5 {
+  font-size: var(--fs-lg);
+  color: var(--text);
+}
+
 /* ── Backlinks ──────────────────────────────────────────────────────────── */
 .backlinks {
   margin-top: 3rem;
@@ -1679,10 +1774,8 @@ html[data-theme="dark"] .ac-popup {
   flex-wrap: wrap;
 }
 .author-bar .author-name {
-  font-weight: 600;
   color: var(--text);
   text-decoration: none;
-  font-family: var(--font-sans);
 }
 .author-bar .author-name:hover {
   text-decoration: underline;

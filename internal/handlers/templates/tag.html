@@ -1,13 +1,23 @@
 {{define "title"}}#{{.Tag}} · {{.Site.Title}}{{end}} {{define "content"}}
-<h1 style="margin-bottom: 0.25em">#{{.Tag}}</h1>
+<h1 class="tag-title">#{{.Tag}}</h1>
 <p class="note-meta">{{len .Items}} note{{if ne (len .Items) 1}}s{{end}}</p>
+{{if .Related}}
+<details class="tag-cloud" open>
+  <summary>相關標籤</summary>
+  <div class="tag-cloud-body">
+    {{range .Related}}
+    <a class="cloud-tag cloud-s{{.Size}}" href="{{.URL}}" title="與 #{{$.Tag}} 同時出現 {{.Count}} 次">#{{.Tag}}</a>
+    {{end}}
+  </div>
+</details>
+{{end}}
 {{if .Items}} {{range .Items}}
 <a class="note-card" href="{{.URL}}">
   <div class="note-title">{{.Title}}</div>
   {{if .Excerpt}}
   <div class="note-excerpt">{{.Excerpt}}</div>
   {{end}}
-  <div class="note-foot">@{{.AuthorHandle}} · {{.UpdatedRel}}</div>
+  <div class="note-foot"><span class="meta-handle">@{{.AuthorHandle}}</span> · {{.UpdatedRel}}</div>
 </a>
 {{end}} {{else}}
 <p class="note-meta">No notes carry this tag yet.</p>
