@@ -62,7 +62,7 @@ func graphPage(title, source string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><canvas id=\"graph-canvas\"></canvas><div id=\"graph-empty\" class=\"graph-empty\" hidden>還沒有筆記可以畫。<a href=\"/write\">寫一篇</a> 試試。</div><div id=\"graph-tooltip\" class=\"graph-tooltip\" hidden></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><canvas id=\"graph-canvas\"></canvas><div id=\"graph-empty\" class=\"graph-empty\" hidden>還沒有筆記可以畫。<a href=\"/write\">寫一篇</a> 試試。</div><div id=\"graph-tooltip\" class=\"graph-tooltip\" hidden></div></div><script src=\"/assets/linkpreview.js\" defer></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

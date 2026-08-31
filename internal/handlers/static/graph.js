@@ -176,6 +176,23 @@
       return { x: (sx - cam.x) / cam.zoom, y: (sy - cam.y) / cam.zoom };
     }
 
+    // Same URL shape as linkpreview.js's own previewURLFor — n.url is always
+    // "/handle/slug" (server-supplied, see /api/graph's node payload).
+    function previewURLForNode(n) {
+      var m = (n.url || "").match(/^\/([^/]+)\/([^/]+)$/);
+      return m ? "/api/preview/" + m[1] + "/" + m[2] : null;
+    }
+
+    // A small rect around the node's current screen position, in page
+    // coordinates, for LinkPreview's popup placement.
+    function nodeScreenRect(n) {
+      var cr = canvas.getBoundingClientRect();
+      var sx = cr.left + n.x * cam.zoom + cam.x;
+      var sy = cr.top + n.y * cam.zoom + cam.y;
+      var pad = 10;
+      return { left: sx - pad, right: sx + pad, top: sy - pad, bottom: sy + pad };
+    }
+
     // ---- data ----
     fetch(url)
       .then(function (r) {
@@ -779,6 +796,7 @@
       var n = nodeAt(p.x, p.y);
       downInfo = { x: p.x, y: p.y, node: n, t: performance.now() };
       tooltip.hidden = true;
+      if (window.LinkPreview) window.LinkPreview.hideNow();
       if (n) {
         draggingNode = n;
         var wp2 = screenToWorld(p.x, p.y);
@@ -843,14 +861,26 @@
         hovered = h;
         canvas.style.cursor = h ? "pointer" : "grab";
         requestFrame();
+        if (window.LinkPreview) {
+          var url = h && previewURLForNode(h);
+          if (url) {
+            window.LinkPreview.scheduleShow(h, url, function () { return nodeScreenRect(h); }, function () { return hovered === h; });
+          } else {
+            window.LinkPreview.scheduleHide();
+          }
+        }
       }
-      if (h) {
-        tooltip.hidden = false;
-        tooltip.textContent = h.title + "  @" + h.author;
-        tooltip.style.left = Math.min(p.x + 14, cw - 60) + "px";
-        tooltip.style.top = p.y - 10 + "px";
-      } else {
-        tooltip.hidden = true;
+      // Plain-text fallback only when the richer preview module isn't loaded
+      // (e.g. a future page that embeds the graph without linkpreview.js).
+      if (!window.LinkPreview) {
+        if (h) {
+          tooltip.hidden = false;
+          tooltip.textContent = h.title + "  @" + h.author;
+          tooltip.style.left = Math.min(p.x + 14, cw - 60) + "px";
+          tooltip.style.top = p.y - 10 + "px";
+        } else {
+          tooltip.hidden = true;
+        }
       }
     });
 

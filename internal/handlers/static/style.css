@@ -963,6 +963,15 @@ button.secondary:hover {
   font-family: var(--font-sans);
   font-size: var(--fs-base);
 }
+.note-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+  gap: 0.6rem;
+}
 
 /* ── Vault masthead ─────────────────────────────────────────────────────── */
 .vault-masthead {
@@ -1154,17 +1163,24 @@ html[data-theme="dark"] .masonry-card:hover {
   flex-wrap: wrap;
   font-family: var(--font-sans);
 }
-/* Handles are the one role that gets small caps. Butterick: use them
-   sparingly, letterspace them, leave kerning on. Weight stays 400 — the face
-   ships only that, and a synthesized bold would undo the point of using a real
-   small-caps font. */
-.meta-handle,
-.author-bar .author-name {
+.meta-handle {
+  color: var(--text);
+}
+/* Tags are the one role that gets small caps — every place a "#tag" glyph
+   appears reads as the same token, chip-shaped or not (.article-tag has no
+   chip background, plain text in the meta row; the font is what marks it as
+   a tag there). Butterick: use small caps sparingly, letterspace them, leave
+   kerning on. Weight stays 400 — the face ships only that, and a synthesized
+   bold would undo the point of using a real small-caps font. */
+.card-tag,
+.tag-chip,
+.filter-chip,
+.cloud-tag,
+.article-tag {
   font-family: var(--font-smallcaps);
   font-weight: 400;
   letter-spacing: 0.05em;
   font-kerning: normal;
-  color: var(--text);
 }
 .card-meta .meta-spacer {
   flex: 1;
@@ -1195,7 +1211,6 @@ html[data-theme="dark"] .masonry-card:hover {
   padding: 1px 7px;
   border-radius: 4px;
   font-size: var(--fs-2xs);
-  font-family: var(--font-sans);
 }
 
 .avatar-dot {
@@ -1284,7 +1299,6 @@ html[data-theme="dark"] .masonry-card:hover {
   border-radius: var(--r-pill);
   font-size: var(--fs-sm);
   border: 1px solid var(--border);
-  font-family: var(--font-sans);
   transition:
     background var(--dur-fast) ease,
     color var(--dur-fast) ease,
@@ -1421,7 +1435,6 @@ html[data-theme="dark"] .masonry-card:hover {
   color: var(--text-3);
   text-decoration: none;
   font-size: var(--fs-sm);
-  font-family: var(--font-sans);
   white-space: nowrap;
   transition:
     border-color var(--dur-fast) ease,
@@ -1511,7 +1524,6 @@ html[data-theme="dark"] .masonry-card:hover {
 .cloud-tag {
   color: var(--text-2);
   text-decoration: none;
-  font-family: var(--font-sans);
   line-height: 1.25;
   transition: color var(--dur-fast) ease;
 }
@@ -1803,6 +1815,7 @@ html[data-theme="dark"] .link-preview-card {
 .author-bar .author-name {
   color: var(--text);
   text-decoration: none;
+  font-family: var(--font-sans);
 }
 .author-bar .author-name:hover {
   text-decoration: underline;
@@ -3275,6 +3288,9 @@ dialog.palette::backdrop {
 .calendar-cell {
   background: var(--bg);
   min-height: 6rem;
+  min-width: 0; /* grid/flex items default to min-width:auto (content size),
+                   which defeats the notes list's text-overflow:ellipsis and
+                   grows the whole row instead of truncating */
   padding: 0.35rem 0.45rem;
   display: flex;
   flex-direction: column;
