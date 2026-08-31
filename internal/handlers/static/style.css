@@ -1067,6 +1067,22 @@ html[data-theme="dark"] .masonry-card:hover {
     0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
+/* Wraps a draft card so its bulk-delete checkbox can overlay the top-left
+   corner without breaking out of the masonry column flow (the checkbox
+   can't live inside .masonry-card itself — that's an <a>, and interactive
+   content can't nest inside one). */
+.masonry-card-draft {
+  position: relative;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+}
+.masonry-card-draft .draft-select {
+  position: absolute;
+  top: 0.9em;
+  left: 0.9em;
+  z-index: 1;
+}
+
 /* One note-title voice: every list/card surface renders the same object
    the same way (serif / 600 / --fs-md / upright). */
 .card-title,

@@ -67,15 +67,9 @@ func main() {
 		Mailer:  newMailer(cfg),
 	}
 
-	pages, err := handlers.LoadPages()
-	if err != nil {
-		log.Fatalf("load pages: %v", err)
-	}
-
 	srv := &handlers.Server{
 		DB:          d,
 		Auth:        a,
-		Pages:       pages,
 		Debug:       cfg.Debug,
 		PlaytestKey: cfg.PlaytestKey,
 		AdminHandle: cfg.AdminHandle,

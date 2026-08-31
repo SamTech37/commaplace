@@ -14,7 +14,7 @@ import (
 // GetGraph renders the graph page shell. The actual node/edge data is
 // fetched client-side from /api/graph and laid out with a force simulation.
 func (s *Server) GetGraph(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, "graph", nil)
+	s.renderPage(w, r, pageTitle("graph"), "", nil, graphPage("", "/api/graph"))
 }
 
 type graphNode struct {
@@ -38,18 +38,14 @@ type graphPayload struct {
 // Route: GET /u/{user}/graph
 func (s *Server) GetUserGraph(w http.ResponseWriter, r *http.Request) {
 	handle := r.PathValue("user")
-	s.render(w, r, "graph", map[string]any{
-		"GraphTitle":  "@" + handle,
-		"GraphSource": "/api/graph?user=" + handle,
-	})
+	title := "@" + handle
+	s.renderPage(w, r, pageTitle(title+" · graph"), "", nil, graphPage(title, "/api/graph?user="+handle))
 }
 
 func (s *Server) GetTagGraph(w http.ResponseWriter, r *http.Request) {
 	tag := r.PathValue("tag")
-	s.render(w, r, "graph", map[string]any{
-		"GraphTitle":  "#" + tag,
-		"GraphSource": "/api/graph?tag=" + tag,
-	})
+	title := "#" + tag
+	s.renderPage(w, r, pageTitle(title+" · graph"), "", nil, graphPage(title, "/api/graph?tag="+tag))
 }
 
 func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {

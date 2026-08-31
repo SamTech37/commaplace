@@ -86,7 +86,7 @@ func (s *Server) GetAdminReports(w http.ResponseWriter, r *http.Request) {
 		items = append(items, rep)
 	}
 
-	s.render(w, r, "admin_reports", map[string]any{"Reports": items})
+	s.renderPage(w, r, pageTitle("Reports · admin"), "", nil, adminReportsContent(items))
 }
 
 // PostAdminHide toggles a note's hidden_at and marks every report on it
@@ -217,11 +217,7 @@ func (s *Server) GetAdminDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.render(w, r, "admin_dashboard", map[string]any{
-		"Stats":       stats,
-		"RecentUsers": recentUsers,
-		"RecentNotes": recentNotes,
-	})
+	s.renderPage(w, r, pageTitle("admin"), "", nil, adminDashboardContent(stats, recentUsers, recentNotes))
 }
 
 func setHidden(ctx context.Context, db *sql.DB, noteID uuid.UUID, hide bool) error {

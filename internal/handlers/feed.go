@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/google/uuid"
 
 	"commonplace/internal/config"
@@ -19,16 +20,8 @@ import (
 var pageCfg = config.DefaultPagination()
 
 
-// feedItem powers list-style cards (/tag, /me/saved, profile recent).
-type feedItem struct {
-	Title        string
-	URL          string
-	Excerpt      string
-	AuthorHandle string
-	UpdatedRel   string
-}
-
-// feedCard powers the masonry feed: meta-rich card with variant selection.
+// feedCard powers every note-listing surface (feed/tag/search/profile/saved
+// and the hover-preview endpoint): a meta-rich card with variant selection.
 type feedCard struct {
 	NoteID       uuid.UUID
 	Title        string
@@ -46,6 +39,8 @@ type feedCard struct {
 	LinkChips    []string // links variant
 	Tags         []string // shown as #hashtag row on the card
 	ImageURL     string   // first body image, shown as masonry thumbnail
+	IsDraft      bool     // profile's own drafts tab: shows a bulk-delete checkbox
+	SnippetHTML  templ.Component // search's ts_headline <mark> highlight; overrides Excerpt when set
 }
 
 type tagChip struct {
@@ -96,26 +91,39 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		olderURL = "/feed?" + v.Encode()
 	}
 
+	view := NoteListView{
+		Cards:    cards,
+		OlderURL: olderURL,
+		Empty:    feedEmpty(tagFilter),
+	}
+
 	// HTMX request for the next batch → return only cards + a new sentinel.
 	if r.Header.Get("HX-Request") == "true" {
-		s.Pages.RenderPartial(w, "feed_partial", "feed_partial", map[string]any{
-			"Cards":    cards,
-			"OlderURL": olderURL,
-		})
+		s.renderFragment(w, r, notesFragment(view))
 		return
 	}
 
 	tagChips := s.topTagChips(r.Context(), tagFilter)
+	userHandle := ""
+	if viewer != nil {
+		userHandle = viewer.Handle
+	}
 
-	s.render(w, r, "feed", map[string]any{
-		"Cards":          cards,
-		"Tab":            tab,
-		"TagFilter":      tagFilter,
-		"TagChips":       tagChips,
-		"ViewerLoggedIn": viewer != nil,
-		"OlderURL":       olderURL,
-		"PageClass":      "page-wide",
-	})
+	s.renderPage(w, r, pageTitle("Feed"), "page-wide", nil, feedPage(FeedPageProps{
+		View:           view,
+		Tab:            tab,
+		TagFilter:      tagFilter,
+		TagChips:       tagChips,
+		ViewerLoggedIn: viewer != nil,
+		UserHandle:     userHandle,
+	}))
+}
+
+func feedEmpty(tagFilter string) templ.Component {
+	if tagFilter != "" {
+		return emptyText("還沒有筆記使用 #" + tagFilter + "。")
+	}
+	return feedEmptyNoTag()
 }
 
 func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, older int64, limit int) ([]feedCard, error) {

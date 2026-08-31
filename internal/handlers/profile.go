@@ -8,21 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/google/uuid"
 
 	"commonplace/internal/auth"
 	"commonplace/internal/markdown"
 )
-
-type profileNote struct {
-	ID         uuid.UUID
-	Title      string
-	URL        string
-	Excerpt    string
-	UpdatedRel string
-	UpdatedAt  int64
-	IsDraft    bool
-}
 
 func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	handle := r.PathValue("user")
@@ -67,14 +58,13 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := map[string]any{
-		"Handle":     profile.Handle,
-		"Recent":     recent,
-		"NextCursor": nextCursor,
-		"Tab":        tab,
+	view := NoteListView{
+		Cards:    recent,
+		OlderURL: profileOlderURL(profile.Handle, nextCursor, tab),
+		Empty:    profileEmpty(tab),
 	}
 	if r.Header.Get("HX-Request") == "true" {
-		s.Pages.RenderPartial(w, "profile", "profile-notes", data)
+		s.renderFragment(w, r, notesFragment(view))
 		return
 	}
 
@@ -98,70 +88,102 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		estYear = time.Unix(createdAt, 0).Year()
 	}
 
-	data["Profile"] = profile
-	data["Following"] = following
-	data["FollowerCount"] = followers
-	data["FollowingCount"] = followingN
-	data["NoteCount"] = noteCount
-	data["EstYear"] = estYear
 	isSelf := viewer != nil && viewer.ID == profile.ID
-	data["IsSelf"] = isSelf
-	data["ViewerLoggedIn"] = viewer != nil
-	data["Tab"] = tab
+	var pinned *pinnedNote
 	if isSelf {
-		data["Pinned"], _ = pinnedNoteForUser(r.Context(), s.DB, profile.ID)
+		pinned, _ = pinnedNoteForUser(r.Context(), s.DB, profile.ID)
 	}
-	s.render(w, r, "profile", data)
+
+	s.renderPage(w, r, pageTitle("@"+profile.Handle), "", nil, profilePage(ProfilePageProps{
+		Handle:         profile.Handle,
+		ProfileID:      profile.ID,
+		View:           view,
+		Tab:            tab,
+		IsSelf:         isSelf,
+		ViewerLoggedIn: viewer != nil,
+		Following:      following,
+		FollowerCount:  followers,
+		FollowingCount: followingN,
+		NoteCount:      noteCount,
+		EstYear:        estYear,
+		Pinned:         pinned,
+		BulkDelete:     isSelf && tab == "drafts",
+	}))
 }
 
-// loadRecentNotes lists a user's notes. Unpublished drafts are included only
-// when the viewer is the author themselves.
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]profileNote, int64, error) {
-	query := `SELECT id, title, slug, body_md, updated_at, published_at
-		FROM notes
-		WHERE author_id = $1 AND hidden_at IS NULL AND deleted_at IS NULL`
+// profileOlderURL builds the infinite-scroll cursor URL, or "" when there's
+// no next page (nextCursor == 0, same sentinel loadRecentNotes already uses).
+func profileOlderURL(handle string, nextCursor int64, tab string) string {
+	if nextCursor == 0 {
+		return ""
+	}
+	url := "/" + handle + "?older=" + strconv.FormatInt(nextCursor, 10)
+	if tab != "" {
+		url += "&tab=" + tab
+	}
+	return url
+}
+
+func profileEmpty(tab string) templ.Component {
+	if tab == "drafts" {
+		return emptyText("還沒有草稿。")
+	}
+	return emptyText("還沒有筆記。")
+}
+
+// loadRecentNotes lists a user's notes as feedCards (the shared card model —
+// see notes_view.templ). Unpublished drafts are included only when the
+// viewer is the author themselves.
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]feedCard, int64, error) {
+	query := `SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, n.published_at,
+		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM n.author_id)
+		FROM notes n
+		WHERE n.author_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL`
 	args := []any{authorID}
 	isSelf := viewerID == authorID
 	if !isSelf {
-		query += ` AND published_at IS NOT NULL`
+		query += ` AND n.published_at IS NOT NULL`
 	} else if tab == "drafts" {
-		query += ` AND published_at IS NULL`
+		query += ` AND n.published_at IS NULL`
 	} else {
-		query += ` AND published_at IS NOT NULL`
+		query += ` AND n.published_at IS NOT NULL`
 	}
 	if olderThan > 0 {
 		args = append(args, olderThan)
-		query += ` AND updated_at < $2`
+		query += ` AND n.updated_at < $2`
 	}
-	query += ` ORDER BY updated_at DESC LIMIT 20`
+	query += ` ORDER BY n.updated_at DESC LIMIT 20`
 	rows, err := db.QueryContext(r.Context(), query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var out []profileNote
+	var out []feedCard
 	for rows.Next() {
-		var id uuid.UUID
-		var title, slug, body string
-		var updated int64
-		var publishedAt sql.NullInt64
-		if err := rows.Scan(&id, &title, &slug, &body, &updated, &publishedAt); err != nil {
+		var (
+			c           feedCard
+			slug, body  string
+			publishedAt sql.NullInt64
+		)
+		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &publishedAt,
+			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
 			return nil, 0, err
 		}
-		out = append(out, profileNote{
-			ID:         id,
-			Title:      title,
-			URL:        noteURL(handle, slug),
-			Excerpt:    markdown.Excerpt(body, 150),
-			UpdatedRel: relativeTime(updated),
-			UpdatedAt:  updated,
-			IsDraft:    !publishedAt.Valid,
-		})
+		c.AuthorHandle = handle
+		c.URL = noteURL(handle, slug)
+		c.UpdatedRel = relativeTime(c.UpdatedAt)
+		c.IsDraft = !publishedAt.Valid
+		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
+		c.ImageURL = markdown.FirstImageURL(body)
+		out = append(out, c)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
 	}
+	attachTagsToCards(r.Context(), db, out)
 	var nextCursor int64
 	if len(out) == 20 {
 		nextCursor = out[len(out)-1].UpdatedAt

@@ -2,30 +2,25 @@ package handlers
 
 import (
 	"fmt"
-	"html/template"
+	"html"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"unicode"
 
+	"github.com/a-h/templ"
+	"github.com/google/uuid"
 	"github.com/longbridgeapp/opencc"
 )
-
-type searchHit struct {
-	Title        string
-	URL          string
-	AuthorHandle string
-	UpdatedRel   string
-	Snippet      template.HTML // contains <mark>…</mark>
-}
 
 func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	scope := r.URL.Query().Get("scope") // "" | "mine" | "following"
 	viewer, _ := s.Auth.CurrentUser(r)
 
-	var hits []searchHit
+	var cards []feedCard
 	if q != "" {
 		tsq := buildTSQueryVariants(q)
 		if tsq != "" {
@@ -45,7 +40,7 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 			}
 
 			rows, err := s.DB.QueryContext(r.Context(), `
-				SELECT n.title, n.slug, u.handle, n.updated_at,
+				SELECT n.id, n.title, n.slug, u.handle, n.updated_at,
 				       ts_headline('simple', n.body_md, query,
 				         'StartSel=<mark>, StopSel=</mark>, MaxFragments=1, MaxWords=16, MinWords=8') AS snip
 				FROM notes n
@@ -59,30 +54,74 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 			} else {
 				defer rows.Close()
 				for rows.Next() {
+					var id uuid.UUID
 					var title, slug, handle, snip string
 					var updated int64
-					if err := rows.Scan(&title, &slug, &handle, &updated, &snip); err != nil {
+					if err := rows.Scan(&id, &title, &slug, &handle, &updated, &snip); err != nil {
 						break
 					}
-					hits = append(hits, searchHit{
+					cards = append(cards, feedCard{
+						NoteID:       id,
 						Title:        title,
 						URL:          noteURL(handle, slug),
 						AuthorHandle: handle,
+						UpdatedAt:    updated,
 						UpdatedRel:   relativeTime(updated),
-						Snippet:      template.HTML(snip),
+						SnippetHTML:  searchSnippet(snip),
 					})
 				}
 			}
 		}
 	}
 
-	s.render(w, r, "search", map[string]any{
-		"Query":          q,
-		"Scope":          scope,
-		"Hits":           hits,
-		"ViewerLoggedIn": viewer != nil,
-		"SearchQuery":    q,
-	})
+	title := pageTitle("搜尋")
+	if q != "" {
+		title = pageTitle(q + " · 搜尋")
+	}
+	s.renderPageWithQuery(w, r, title, "", q, nil, searchPage(SearchPageProps{
+		Query:          q,
+		Scope:          scope,
+		ViewerLoggedIn: viewer != nil,
+		View: NoteListView{
+			Cards: cards,
+			Empty: emptyText("沒有符合的結果。"),
+		},
+	}))
+}
+
+// searchSnippet escapes ts_headline's raw output for safe HTML rendering.
+// ts_headline returns the original note body text (arbitrary, user-authored
+// markdown) with literal <mark>/</mark> inserted around matched terms — it
+// does NOT escape the surrounding text. Rendering that unescaped (as the old
+// search.html did via template.HTML) let anyone who authored a note with
+// HTML/JS-looking plain text reproduce it live on the search-results page
+// for every visitor whose query matched it: a stored XSS reachable by any
+// searcher, not just the note's author. This escapes everything except the
+// <mark>/</mark> delimiters themselves, which are exactly the StartSel/
+// StopSel passed to ts_headline above, so no other literal "<mark>" can
+// appear in the input.
+func searchSnippet(raw string) templ.Component {
+	const open, close = "<mark>", "</mark>"
+	var b strings.Builder
+	for {
+		i := strings.Index(raw, open)
+		if i < 0 {
+			b.WriteString(html.EscapeString(raw))
+			break
+		}
+		b.WriteString(html.EscapeString(raw[:i]))
+		b.WriteString(open)
+		raw = raw[i+len(open):]
+		j := strings.Index(raw, close)
+		if j < 0 {
+			b.WriteString(html.EscapeString(raw))
+			break
+		}
+		b.WriteString(html.EscapeString(raw[:j]))
+		b.WriteString(close)
+		raw = raw[j+len(close):]
+	}
+	return templ.Raw(b.String())
 }
 
 var (
@@ -168,4 +207,16 @@ func buildTSQuery(q string) string {
 		parts[i] = p + ":*"
 	}
 	return strings.Join(parts, " & ")
+}
+
+// searchScopeURL builds /search?q=...&scope=... with q properly escaped
+// (unlike the old search.html, which interpolated .Query raw into the href
+// and relied on html/template's contextual auto-escaping; templ.URL does not
+// re-escape a pre-built string, so this does the escaping itself).
+func searchScopeURL(q, scope string) string {
+	href := "/search?q=" + url.QueryEscape(q)
+	if scope != "" {
+		href += "&scope=" + scope
+	}
+	return href
 }

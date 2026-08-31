@@ -2,11 +2,12 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/server ./cmd/server"
+  cmd = "go tool templ generate && go build -o ./tmp/server ./cmd/server"
   bin = "./tmp/server"
   full_bin = "DEBUG=1 DB_PATH=./dev.db ADDR=:8080 SEED_DEV=1 ./tmp/server"
-  include_ext = ["go", "html", "css", "js", "sql"]
+  include_ext = ["go", "templ", "css", "js", "sql"]
   exclude_dir  = ["tmp", "vendor"]
+  exclude_regex = ["_templ\\.go$"]
   delay = 500
 
 [log]

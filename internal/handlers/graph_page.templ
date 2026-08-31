@@ -1,0 +1,17 @@
+package handlers
+
+templ graphPage(title, source string) {
+	<h1 style="margin:0 0 0.4em">
+		if title != "" {
+			{ title }
+		} else {
+			graph
+		}
+	</h1>
+	<p class="note-meta" style="margin:0 0 1em">點是筆記，線是 <code>[[wiki link]]</code>。</p>
+	<div id="graph-wrap" data-graph-source={ source }>
+		<canvas id="graph-canvas"></canvas>
+		<div id="graph-empty" class="graph-empty" hidden>還沒有筆記可以畫。<a href="/write">寫一篇</a> 試試。</div>
+		<div id="graph-tooltip" class="graph-tooltip" hidden></div>
+	</div>
+}

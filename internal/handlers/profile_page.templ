@@ -1,0 +1,110 @@
+package handlers
+
+import (
+	"strconv"
+
+	"github.com/google/uuid"
+)
+
+type ProfilePageProps struct {
+	Handle         string
+	ProfileID      uuid.UUID
+	View           NoteListView
+	Tab            string
+	IsSelf         bool
+	ViewerLoggedIn bool
+	Following      bool
+	FollowerCount  int
+	FollowingCount int
+	NoteCount      int
+	EstYear        int
+	Pinned         *pinnedNote
+	BulkDelete     bool
+}
+
+templ profileNotesList(p ProfilePageProps) {
+	<div id="notes-list" data-reveal-group>
+		@notesView(p.View)
+	</div>
+}
+
+templ profilePage(p ProfilePageProps) {
+	<header class="vault-masthead" data-reveal>
+		<div class="profile-header">
+			<img class="avatar-img-lg" src={ avatarURL(p.Handle) } alt={ "@" + p.Handle } onerror="this.style.display='none'"/>
+			<h1 class="vault-name">{ "@" + p.Handle }</h1>
+		</div>
+		<div class="vault-meta">
+			if p.EstYear > 0 {
+				Est. { strconv.Itoa(p.EstYear) } ·
+			}
+			{ strconv.Itoa(p.NoteCount) } entries
+		</div>
+	</header>
+	<div class="note-meta profile-meta">
+		{ strconv.Itoa(p.FollowerCount) } follower
+		if p.FollowerCount != 1 {
+			s
+		}
+		<span class="crumb-sep">·</span>
+		{ strconv.Itoa(p.FollowingCount) } following
+		if p.IsSelf {
+			<span class="crumb-sep">·</span>
+			<a href="/me/avatar">編輯大頭貼</a>
+			<span class="crumb-sep">·</span>
+			<a href="/write">寫筆記</a>
+			<span class="crumb-sep">·</span>
+			<details class="handle-edit">
+				<summary>改用戶名</summary>
+				<form method="POST" action="/settings/handle" class="handle-form">
+					<span class="handle-at">{ "@" }</span>
+					<input
+						type="text"
+						name="handle"
+						value={ p.Handle }
+						pattern="[a-z0-9][a-z0-9-]{0,28}[a-z0-9]"
+						maxlength="30"
+						required
+						aria-label="新的用戶名"
+						title="小寫英數字與連字號，2–30 字"
+					/>
+					<button type="submit" class="handle-save">儲存</button>
+				</form>
+			</details>
+		}
+	</div>
+	if p.IsSelf && p.Pinned != nil {
+		<div class="pinned-card">
+			<div class="pinned-label">📌 Pinned</div>
+			<a href={ templ.URL(p.Pinned.URL) } class="pinned-link">{ p.Pinned.Title }</a>
+		</div>
+	}
+	if p.ViewerLoggedIn && !p.IsSelf {
+		<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML" style="margin-bottom: 1.25em">
+			<input type="hidden" name="user_id" value={ p.ProfileID.String() }/>
+			<button type="submit" class={ "follow-btn", templ.KV("following", p.Following) } aria-pressed={ strconv.FormatBool(p.Following) }>
+				if p.Following {
+					Following
+				} else {
+					Follow
+				}
+			</button>
+		</form>
+	}
+	if p.IsSelf {
+		<nav class="feed-tabs" style="margin-top: 1.5em;">
+			<a href={ templ.URL("/" + p.Handle) } class={ "feed-tab", templ.KV("active", p.Tab != "drafts") }>公開</a>
+			<a href={ templ.URL("/" + p.Handle + "?tab=drafts") } class={ "feed-tab", templ.KV("active", p.Tab == "drafts") }>草稿</a>
+		</nav>
+	} else {
+		<div class="profile-notes-heading" style="margin-top:1.5em">最近的筆記</div>
+	}
+	if p.BulkDelete {
+		<form method="post" action="/api/notes/bulk-delete" id="bulk-delete-drafts-form" onsubmit="return confirm('刪除所選的草稿？');">
+			@profileNotesList(p)
+			<button type="submit" class="bulk-delete-btn" style="margin-top: 1em">刪除所選</button>
+		</form>
+	} else {
+		@profileNotesList(p)
+	}
+}

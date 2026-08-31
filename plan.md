@@ -17,7 +17,7 @@
 順序：
 
 1. `templ generate` 接上 air 的 dev loop，先遷一個模板驗證流程 → 驗證：`make watch` 改 `.templ` 會重編，`go build ./...` 綠
-2. 抽出共用 view（toggle + 三種版面 + 三個卡片模板），定義 `NoteListView` → 驗證：`/feed` 行為與現在完全相同
+2. 抽出共用 view（toggle + 三種版面 + 三個卡片模板），定義 `NoteListView` → 驗證：`/feed` 行為與現在完全相同。`_note_preview.html` 也吃 `masonry_card`，它跟 `feed.html` 的 parse 配對要一起搬（`render.go:96`）
 3. 五個版面逐一接上去，一次一個，每個都有測試 → 驗證：每頁都有切換鈕、無限捲動維持當前版面、沒有生 markdown 外洩
 4. 砍掉 `feedItem` / `profileNote` / `searchHit` 與多餘的 scan loop → 驗證：`grep` 不到，測試全綠
 
@@ -60,6 +60,8 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 - [x] CRUD、progressive load
 - [x] wikilink：embed、stub、同名處理（per-author `UNIQUE(author_id, slug_ci)` + `@user` 語法，全域撞名不可能發生）
 - [x] **連結一律走 UUID，不走名字**。`links.resolved_target_id` 是唯一真實來源，改名不斷鏈；`link_regression_test.go` 守著。順手抓到真 bug：編輯器路徑（autosave → publish）漏了 stub backfill，`/write` 跟 import 有做，`autosaveNote` 現在也補上了
+- [x] **hover 連結預覽** — 滑過 `[[wikilink]]` 就浮出那篇的卡片（照 LessWrong 那套），不用整頁載完才知道值不值得跳；`[[@user/note]]` 同樣有，跨 vault 的兔子洞才不用每次付一次 page load。卡片直接是 feed 的 `masonry_card` 吃 `feedCard`——沒有第二套卡片模型，所以清單那半邊重構時它跟著走。`GET /api/preview/{user}/{slug}` 只出已發布的，gate 寫在 SQL 裡，因此與看的人無關、可快取
+  - [ ] **外部連結預覽** — `linkpreview.js` 的 `previewURLFor()` 就是留好的接口，缺的是抓 og tag 那半（fetcher + 快取表 + SSRF 防護）
 - [ ] 搜尋
   - [x] Cmd+K 模糊標題（不是 Ctrl+O，避開瀏覽器熱鍵）
   - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格

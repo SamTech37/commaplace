@@ -190,7 +190,7 @@ func urlenc(s string) string {
 	return r.Replace(s)
 }
 
-func hasNoteTitle(notes []profileNote, title string) bool {
+func hasNoteTitle(notes []feedCard, title string) bool {
 	for _, n := range notes {
 		if n.Title == title {
 			return true

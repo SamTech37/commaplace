@@ -18,12 +18,7 @@ func (s *Server) GetAvatarBuilder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	choice := loadAvatarChoice(r, s.DB, u.ID)
-	data := map[string]any{
-		"User":   u,
-		"Parts":  AvatarParts,
-		"Choice": choice,
-	}
-	s.render(w, r, "avatar_builder", data)
+	s.renderPage(w, r, pageTitle("選擇大頭貼"), "", nil, avatarBuilderPage(choice))
 }
 
 // PostAvatarBuilder validates the four part IDs + skin color, composes the

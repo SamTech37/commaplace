@@ -1,0 +1,87 @@
+package handlers
+
+import "strconv"
+
+type FeedPageProps struct {
+	View           NoteListView
+	Tab            string
+	TagFilter      string
+	TagChips       []tagChip
+	ViewerLoggedIn bool
+	UserHandle     string // "" when logged out; used for the "我的" tab link
+}
+
+// feedTabURL builds /feed with the tab + tag query params the way the old
+// feed.html's inline conditionals did (tab param omitted for "recommended").
+func feedTabURL(tab, tagFilter string) string {
+	url := "/feed"
+	var q []string
+	if tab == "following" {
+		q = append(q, "tab=following")
+	}
+	if tagFilter != "" {
+		q = append(q, "tag="+tagFilter)
+	}
+	for i, p := range q {
+		if i == 0 {
+			url += "?" + p
+		} else {
+			url += "&" + p
+		}
+	}
+	return url
+}
+
+func feedChipURL(tag, tab string) string {
+	url := "/feed?tag=" + tag
+	if tab == "following" {
+		url += "&tab=following"
+	}
+	return url
+}
+
+templ feedTagChips(chips []tagChip, tab, tagFilter string) {
+	<div class="tag-search-wrap">
+		<input type="search" id="tag-search" placeholder="搜尋標籤…" autocomplete="off"/>
+		<div id="tag-search-popup" class="ac-popup" hidden><ul></ul></div>
+	</div>
+	<div class="filter-chips">
+		<a class={ "filter-chip", templ.KV("active", tagFilter == "") } href={ templ.URL(feedTabURL(tab, "")) }>全部</a>
+		for _, chip := range chips {
+			<a class={ "filter-chip", templ.KV("active", chip.Active) } href={ templ.URL(feedChipURL(chip.Tag, tab)) }>
+				#{ chip.Tag } <span class="chip-count">{ strconv.Itoa(chip.Count) }</span>
+			</a>
+		}
+	</div>
+	<script src="/assets/tagsearch.js" defer></script>
+}
+
+templ feedEmptyNoTag() {
+	還沒有筆記。<a href="/write">寫第一篇</a>。
+}
+
+templ feedPage(p FeedPageProps) {
+	<div class="feed-shell">
+		<aside class="feed-sidebar">
+			<nav class="feed-tabs">
+				<a href={ templ.URL(feedTabURL("recommended", p.TagFilter)) } class={ "feed-tab", templ.KV("active", p.Tab == "recommended") }>推薦</a>
+				<a href={ templ.URL(feedTabURL("following", p.TagFilter)) } class={ "feed-tab", templ.KV("active", p.Tab == "following") }>追蹤中</a>
+				if p.UserHandle != "" {
+					<a href={ templ.URL("/" + p.UserHandle) } class="feed-tab">我的</a>
+				}
+			</nav>
+			if len(p.TagChips) > 0 {
+				@feedTagChips(p.TagChips, p.Tab, p.TagFilter)
+			}
+		</aside>
+		<section class="feed-main">
+			<div class="feed-container">
+				if p.Tab == "following" && !p.ViewerLoggedIn {
+					<p class="note-meta"><a href="/login">登入</a>後即可看到你追蹤的人的筆記。</p>
+				} else {
+					@notesView(p.View)
+				}
+			</div>
+		</section>
+	</div>
+}

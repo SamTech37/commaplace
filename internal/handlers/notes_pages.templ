@@ -1,0 +1,337 @@
+package handlers
+
+import (
+	"html/template"
+	"strconv"
+
+	"github.com/google/uuid"
+)
+
+// ---------- write ----------
+
+type WriteProps struct {
+	NoteID    string
+	Document  string
+	IsEdit    bool
+	Published bool
+	NoteURL   string
+}
+
+templ writePage(p WriteProps) {
+	<link rel="stylesheet" href="/assets/easymde.min.css"/>
+	<script src="/assets/easymde.min.js" defer></script>
+	<script src="/assets/cmeditor.js" defer></script>
+	<div
+		class="editor-page"
+		data-note-id={ p.NoteID }
+		data-allow-upload={ templ.KV("1", !p.Published) }
+	>
+		<div class="editor-bar">
+			if p.Published {
+				<a href={ templ.URL(p.NoteURL) } class="link-btn editor-back-btn">← 返回</a>
+			} else {
+				<form
+					class="inline-form editor-back-btn"
+					method="post"
+					action={ templ.URL("/delete/" + p.NoteID) }
+					onsubmit="return confirm('放棄這篇草稿？');"
+				>
+					<button type="submit" class="link-btn">捨棄</button>
+				</form>
+			}
+			<span id="save-status" class="save-status" aria-live="polite"></span>
+			if p.IsEdit && p.Published {
+				<form
+					class="inline-form"
+					method="post"
+					action={ templ.URL("/delete/" + p.NoteID) }
+					onsubmit="return confirm('確定刪除這篇筆記？');"
+				>
+					<button type="submit" class="editor-delete-btn">🗑 刪除</button>
+				</form>
+			}
+			<button type="button" id="publish-btn" class="publish-btn">
+				if p.Published {
+					更新
+				} else {
+					發布
+				}
+			</button>
+		</div>
+		<textarea id="doc">{ p.Document }</textarea>
+		<div id="ac-popup" class="ac-popup" hidden>
+			<ul></ul>
+		</div>
+	</div>
+}
+
+// ---------- note stub (user exists, note doesn't) ----------
+
+type NoteStubProps struct {
+	Handle string
+	Slug   string
+}
+
+templ noteStubContent(p NoteStubProps) {
+	<div class="note-container">
+		<p class="note-meta"><a href={ templ.URL("/" + p.Handle) }>{ "@" + p.Handle }</a> hasn't written this note yet.</p>
+		<p style="margin-top:1.5rem"><a href={ templ.URL("/" + p.Handle) }>View profile</a> · <a href="/feed">Feed</a></p>
+	</div>
+}
+
+// ---------- note view ----------
+
+type NoteViewProps struct {
+	Note           noteView
+	AuthorHandle   string
+	AuthorID       uuid.UUID
+	AuthorStats    authorStats
+	ViewerFollows  bool
+	BodyHTML       template.HTML
+	Tags           []string
+	BacklinksSame  []backlink
+	BacklinksCross []backlink
+	OutgoingSame   []outlink
+	OutgoingCross  []outlink
+	UpdatedRel     string
+	ReadingMinutes int
+	LikeCount      int
+	Liked          bool
+	Saved          bool
+	ViewerLoggedIn bool
+	IsAuthor       bool
+	IsHidden       bool
+	OGDescription  string
+	OGImage        string
+	OGURL          string
+}
+
+templ noteMeta(p NoteViewProps) {
+	<meta property="og:site_name" content={ siteCfg.Title }/>
+	<meta property="og:title" content={ p.Note.Title + " · @" + p.AuthorHandle }/>
+	<meta property="og:type" content="article"/>
+	<meta property="og:article:author" content={ "@" + p.AuthorHandle }/>
+	<meta property="og:description" content={ p.OGDescription }/>
+	<meta property="og:image" content={ p.OGImage }/>
+	<meta property="og:url" content={ p.OGURL }/>
+	<meta name="twitter:card" content="summary_large_image"/>
+}
+
+templ connectedGrid(items []outlink) {
+	<div class="connected-grid">
+		for _, bl := range items {
+			<a class="mini-card" href={ templ.URL(bl.URL) }>
+				<div class="mini-card-title">{ bl.Title }</div>
+				<div class="mini-card-meta">
+					<span class="mini-card-author-dot" style={ "background-color:" + avatarColor(bl.AuthorHandle) }>{ avatarInitial(bl.AuthorHandle) }</span>
+					{ "@" + bl.AuthorHandle }
+				</div>
+			</a>
+		}
+	</div>
+}
+
+templ backlinksList(items []backlink, icon string) {
+	<div class="backlinks-list">
+		for _, bl := range items {
+			<a class="backlink-row" href={ templ.URL(bl.URL) }>
+				<span class="backlink-icon">{ icon }</span>
+				<span class="backlink-title">{ bl.Title }</span>
+				<span class="backlink-author">
+					<span class="mini-card-author-dot" style={ "background-color:" + avatarColor(bl.AuthorHandle) }>{ avatarInitial(bl.AuthorHandle) }</span>
+					{ "@" + bl.AuthorHandle }
+				</span>
+			</a>
+		}
+	</div>
+}
+
+templ noteContent(p NoteViewProps) {
+	if p.IsHidden {
+		<p class="error">這篇筆記已被管理員隱藏，只有作者本人和管理員看得到。</p>
+	}
+	<div class="author-bar" data-reveal data-reveal-delay="1">
+		<a class="author-avatar" href={ templ.URL("/" + p.AuthorHandle) } style={ "background-color:" + avatarColor(p.AuthorHandle) }>{ avatarInitial(p.AuthorHandle) }</a>
+		<div class="author-info">
+			<div class="author-name-row">
+				<a class="author-name" href={ templ.URL("/" + p.AuthorHandle) }>{ "@" + p.AuthorHandle }</a>
+			</div>
+			<div class="author-stats">
+				{ strconv.Itoa(p.AuthorStats.Followers) } 訂閱者 · { strconv.Itoa(p.AuthorStats.Notes) } 篇筆記
+			</div>
+		</div>
+		if p.ViewerLoggedIn && !p.IsAuthor {
+			<form class="inline-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
+				<input type="hidden" name="user_id" value={ p.AuthorID.String() }/>
+				<button type="submit" class={ "follow-btn", templ.KV("following", p.ViewerFollows) }>
+					if p.ViewerFollows {
+						已追蹤
+					} else {
+						+ 追蹤
+					}
+				</button>
+			</form>
+		}
+	</div>
+	<article class="article" data-reveal data-reveal-delay="2">
+		<div class="article-meta-row">
+			<div class="article-info">
+				更新於 { p.UpdatedRel } · 約 { strconv.Itoa(p.ReadingMinutes) } 分鐘
+				if len(p.Tags) > 0 {
+					for _, t := range p.Tags {
+						<a class="article-tag" href={ templ.URL("/tag/" + t) }>#{ t }</a>
+					}
+				}
+			</div>
+			<div class="article-actions">
+				if p.ViewerLoggedIn {
+					<form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML">
+						<input type="hidden" name="note_id" value={ p.Note.ID.String() }/>
+						<button type="submit" class={ "action-btn", templ.KV("liked", p.Liked) } aria-pressed={ strconv.FormatBool(p.Liked) }>
+							if p.Liked {
+								♥
+							} else {
+								♡
+							}
+							<span class="count">{ strconv.Itoa(p.LikeCount) }</span>
+						</button>
+					</form>
+				} else {
+					<span class="action-btn" aria-disabled="true">♡ <span class="count">{ strconv.Itoa(p.LikeCount) }</span></span>
+				}
+				if p.ViewerLoggedIn {
+					<form class="inline-form" hx-post="/api/save" hx-target="this" hx-swap="outerHTML">
+						<input type="hidden" name="note_id" value={ p.Note.ID.String() }/>
+						<button type="submit" class={ "action-btn save-btn", templ.KV("saved", p.Saved) } aria-pressed={ strconv.FormatBool(p.Saved) }>
+							if p.Saved {
+								✓ 已收藏
+							} else {
+								＋ 收藏
+							}
+						</button>
+					</form>
+				}
+				if !p.IsHidden && p.Note.PublishedAt.Valid {
+					<button type="button" class="action-btn share-btn" aria-label="分享" data-title={ p.Note.Title }>
+						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<circle cx="18" cy="5" r="3"></circle>
+							<circle cx="6" cy="12" r="3"></circle>
+							<circle cx="18" cy="19" r="3"></circle>
+							<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+							<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+						</svg>
+					</button>
+				}
+				<details class="action-menu reader-menu">
+					<summary class="action-btn" aria-label="閱讀設定" title="閱讀設定">Aa</summary>
+					<div class="action-menu-list reader-panel">
+						<div class="reader-row">
+							<span class="reader-label">字級</span>
+							<div class="reader-seg" role="group" aria-label="字級">
+								<button type="button" class="reader-opt" data-reader-set="size" data-val="s" aria-pressed="false">小</button>
+								<button type="button" class="reader-opt" data-reader-set="size" data-val="m" aria-pressed="true">中</button>
+								<button type="button" class="reader-opt" data-reader-set="size" data-val="l" aria-pressed="false">大</button>
+							</div>
+						</div>
+						<div class="reader-row">
+							<span class="reader-label">字體</span>
+							<div class="reader-seg" role="group" aria-label="字體">
+								<button type="button" class="reader-opt" data-reader-set="font" data-val="serif" aria-pressed="true">宋體</button>
+								<button type="button" class="reader-opt" data-reader-set="font" data-val="sans" aria-pressed="false">黑體</button>
+							</div>
+						</div>
+					</div>
+				</details>
+				<details class="action-menu">
+					<summary class="action-btn" aria-label="更多">⋯</summary>
+					<div class="action-menu-list">
+						<button type="button" class="rsvp-start">⚡ 快速閱讀</button>
+						if p.ViewerLoggedIn {
+							<a href={ templ.URL("/write?reply-to=" + p.Note.ID.String()) }>↩ 回覆</a>
+						}
+						if p.IsAuthor {
+							<div class="action-menu-sep"></div>
+							<a href={ templ.URL("/edit/" + p.Note.ID.String()) }>✎ 編輯</a>
+							<form class="inline-form" method="post" action={ templ.URL("/delete/" + p.Note.ID.String()) } onsubmit="return confirm('確定刪除這篇筆記？');">
+								<button type="submit" class="action-menu-danger">🗑 刪除</button>
+							</form>
+						}
+						<div class="action-menu-sep"></div>
+						<a href={ templ.URL(string(obsidianURL(p.Note.Slug, p.Note.BodyMD))) } title="在 Obsidian 開啟">
+							⬇ 匯入到我的 vault
+						</a>
+						<a href={ templ.URL("/api/notes/" + p.Note.ID.String() + "/raw") } download>⬇ 下載 .md</a>
+						<button type="button" class="copy-md" data-raw={ "/api/notes/" + p.Note.ID.String() + "/raw" }>
+							📋 複製 markdown
+						</button>
+						if p.ViewerLoggedIn && !p.IsAuthor {
+							<div class="action-menu-sep"></div>
+							<button
+								type="button"
+								onclick="this.closest('.action-menu-list').querySelector('.report-form').hidden = false; this.hidden = true;"
+							>
+								⚑ 檢舉
+							</button>
+							<form class="inline-form report-form" hx-post="/api/report" hx-target="this" hx-swap="outerHTML" hidden style="padding: 0.45em 0.85em; gap: 0.4em">
+								<input type="hidden" name="note_id" value={ p.Note.ID.String() }/>
+								<input type="text" name="reason" placeholder="原因（可省略）" maxlength="200" style="font-size: 0.8rem; padding: 0.25em 0.5em"/>
+								<button type="submit" class="link-btn" style="font-size: 0.8rem">送出</button>
+							</form>
+						}
+					</div>
+				</details>
+			</div>
+		</div>
+		<h1 class="article-title">{ p.Note.Title }</h1>
+		<div class="article-body">@templ.Raw(string(p.BodyHTML))</div>
+		<script src="/assets/linkpreview.js" defer></script>
+	</article>
+	if len(p.OutgoingSame) > 0 || len(p.OutgoingCross) > 0 {
+		<section class="connected-section" data-reveal data-reveal-delay="3">
+			<div class="section-header">
+				→ 這篇連到的筆記
+				<span class="section-count">{ strconv.Itoa(len(p.OutgoingSame) + len(p.OutgoingCross)) } 篇</span>
+			</div>
+			if len(p.OutgoingSame) > 0 {
+				<div class="subsection-label">
+					<span class="dot"></span>在 { p.AuthorHandle } 的同個 vault · { strconv.Itoa(len(p.OutgoingSame)) } 篇
+				</div>
+				@connectedGrid(p.OutgoingSame)
+			}
+			if len(p.OutgoingCross) > 0 {
+				<div class="subsection-label cross">
+					↝ 連到其他人的筆記 · { strconv.Itoa(len(p.OutgoingCross)) } 篇
+				</div>
+				@connectedGrid(p.OutgoingCross)
+			}
+		</section>
+	}
+	if len(p.BacklinksSame) > 0 || len(p.BacklinksCross) > 0 {
+		<section class="backlinks-section" data-reveal data-reveal-delay="4">
+			<div class="section-header">
+				← 引用了這篇筆記的人
+				<span class="section-count">{ strconv.Itoa(len(p.BacklinksSame) + len(p.BacklinksCross)) } 篇</span>
+			</div>
+			if len(p.BacklinksSame) > 0 {
+				<div class="subsection-label">
+					<span class="dot"></span>在 { p.AuthorHandle } 的同個 vault 引用 · { strconv.Itoa(len(p.BacklinksSame)) } 篇
+				</div>
+				@backlinksList(p.BacklinksSame, "←")
+			}
+			if len(p.BacklinksCross) > 0 {
+				<div class="subsection-label cross">
+					↜ 其他人引用 · { strconv.Itoa(len(p.BacklinksCross)) } 篇
+				</div>
+				@backlinksList(p.BacklinksCross, "↜")
+			}
+		</section>
+	}
+	if len(p.OutgoingSame) > 0 || len(p.OutgoingCross) > 0 || len(p.BacklinksSame) > 0 || len(p.BacklinksCross) > 0 {
+		<details class="local-graph-toggle">
+			<summary>顯示關聯圖</summary>
+			<div class="local-graph" data-lazy-graph={ "/api/graph/local?note=" + p.Note.ID.String() } data-graph-height="280">
+				<canvas></canvas>
+			</div>
+		</details>
+	}
+}

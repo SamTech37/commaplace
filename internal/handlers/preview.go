@@ -51,5 +51,5 @@ func (s *Server) GetNotePreview(w http.ResponseWriter, r *http.Request) {
 	attachTagsToCards(r.Context(), s.DB, cards)
 
 	w.Header().Set("Cache-Control", "private, max-age=60")
-	s.Pages.RenderPartial(w, "_note_preview", "note_preview", map[string]any{"Card": cards[0]})
+	s.renderFragment(w, r, masonryCard(cards[0]))
 }

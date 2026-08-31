@@ -1,0 +1,37 @@
+package handlers
+
+import "strconv"
+
+type SearchPageProps struct {
+	Query          string
+	Scope          string
+	ViewerLoggedIn bool
+	View           NoteListView
+}
+
+templ searchPage(p SearchPageProps) {
+	<h1>搜尋</h1>
+	<form method="GET" action="/search" style="margin-bottom:1rem">
+		<label>
+			關鍵字
+			<input type="search" name="q" value={ p.Query } autofocus/>
+		</label>
+		if p.Scope != "" {
+			<input type="hidden" name="scope" value={ p.Scope }/>
+		}
+		<button type="submit">搜尋</button>
+	</form>
+	if p.Query != "" {
+		<div class="filter-chips">
+			<a class={ "filter-chip", templ.KV("active", p.Scope == "") } href={ templ.URL(searchScopeURL(p.Query, "")) }>全部</a>
+			if p.ViewerLoggedIn {
+				<a class={ "filter-chip", templ.KV("active", p.Scope == "mine") } href={ templ.URL(searchScopeURL(p.Query, "mine")) }>我的</a>
+				<a class={ "filter-chip", templ.KV("active", p.Scope == "following") } href={ templ.URL(searchScopeURL(p.Query, "following")) }>我追蹤的人</a>
+			}
+		</div>
+		if len(p.View.Cards) > 0 {
+			<p class="note-meta">{ strconv.Itoa(len(p.View.Cards)) } 筆結果</p>
+		}
+		@notesView(p.View)
+	}
+}

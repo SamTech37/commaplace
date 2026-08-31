@@ -30,7 +30,7 @@ func (s *Server) GetOnboarding(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/me/avatar", http.StatusSeeOther)
 		return
 	}
-	s.render(w, r, "onboarding", map[string]any{"User": u})
+	s.renderPage(w, r, pageTitle("Welcome"), "", nil, onboardingPage(u))
 }
 
 // PostOnboardingFork handles both choices. ?skip=1 marks the user

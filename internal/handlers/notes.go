@@ -51,12 +51,10 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	s.render(w, r, "write", map[string]any{
-		"NoteID":    draftID,
-		"Document":  doc,
-		"IsEdit":    false,
-		"Published": false,
-	})
+	s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{
+		NoteID:   draftID.String(),
+		Document: doc,
+	}))
 }
 
 func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
@@ -71,29 +69,19 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(r.PostFormValue("title"))
 	body := r.PostFormValue("body_md")
 
-	form := map[string]string{
-		"Title": title, "BodyMD": body,
-		"Tags": r.PostFormValue("tags"),
-	}
+	// Note: title/body/tags and the validation error message aren't
+	// rendered anywhere in write.templ (the editor is a client-side
+	// textarea, not server-templated form fields) — same as the old
+	// write.html, which never referenced .Form/.Error either. Preserved
+	// as-is rather than fixed here; it's the "publish guard"/lost-draft
+	// behavior already tracked in .claude/runs.md's TODO list.
 	if title == "" {
-		s.render(w, r, "write", map[string]any{
-			"Form":      form,
-			"Error":     "Title is required.",
-			"NoteID":    "",
-			"IsEdit":    false,
-			"Published": false,
-		})
+		s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{}))
 		return
 	}
 	slug := kebabSlug(title)
 	if slug == "" {
-		s.render(w, r, "write", map[string]any{
-			"Form":      form,
-			"Error":     "Title must contain at least one letter or digit (it's used as the URL slug).",
-			"NoteID":    "",
-			"IsEdit":    false,
-			"Published": false,
-		})
+		s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{}))
 		return
 	}
 
@@ -104,17 +92,7 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	tags := parseTags(tagsInput)
 	noteID, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags)
 	if err != nil {
-		msg := err.Error()
-		if isUniqueViolation(err) {
-			msg = "A note with this title already exists. Pick a different title."
-		}
-		s.render(w, r, "write", map[string]any{
-			"Form":      form,
-			"Error":     msg,
-			"NoteID":    "",
-			"IsEdit":    false,
-			"Published": false,
-		})
+		s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{}))
 		return
 	}
 	if err := s.saveNoteImage(r, noteID); err != nil {
@@ -201,13 +179,13 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		doc += "\n\n" + strings.Join(extra, " ")
 	}
 
-	s.render(w, r, "write", map[string]any{
-		"NoteID":    noteID,
-		"Document":  doc,
-		"IsEdit":    true,
-		"Published": publishedAt.Valid,
-		"NoteURL":   noteURL(u.Handle, slug),
-	})
+	s.renderPage(w, r, pageTitle("Edit"), "", nil, writePage(WriteProps{
+		NoteID:    noteID.String(),
+		Document:  doc,
+		IsEdit:    true,
+		Published: publishedAt.Valid,
+		NoteURL:   noteURL(u.Handle, slug),
+	}))
 }
 
 // ---------- note view ----------
@@ -256,10 +234,10 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 			`SELECT EXISTS(SELECT 1 FROM users WHERE handle = $1)`, handle,
 		).Scan(&userExists)
 		if userExists {
-			s.render(w, r, "note_stub", map[string]any{
-				"Handle": handle,
-				"Slug":   slug,
-			})
+			s.renderPage(w, r, pageTitle("@"+handle+"/"+slug), "", nil, noteStubContent(NoteStubProps{
+				Handle: handle,
+				Slug:   slug,
+			}))
 			return
 		}
 		s.renderError(w, r, http.StatusNotFound, "note not found")
@@ -325,31 +303,31 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 
 	hasImage := noteHasImage(r, s.DB, n.ID)
 
-	s.render(w, r, "note", map[string]any{
-		"Note":           n,
-		"AuthorHandle":   handle,
-		"AuthorID":       n.AuthorID,
-		"AuthorStats":    authorStats,
-		"ViewerFollows":  viewerFollows,
-		"BodyHTML":       bodyHTML,
-		"Tags":           tags,
-		"BacklinksSame":  sameVaultBL,
-		"BacklinksCross": crossVaultBL,
-		"OutgoingSame":   outgoingSame,
-		"OutgoingCross":  outgoingCross,
-		"UpdatedRel":     relativeTime(n.UpdatedAt),
-		"ReadingMinutes": readingMinutes(n.BodyMD),
-		"LikeCount":      likeN,
-		"Liked":          liked,
-		"Saved":          saved,
-		"ViewerLoggedIn": viewer != nil,
-		"IsAuthor":       viewer != nil && viewer.ID == n.AuthorID,
-		"IsHidden":       n.HiddenAt.Valid,
-		"HasImage":       hasImage,
-		"OGDescription":  markdown.Excerpt(n.BodyMD, 160),
-		"OGImage":        s.resolveOGImage(n.ID, hasImage),
-		"OGURL":          s.absoluteNoteURL(handle, n.Slug),
-	})
+	noteProps := NoteViewProps{
+		Note:           n,
+		AuthorHandle:   handle,
+		AuthorID:       n.AuthorID,
+		AuthorStats:    authorStats,
+		ViewerFollows:  viewerFollows,
+		BodyHTML:       bodyHTML,
+		Tags:           tags,
+		BacklinksSame:  sameVaultBL,
+		BacklinksCross: crossVaultBL,
+		OutgoingSame:   outgoingSame,
+		OutgoingCross:  outgoingCross,
+		UpdatedRel:     relativeTime(n.UpdatedAt),
+		ReadingMinutes: readingMinutes(n.BodyMD),
+		LikeCount:      likeN,
+		Liked:          liked,
+		Saved:          saved,
+		ViewerLoggedIn: viewer != nil,
+		IsAuthor:       viewer != nil && viewer.ID == n.AuthorID,
+		IsHidden:       n.HiddenAt.Valid,
+		OGDescription:  markdown.Excerpt(n.BodyMD, 160),
+		OGImage:        s.resolveOGImage(n.ID, hasImage),
+		OGURL:          s.absoluteNoteURL(handle, n.Slug),
+	}
+	s.renderPage(w, r, pageTitle(n.Title+" · @"+handle), "", noteMeta(noteProps), noteContent(noteProps))
 }
 
 func loadTagsForNote(ctx context.Context, db *sql.DB, noteID uuid.UUID) ([]string, error) {

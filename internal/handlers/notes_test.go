@@ -32,14 +32,9 @@ func newTestServer(t *testing.T) *Server {
 	if _, err := d.Exec(`TRUNCATE users, notes, links, note_tags, likes, follows, reports, auth_tokens, note_images CASCADE`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
-	pages, err := LoadPages()
-	if err != nil {
-		t.Fatalf("load pages: %v", err)
-	}
 	return &Server{
-		DB:    d,
-		Auth:  &auth.Auth{DB: d, Secret: []byte("test")},
-		Pages: pages,
+		DB:   d,
+		Auth: &auth.Auth{DB: d, Secret: []byte("test")},
 	}
 }
 

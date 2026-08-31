@@ -10,13 +10,13 @@ import (
 
 func (s *Server) GetLogin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	s.render(w, r, "login", map[string]any{
-		"Sent":         q.Get("sent") == "1",
-		"Error":        q.Get("err"),
-		"Email":        q.Get("email"),
-		"Next":         q.Get("next"),
-		"OAuthEnabled": s.OAuthCfg != nil,
-	})
+	s.renderPage(w, r, pageTitle("登入"), "", nil, loginPage(loginProps{
+		Sent:         q.Get("sent") == "1",
+		Error:        q.Get("err"),
+		Email:        q.Get("email"),
+		Next:         q.Get("next"),
+		OAuthEnabled: s.OAuthCfg != nil,
+	}))
 }
 
 func (s *Server) PostLogin(w http.ResponseWriter, r *http.Request) {

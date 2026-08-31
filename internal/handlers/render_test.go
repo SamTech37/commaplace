@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"html/template"
 	"net/url"
 	"strings"
 	"testing"
@@ -12,13 +11,8 @@ import (
 // where '+' is a literal plus) and double-encoding (%20 -> %2520 when
 // html/template re-escapes an already-encoded query value).
 func TestObsidianURLEncoding(t *testing.T) {
-	fn, ok := funcs["obsidianURL"].(func(name, content string) template.URL)
-	if !ok {
-		t.Fatal("obsidianURL func missing or wrong signature")
-	}
-
 	body := "# Title\n\nhello world [[a link]]"
-	got := string(fn("my-slug", body))
+	got := string(obsidianURL("my-slug", body))
 
 	if !strings.HasPrefix(got, "obsidian://new?name=my-slug&content=") {
 		t.Fatalf("unexpected prefix: %s", got)

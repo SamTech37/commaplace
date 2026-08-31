@@ -20,7 +20,7 @@ func (s *Server) GetImport(w http.ResponseWriter, r *http.Request) {
 	if u := s.requireUser(w, r); u == nil {
 		return
 	}
-	s.render(w, r, "import", nil)
+	s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{}))
 }
 
 // batchItem is one pending note in the batch-edit UI.
@@ -48,13 +48,13 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 		headers = r.MultipartForm.File["file"]
 	}
 	if len(headers) == 0 {
-		s.render(w, r, "import", map[string]any{"Error": "No file selected."})
+		s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{Error: "No file selected."}))
 		return
 	}
 	if len(headers) > MaxBatchFiles {
-		s.render(w, r, "import", map[string]any{
-			"Error": fmt.Sprintf("Too many files — upload at most %d at a time.", MaxBatchFiles),
-		})
+		s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{
+			Error: fmt.Sprintf("Too many files — upload at most %d at a time.", MaxBatchFiles),
+		}))
 		return
 	}
 
@@ -62,9 +62,9 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 	for i, hdr := range headers {
 		title, body, tagsInput, err := parseUploadedNote(hdr)
 		if err != nil {
-			s.render(w, r, "import", map[string]any{
-				"Error": fmt.Sprintf("%s: %s", hdr.Filename, err.Error()),
-			})
+			s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{
+				Error: fmt.Sprintf("%s: %s", hdr.Filename, err.Error()),
+			}))
 			return
 		}
 		items = append(items, batchItem{
@@ -80,7 +80,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 	if len(items) == 1 {
 		it := items[0]
 		if it.Slug == "" {
-			s.render(w, r, "import", map[string]any{"Error": "Title must contain at least one letter or digit."})
+			s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{Error: "Title must contain at least one letter or digit."}))
 			return
 		}
 		tags := parseTags(it.Tags)
@@ -89,7 +89,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 			if isUniqueViolation(err) {
 				msg = "A note with this title already exists."
 			}
-			s.render(w, r, "import", map[string]any{"Error": msg})
+			s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{Error: msg}))
 			return
 		}
 		http.Redirect(w, r, noteURL(u.Handle, it.Slug), http.StatusSeeOther)
@@ -97,10 +97,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Multi-file → render batch editor.
-	s.render(w, r, "import_batch", map[string]any{
-		"Items": items,
-		"Count": len(items),
-	})
+	s.renderPage(w, r, pageTitle("批次匯入"), "", nil, importBatchPage(items))
 }
 
 // PostImportSaveOne saves a single pending note from the batch editor.

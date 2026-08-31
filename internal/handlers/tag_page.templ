@@ -1,0 +1,37 @@
+package handlers
+
+import "strconv"
+
+type TagPageProps struct {
+	Tag     string
+	View    NoteListView
+	Related []cloudTag
+}
+
+templ tagCloud(related []cloudTag, tag string) {
+	<details class="tag-cloud" open>
+		<summary>相關標籤</summary>
+		<div class="tag-cloud-body">
+			for _, rt := range related {
+				<a class={ "cloud-tag", "cloud-s" + strconv.Itoa(rt.Size) } href={ templ.URL(rt.URL) } title={ "與 #" + tag + " 同時出現 " + strconv.Itoa(rt.Count) + " 次" }>#{ rt.Tag }</a>
+			}
+		</div>
+	</details>
+}
+
+templ tagNoteCount(n int) {
+	if n == 1 {
+		{ strconv.Itoa(n) } note
+	} else {
+		{ strconv.Itoa(n) } notes
+	}
+}
+
+templ tagPage(p TagPageProps) {
+	<h1 class="tag-title">#{ p.Tag }</h1>
+	<p class="note-meta">@tagNoteCount(len(p.View.Cards))</p>
+	if len(p.Related) > 0 {
+		@tagCloud(p.Related, p.Tag)
+	}
+	@notesView(p.View)
+}

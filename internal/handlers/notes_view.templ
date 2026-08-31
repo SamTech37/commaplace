@@ -1,0 +1,150 @@
+package handlers
+
+import (
+	"context"
+	"io"
+	"strconv"
+)
+
+// NoteListView is the shared view-model for every note-listing surface
+// (feed/tag/search/profile/saved, and the hover-preview endpoint): one data
+// source (a []feedCard query), one rendering.
+type NoteListView struct {
+	Cards    []feedCard
+	Layout   string // registry key into cardRenderers; "" defaults to "masonry"
+	OlderURL string // "" = no infinite scroll (end marker shown instead)
+	Empty    templ.Component // shown (inside a <p class="note-meta">) when len(Cards) == 0
+}
+
+// cardRenderers maps a layout name to the component that renders one card in
+// that layout. Adding a layout later is one function + one entry here — no
+// handler changes. Only "masonry" is registered today; nothing in this repo
+// builds a toggle UI for it yet (see plan.md's Meta-App view substrate note).
+var cardRenderers = map[string]func(feedCard) templ.Component{
+	"masonry": masonryCard,
+}
+
+// renderCards renders every card in view.Cards through view.Layout's
+// registered renderer (falling back to masonry for an empty/unknown key).
+func renderCards(view NoteListView) templ.Component {
+	render, ok := cardRenderers[view.Layout]
+	if !ok {
+		render = cardRenderers["masonry"]
+	}
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		for _, c := range view.Cards {
+			if err := render(c).Render(ctx, w); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// emptyText is a plain-text NoteListView.Empty for surfaces with no link in
+// their empty-state message.
+templ emptyText(msg string) {
+	{ msg }
+}
+
+templ notesSentinel(olderURL string) {
+	if olderURL != "" {
+		<div id="notes-sentinel" class="feed-sentinel" aria-label="載入中" hx-get={ olderURL } hx-trigger="revealed" hx-target=".notes-items" hx-swap="beforeend">
+			<span></span><span></span><span></span>
+		</div>
+	} else {
+		<div id="notes-sentinel" class="feed-end">— 沒有更多了 —</div>
+	}
+}
+
+templ notesSentinelOOB(olderURL string) {
+	if olderURL != "" {
+		<div id="notes-sentinel" hx-swap-oob="outerHTML" class="feed-sentinel" hx-get={ olderURL } hx-trigger="revealed" hx-target=".notes-items" hx-swap="beforeend">載入更多…</div>
+	} else {
+		<div id="notes-sentinel" hx-swap-oob="outerHTML" class="feed-end">— 沒有更多了 —</div>
+	}
+}
+
+// notesView is the full render: empty state, or the card grid + sentinel.
+templ notesView(view NoteListView) {
+	if len(view.Cards) == 0 {
+		<p class="note-meta">@view.Empty</p>
+	} else {
+		<div class="masonry notes-items">
+			@renderCards(view)
+		</div>
+		@notesSentinel(view.OlderURL)
+	}
+}
+
+// notesFragment is the HTMX infinite-scroll response: new cards appended via
+// hx-swap="beforeend" into .notes-items, plus a replacement OOB sentinel.
+templ notesFragment(view NoteListView) {
+	@renderCards(view)
+	@notesSentinelOOB(view.OlderURL)
+}
+
+templ masonryCard(c feedCard) {
+	if c.IsDraft {
+		<div class="masonry-card-draft">
+			<input type="checkbox" class="draft-select" name="ids" value={ c.NoteID.String() } aria-label="選取這篇草稿"/>
+			@masonryCardLink(c)
+		</div>
+	} else {
+		@masonryCardLink(c)
+	}
+}
+
+templ masonryCardLink(c feedCard) {
+	<a class={ "masonry-card", "variant-" + c.Variant } href={ templ.URL(c.URL) } data-reveal>
+		<div class="card-title">{ c.Title }</div>
+		if c.ImageURL != "" {
+			<img class="card-image" src={ c.ImageURL } alt="" loading="lazy"/>
+		}
+		if c.Variant == "list" {
+			<ul class="card-list">
+				for _, item := range c.ListItems {
+					<li>{ item }</li>
+				}
+			</ul>
+		} else if c.Variant == "quote" {
+			<blockquote class="card-quote">{ c.Quote }</blockquote>
+		} else if c.Variant == "links" {
+			<div class="card-connections">
+				for i, chip := range c.LinkChips {
+					if i < 2 {
+						<div class="connection">→ { chip }</div>
+					}
+				}
+				if len(c.LinkChips) > 2 {
+					<div class="connection-more">+ { strconv.Itoa(len(c.LinkChips) - 2) } 篇相關筆記</div>
+				}
+			</div>
+		}
+		if c.SnippetHTML != nil {
+			<div class="card-excerpt">@c.SnippetHTML</div>
+		} else if c.Excerpt != "" {
+			<div class="card-excerpt">{ c.Excerpt }</div>
+		}
+		if len(c.Tags) > 0 {
+			<div class="card-tags">
+				for _, t := range c.Tags {
+					<span class="card-tag">#{ t }</span>
+				}
+			</div>
+		}
+		<div class="card-meta">
+			<span class="meta-handle">{ "@" + c.AuthorHandle }</span>
+			<span class="meta-spacer"></span>
+			if c.LikeCount > 0 {
+				<span class="meta-like">♡ { strconv.Itoa(c.LikeCount) }</span>
+			}
+			if c.LinkCount > 0 {
+				<span class="meta-links">→ { strconv.Itoa(c.LinkCount) }</span>
+			}
+			if c.CrossCount > 0 {
+				<span class="meta-cross">↝ { strconv.Itoa(c.CrossCount) }</span>
+			}
+		</div>
+	</a>
+}

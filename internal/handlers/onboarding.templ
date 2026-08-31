@@ -1,0 +1,18 @@
+package handlers
+
+import "commonplace/internal/auth"
+
+templ onboardingPage(u *auth.User) {
+	<h1>Welcome, @{ u.Handle }</h1>
+	<p>Two ways to start. You can change everything later.</p>
+	<div style="display:flex;flex-direction:column;gap:1rem;margin-top:1.25rem">
+		<form method="POST" action="/onboarding/fork" style="margin:0">
+			<button type="submit" style="font-size:1rem">Fork the tour</button>
+			<p class="note-meta" style="margin:0.5em 0 0">12 example notes that already link to each other and to <a href={ templ.URL("/" + u.Handle) }>your vault</a> after forking. Recommended.</p>
+		</form>
+		<form method="POST" action="/onboarding/fork?skip=1" style="margin:0">
+			<button type="submit" class="secondary" style="font-size:1rem">Start fresh</button>
+			<p class="note-meta" style="margin:0.5em 0 0">Empty vault. You write everything yourself.</p>
+		</form>
+	</div>
+}

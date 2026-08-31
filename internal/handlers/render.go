@@ -18,6 +18,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/a-h/templ"
+
 	"commonplace/internal/auth"
 	"commonplace/internal/config"
 )
@@ -28,7 +30,7 @@ var (
 	emailCfg = config.DefaultEmail(siteCfg.Title)
 )
 
-//go:embed all:templates all:static
+//go:embed all:static
 var assetsFS embed.FS
 
 // StaticFS exposes the embedded static/ subtree, mounted at /assets/ by Routes.
@@ -40,120 +42,12 @@ func StaticFS() fs.FS {
 	return sub
 }
 
-// Funcs available inside templates.
-var funcs = template.FuncMap{
-	"avatarColor":   avatarColor,
-	"avatarInitial": avatarInitial,
-	"avatarURL":     func(handle string) string { return "/u/" + handle + "/avatar.png" },
-	"sub":           func(a, b int) int { return a - b },
-	"add":           func(a, b int) int { return a + b },
-	// obsidianURL builds an obsidian://new deep link. Params are percent-encoded
-	// with %20 for spaces (not '+') because Obsidian's URI parser decodes per
-	// RFC 3986, where '+' is a literal plus. Returning template.URL makes
-	// html/template normalize the whole URL instead of re-escaping the params
-	// (which would turn %20 into %2520).
-	"obsidianURL": func(name, content string) template.URL {
-		enc := func(s string) string { return strings.ReplaceAll(url.QueryEscape(s), "+", "%20") }
-		return template.URL("obsidian://new?name=" + enc(name) + "&content=" + enc(content))
-	},
-}
-
-// Pages is a name -> parsed template cache. Each page template is parsed
-// alongside _base.html so that {{block "content"}} / {{block "title"}}
-// overrides apply.
-type Pages struct {
-	cache    map[string]*template.Template
-	partials map[string]*template.Template
-}
-
-func LoadPages() (*Pages, error) {
-	pageNames := []string{
-		"login", "write", "note", "note_stub", "profile", "feed", "error",
-		"tag", "saved", "search", "onboarding", "admin_dashboard", "admin_reports", "graph",
-		"avatar_builder", "import", "import_batch", "calendar",
-		"terms", "privacy",
-	}
-	// Partials are standalone fragments (no _base.html wrapper) used for
-	// HTMX swap responses — e.g. infinite-scroll feed batches.
-	partialNames := []string{"feed_partial", "_note_preview"}
-
-	p := &Pages{
-		cache:    make(map[string]*template.Template, len(pageNames)),
-		partials: make(map[string]*template.Template, len(partialNames)),
-	}
-	for _, name := range pageNames {
-		t, err := template.New("").Funcs(funcs).ParseFS(assetsFS,
-			"templates/_base.html",
-			"templates/"+name+".html",
-		)
-		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", name, err)
-		}
-		p.cache[name] = t
-	}
-	// Partials get the feed page parsed alongside so they can reuse the
-	// {{template "card" .}} definition.
-	for _, name := range partialNames {
-		t, err := template.New("").Funcs(funcs).ParseFS(assetsFS,
-			"templates/feed.html",
-			"templates/"+name+".html",
-		)
-		if err != nil {
-			return nil, fmt.Errorf("parse partial %s: %w", name, err)
-		}
-		p.partials[name] = t
-	}
-	return p, nil
-}
-
-func (p *Pages) Render(w http.ResponseWriter, name string, data map[string]any) {
-	t, ok := p.cache[name]
-	if !ok {
-		http.Error(w, "template not found: "+name, http.StatusInternalServerError)
-		return
-	}
-	if data == nil {
-		data = map[string]any{}
-	}
-	if _, has := data["User"]; !has {
-		data["User"] = nil
-	}
-	if _, has := data["SearchQuery"]; !has {
-		data["SearchQuery"] = ""
-	}
-	if _, has := data["Theme"]; !has {
-		data["Theme"] = ""
-	}
-	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, "base", data); err != nil {
-		log.Printf("render %s: %v", name, err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
-	w.Header().Add("Vary", "HX-Request") // Add, not Set: gzip middleware also varies on Accept-Encoding
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	buf.WriteTo(w)
-}
-
-// RenderPartial executes a fragment template (no _base.html wrapper).
-// Used for HTMX swap responses.
-func (p *Pages) RenderPartial(w http.ResponseWriter, name, defined string, data map[string]any) {
-	t, ok := p.partials[name]
-	if !ok {
-		http.Error(w, "partial not found: "+name, http.StatusInternalServerError)
-		return
-	}
-	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, defined, data); err != nil {
-		log.Printf("render partial %s: %v", name, err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
-	w.Header().Add("Vary", "HX-Request") // Add, not Set: gzip middleware also varies on Accept-Encoding
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	buf.WriteTo(w)
+// obsidianURL builds an obsidian://new deep link. Params are percent-encoded
+// with %20 for spaces (not '+') because Obsidian's URI parser decodes per
+// RFC 3986, where '+' is a literal plus.
+func obsidianURL(name, content string) template.URL {
+	enc := func(s string) string { return strings.ReplaceAll(url.QueryEscape(s), "+", "%20") }
+	return template.URL("obsidian://new?name=" + enc(name) + "&content=" + enc(content))
 }
 
 // ---------- Server ----------
@@ -172,7 +66,6 @@ type tagChipCache struct {
 type Server struct {
 	DB          *sql.DB
 	Auth        *auth.Auth
-	Pages       *Pages
 	Debug       bool
 	PlaytestKey string            // non-empty enables /_dev/login?key=... outside Debug mode
 	AdminHandle string            // empty disables admin entirely
@@ -181,33 +74,77 @@ type Server struct {
 	tagChips    tagChipCache      // memoized top-tag chips; see tagChipCache
 }
 
-// render is a small wrapper that injects the current user and site config automatically.
-func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data map[string]any) {
-	if data == nil {
-		data = map[string]any{}
-	}
+// chrome builds the site-chrome data (nav, current user, theme) every
+// templ page needs. SearchQuery is left blank; the one caller that shows a
+// live query (search.go) sets it after this returns.
+func (s *Server) chrome(r *http.Request) ChromeProps {
 	u, _ := s.Auth.CurrentUser(r)
-	data["User"] = u
-	data["Site"] = siteCfg
-	data["Nav"] = navCfg
-	// Theme: when a logged-in user explicitly chose light/dark, render it
-	// server-side to avoid FOUC. "auto" (or visitor) defers to inline JS
-	// reading localStorage / prefers-color-scheme.
+	theme := ""
 	if u != nil && (u.Theme == "light" || u.Theme == "dark") {
-		data["Theme"] = u.Theme
-	} else {
-		data["Theme"] = ""
+		theme = u.Theme
 	}
-	s.Pages.Render(w, name, data)
+	return ChromeProps{User: u, Site: siteCfg, Nav: navCfg, Theme: theme}
+}
+
+// renderPage writes a full HTML page (Layout + chrome + body) for a templ
+// component. meta may be nil (Layout falls back to the default og: tags).
+func (s *Server) renderPage(w http.ResponseWriter, r *http.Request, title, pageClass string, meta, body templ.Component) {
+	c := s.chrome(r)
+	var buf bytes.Buffer
+	if err := Layout(c, title, pageClass, meta, body).Render(r.Context(), &buf); err != nil {
+		log.Printf("render page %q: %v", title, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	// Same URL serves full page or HTMX fragment depending on HX-Request; keep them in separate cache slots.
+	w.Header().Add("Vary", "HX-Request") // Add, not Set: gzip middleware also varies on Accept-Encoding
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
+}
+
+// renderPageWithQuery is renderPage for the one page (search) that shows the
+// live search query in the topbar's search box.
+func (s *Server) renderPageWithQuery(w http.ResponseWriter, r *http.Request, title, pageClass, query string, meta, body templ.Component) {
+	c := s.chrome(r)
+	c.SearchQuery = query
+	var buf bytes.Buffer
+	if err := Layout(c, title, pageClass, meta, body).Render(r.Context(), &buf); err != nil {
+		log.Printf("render page %q: %v", title, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Add("Vary", "HX-Request")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
+}
+
+// renderFragment writes an HTMX fragment: no Layout wrapper, just the component.
+func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, body templ.Component) {
+	var buf bytes.Buffer
+	if err := body.Render(r.Context(), &buf); err != nil {
+		log.Printf("render fragment: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Add("Vary", "HX-Request")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
+}
+
+// pageTitle builds a "prefix · Site.Title" title, or just Site.Title when
+// prefix is empty.
+func pageTitle(prefix string) string {
+	if prefix == "" {
+		return siteCfg.Title
+	}
+	return prefix + " · " + siteCfg.Title
 }
 
 // renderError writes a templated error page with the given status code.
 func (s *Server) renderError(w http.ResponseWriter, r *http.Request, code int, msg string) {
 	w.WriteHeader(code)
-	s.render(w, r, "error", map[string]any{
-		"Code":    fmt.Sprintf("%d %s", code, http.StatusText(code)),
-		"Message": msg,
-	})
+	statusCode := fmt.Sprintf("%d %s", code, http.StatusText(code))
+	s.renderPage(w, r, pageTitle(statusCode), "", nil, errorContent(statusCode, msg))
 }
 
 // requireUser redirects to /login if no user is logged in.

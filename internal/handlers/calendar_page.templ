@@ -1,0 +1,33 @@
+package handlers
+
+import "fmt"
+
+templ calendarPage(props calendarPageProps) {
+	<div class="calendar-page">
+		<header class="calendar-head">
+			<a class="calendar-nav" href={ templ.URL("?m=" + props.PrevMonth) } aria-label="前一個月">‹</a>
+			<h1 class="calendar-month">{ props.MonthLabel }</h1>
+			<a class="calendar-nav" href={ templ.URL("?m=" + props.NextMonth) } aria-label="下一個月">›</a>
+			if props.ThisMonth != props.PrevMonth && props.ThisMonth != props.NextMonth {
+				<a class="calendar-today" href="/me/calendar">今天</a>
+			}
+		</header>
+		<div class="calendar-grid">
+			for _, name := range props.DayNames {
+				<div class="calendar-dayname">{ name }</div>
+			}
+			for _, day := range props.Days {
+				<div class={ calendarCellClass(day) }>
+					<div class="calendar-cell-day">{ fmt.Sprint(day.Day) }</div>
+					if len(day.Notes) > 0 {
+						<ul class="calendar-cell-notes">
+							for _, n := range day.Notes {
+								<li><a href={ templ.URL(n.URL) } title={ n.Title }>{ n.Title }</a></li>
+							}
+						</ul>
+					}
+				</div>
+			}
+		</div>
+	</div>
+}

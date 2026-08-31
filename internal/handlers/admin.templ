@@ -1,0 +1,133 @@
+package handlers
+
+import "fmt"
+
+templ adminDashboardContent(stats []adminStat, recentUsers []adminRecentUser, recentNotes []adminRecentNote) {
+	<h1>Admin</h1>
+	<p class="note-meta">
+		<a href="/admin">dashboard</a> ·
+		<a href="/admin/reports">reports</a>
+	</p>
+	<h2 style="margin-top:1.5em">Numbers</h2>
+	<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75em;margin-top:0.75em">
+		for _, stat := range stats {
+			<div style="border:1px solid var(--border);border-radius:8px;padding:0.75em 1em">
+				<div style="font-size:1.6rem;font-weight:600">{ fmt.Sprint(stat.Value) }</div>
+				<div style="font-size:0.85rem">{ stat.Label }</div>
+				if stat.Hint != "" {
+					<div class="note-meta" style="font-size:0.75rem">{ stat.Hint }</div>
+				}
+			</div>
+		}
+	</div>
+	<h2 style="margin-top:2em">Recent signups</h2>
+	if len(recentUsers) > 0 {
+		<table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+			<thead>
+				<tr style="text-align:left;border-bottom:1px solid var(--border)">
+					<th style="padding:0.5em 0.5em 0.5em 0">Handle</th>
+					<th style="padding:0.5em">Email</th>
+					<th style="padding:0.5em">Notes</th>
+					<th style="padding:0.5em">Joined</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, ru := range recentUsers {
+					<tr style="border-bottom:1px solid var(--border)">
+						<td style="padding:0.5em 0.5em 0.5em 0"><a href={ templ.URL("/" + ru.Handle) }>{ "@" + ru.Handle }</a></td>
+						<td style="padding:0.5em">{ ru.Email }</td>
+						<td style="padding:0.5em">{ fmt.Sprint(ru.NoteCount) }</td>
+						<td style="padding:0.5em">{ ru.CreatedRel }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	} else {
+		<p class="note-meta">No users yet.</p>
+	}
+	<h2 style="margin-top:2em">Recent notes</h2>
+	if len(recentNotes) > 0 {
+		<table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+			<thead>
+				<tr style="text-align:left;border-bottom:1px solid var(--border)">
+					<th style="padding:0.5em 0.5em 0.5em 0">Title</th>
+					<th style="padding:0.5em">Author</th>
+					<th style="padding:0.5em">Updated</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, rn := range recentNotes {
+					<tr style="border-bottom:1px solid var(--border)">
+						<td style="padding:0.5em 0.5em 0.5em 0">
+							<a href={ templ.URL(rn.URL) }>{ rn.Title }</a>
+							if rn.Hidden {
+								<small><em>hidden</em></small>
+							}
+						</td>
+						<td style="padding:0.5em">{ "@" + rn.AuthorHandle }</td>
+						<td style="padding:0.5em">{ rn.UpdatedRel }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	} else {
+		<p class="note-meta">No notes yet.</p>
+	}
+}
+
+templ adminReportsContent(reports []adminReportRow) {
+	<h1>Reports</h1>
+	<p class="note-meta">
+		<a href="/admin">dashboard</a> ·
+		<a href="/admin/reports">reports</a> ·
+		<a href="/admin/external">external vaults</a>
+	</p>
+	<p class="note-meta">Open reports first, then resolved.</p>
+	if len(reports) > 0 {
+		<table style="width:100%;border-collapse:collapse;font-size:0.9rem">
+			<thead>
+				<tr style="text-align:left;border-bottom:1px solid var(--border)">
+					<th style="padding:0.5em 0.5em 0.5em 0">When</th>
+					<th style="padding:0.5em">Note</th>
+					<th style="padding:0.5em">Reporter</th>
+					<th style="padding:0.5em">Reason</th>
+					<th style="padding:0.5em">Status</th>
+					<th style="padding:0.5em">Action</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, rep := range reports {
+					<tr style="border-bottom:1px solid var(--border)">
+						<td style="padding:0.5em 0.5em 0.5em 0">{ rep.CreatedRel }</td>
+						<td style="padding:0.5em">
+							<a href={ templ.URL(rep.NoteURL) }>{ rep.NoteTitle }</a><br/>
+							<small>
+								{ "@" + rep.AuthorHandle }
+								if rep.NoteHidden {
+									· <em>hidden</em>
+								}
+							</small>
+						</td>
+						<td style="padding:0.5em">{ "@" + rep.ReporterHandle }</td>
+						<td style="padding:0.5em">{ rep.Reason }</td>
+						<td style="padding:0.5em">{ rep.Status }</td>
+						<td style="padding:0.5em">
+							<form method="POST" action="/admin/hide" class="inline-form">
+								<input type="hidden" name="note_id" value={ rep.NoteID.String() }/>
+								if rep.NoteHidden {
+									<input type="hidden" name="action" value="unhide"/>
+									<button type="submit" class="secondary">Unhide</button>
+								} else {
+									<input type="hidden" name="action" value="hide"/>
+									<button type="submit">Hide</button>
+								}
+							</form>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	} else {
+		<p class="folder-tree empty">No reports yet.</p>
+	}
+}

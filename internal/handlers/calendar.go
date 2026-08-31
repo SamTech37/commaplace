@@ -61,14 +61,37 @@ func (s *Server) GetCalendar(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	s.render(w, r, "calendar", map[string]any{
-		"MonthLabel": month.Format("2006 · 01"),
-		"PrevMonth":  month.AddDate(0, -1, 0).Format("2006-01"),
-		"NextMonth":  month.AddDate(0, 1, 0).Format("2006-01"),
-		"ThisMonth":  time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc).Format("2006-01"),
-		"Days":       days,
-		"DayNames":   []string{"日", "一", "二", "三", "四", "五", "六"},
-	})
+	props := calendarPageProps{
+		MonthLabel: month.Format("2006 · 01"),
+		PrevMonth:  month.AddDate(0, -1, 0).Format("2006-01"),
+		NextMonth:  month.AddDate(0, 1, 0).Format("2006-01"),
+		ThisMonth:  time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc).Format("2006-01"),
+		Days:       days,
+		DayNames:   []string{"日", "一", "二", "三", "四", "五", "六"},
+	}
+	s.renderPage(w, r, pageTitle(navCfg.Calendar), "", nil, calendarPage(props))
+}
+
+type calendarPageProps struct {
+	MonthLabel string
+	PrevMonth  string
+	NextMonth  string
+	ThisMonth  string
+	Days       []calendarDay
+	DayNames   []string
+}
+
+// calendarCellClass mirrors calendar.html's "calendar-cell{{if not .InMonth}}
+// calendar-cell-out{{end}}{{if .IsToday}} calendar-cell-today{{end}}".
+func calendarCellClass(d calendarDay) string {
+	class := "calendar-cell"
+	if !d.InMonth {
+		class += " calendar-cell-out"
+	}
+	if d.IsToday {
+		class += " calendar-cell-today"
+	}
+	return class
 }
 
 func (s *Server) notesByDay(ctx context.Context, userID uuid.UUID, start, end time.Time) (map[string][]calendarNote, error) {

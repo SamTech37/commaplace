@@ -7,10 +7,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"unicode"
-
-	"commonplace/internal/markdown"
 )
 
 // normalizeTag lowercases ASCII, collapses runs of non-letter/digit into '-'
@@ -61,6 +60,10 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusNotFound, "no such tag")
 		return
 	}
+	var older int64
+	if v := r.URL.Query().Get("older"); v != "" {
+		older, _ = strconv.ParseInt(v, 10, 64)
+	}
 	// Match by script variant (Simplified/Traditional) and case, not exact
 	// bytes — note_tags isn't guaranteed lowercase at rest (some seed paths
 	// insert raw casing, e.g. "UX"), and a tag typed in one script should
@@ -72,41 +75,58 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		clauses[i] = fmt.Sprintf("lower(nt.tag) = $%d", i+1)
 		args[i] = v
 	}
-	rows, err := s.DB.QueryContext(r.Context(), `
-		SELECT n.title, n.slug, n.body_md, n.updated_at, u.handle
+	q := strings.Builder{}
+	q.WriteString(`
+		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u.handle,
+		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		JOIN users u ON u.id = n.author_id
-		WHERE (`+strings.Join(clauses, " OR ")+`) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
-		ORDER BY n.updated_at DESC
-		LIMIT 200`, args...)
+		WHERE (` + strings.Join(clauses, " OR ") + `) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+	if older > 0 {
+		args = append(args, older)
+		fmt.Fprintf(&q, ` AND n.updated_at < $%d`, len(args))
+	}
+	args = append(args, pageCfg.FeedPageSize)
+	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC LIMIT $%d`, len(args))
+	rows, err := s.DB.QueryContext(r.Context(), q.String(), args...)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer rows.Close()
-
-	var items []feedItem
-	for rows.Next() {
-		var title, slug, body, handle string
-		var updated int64
-		if err := rows.Scan(&title, &slug, &body, &updated, &handle); err != nil {
-			s.renderError(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		items = append(items, feedItem{
-			Title:        title,
-			URL:          noteURL(handle, slug),
-			Excerpt:      markdown.Excerpt(body, 150),
-			AuthorHandle: handle,
-			UpdatedRel:   relativeTime(updated),
-		})
+	cards, err := scanCards(rows)
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
-	s.render(w, r, "tag", map[string]any{
-		"Tag":     tag,
-		"Items":   items,
-		"Related": s.relatedTags(r.Context(), variants, args),
-	})
+	attachTagsToCards(r.Context(), s.DB, cards)
+
+	var olderURL string
+	if len(cards) == pageCfg.FeedPageSize {
+		last := cards[len(cards)-1]
+		v := r.URL.Query()
+		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+		olderURL = "/tag/" + tag + "?" + v.Encode()
+	}
+
+	view := NoteListView{
+		Cards:    cards,
+		OlderURL: olderURL,
+		Empty:    emptyText("#" + tag + " 還沒有筆記。"),
+	}
+
+	if r.Header.Get("HX-Request") == "true" {
+		s.renderFragment(w, r, notesFragment(view))
+		return
+	}
+
+	s.renderPage(w, r, pageTitle("#"+tag), "", nil, tagPage(TagPageProps{
+		Tag:     tag,
+		View:    view,
+		Related: s.relatedTags(r.Context(), variants, args[:len(variants)]),
+	}))
 }
 
 // cloudTag is one entry in the related-tag cloud. Size is a 1..5 bucket the

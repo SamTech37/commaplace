@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -96,39 +98,90 @@ func userHasLiked(ctx context.Context, db *sql.DB, userID, noteID uuid.UUID) (bo
 }
 
 // GetSaved lists notes the current user has saved, newest save first.
+// Pagination cursors on save time (sv.created_at), not note update time —
+// those are different columns here, unlike feed's cursor which is the note's
+// own updated_at.
 func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 	u := s.requireUser(w, r)
 	if u == nil {
 		return
 	}
-	rows, err := s.DB.QueryContext(r.Context(), `
-		SELECT n.title, n.slug, n.body_md, n.updated_at, u2.handle
+	var older int64
+	if v := r.URL.Query().Get("older"); v != "" {
+		older, _ = strconv.ParseInt(v, 10, 64)
+	}
+
+	args := []any{u.ID}
+	q := strings.Builder{}
+	q.WriteString(`
+		SELECT n.id, n.title, n.slug, n.body_md, n.updated_at, u2.handle, sv.created_at,
+		       (SELECT COUNT(*) FROM likes WHERE note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
+		       (SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u2.id)
 		FROM saves sv
 		JOIN notes n  ON n.id = sv.note_id
 		JOIN users u2 ON u2.id = n.author_id
-		WHERE sv.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
-		ORDER BY sv.created_at DESC
-		LIMIT 200`, u.ID)
+		WHERE sv.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+	if older > 0 {
+		args = append(args, older)
+		fmt.Fprintf(&q, ` AND sv.created_at < $%d`, len(args))
+	}
+	args = append(args, pageCfg.FeedPageSize)
+	fmt.Fprintf(&q, ` ORDER BY sv.created_at DESC LIMIT $%d`, len(args))
+
+	rows, err := s.DB.QueryContext(r.Context(), q.String(), args...)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer rows.Close()
-	var items []feedItem
+	var cards []feedCard
+	var lastSaveCreatedAt int64
 	for rows.Next() {
-		var title, slug, body, handle string
-		var updated int64
-		if err := rows.Scan(&title, &slug, &body, &updated, &handle); err != nil {
+		var (
+			c      feedCard
+			slug   string
+			body   string
+			handle string
+			saved  int64
+		)
+		if err := rows.Scan(&c.NoteID, &c.Title, &slug, &body, &c.UpdatedAt, &handle, &saved,
+			&c.LikeCount, &c.LinkCount, &c.CrossCount); err != nil {
+			rows.Close()
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		items = append(items, feedItem{
-			Title:        title,
-			URL:          noteURL(handle, slug),
-			Excerpt:      markdown.Excerpt(body, 150),
-			AuthorHandle: handle,
-			UpdatedRel:   relativeTime(updated),
-		})
+		c.AuthorHandle = handle
+		c.URL = noteURL(handle, slug)
+		c.UpdatedRel = relativeTime(c.UpdatedAt)
+		c.Variant, c.Excerpt, c.ListItems, c.Quote, c.LinkChips = analyzeCardBody(body)
+		c.ImageURL = markdown.FirstImageURL(body)
+		cards = append(cards, c)
+		lastSaveCreatedAt = saved
 	}
-	s.render(w, r, "saved", map[string]any{"Items": items})
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	attachTagsToCards(r.Context(), s.DB, cards)
+
+	var olderURL string
+	if len(cards) == pageCfg.FeedPageSize {
+		v := r.URL.Query()
+		v.Set("older", strconv.FormatInt(lastSaveCreatedAt, 10))
+		olderURL = "/me/saved?" + v.Encode()
+	}
+
+	view := NoteListView{
+		Cards:    cards,
+		OlderURL: olderURL,
+		Empty:    emptyText("還沒有收藏。在筆記頁按「＋ 收藏」即可加入這裡。"),
+	}
+
+	if r.Header.Get("HX-Request") == "true" {
+		s.renderFragment(w, r, notesFragment(view))
+		return
+	}
+
+	s.renderPage(w, r, pageTitle("收藏"), "", nil, savedPage(view))
 }
