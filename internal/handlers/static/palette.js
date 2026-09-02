@@ -134,13 +134,12 @@
     }
   });
 
-  // Topbar search icon (the only way in on mobile, where the input is hidden).
+  // Search buttons in the topbar and the mobile dock share the same palette.
   // This script is deferred, so the DOM is already parsed.
-  const paletteBtn = document.getElementById('palette-btn');
-  if (paletteBtn) {
-    paletteBtn.addEventListener('click', function (e) {
+  document.querySelectorAll('#palette-btn, #mobile-palette-btn').forEach(function (button) {
+    button.addEventListener('click', function (e) {
       e.preventDefault();
       open();
     });
-  }
+  });
 })();

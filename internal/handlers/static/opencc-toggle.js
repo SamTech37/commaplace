@@ -12,6 +12,7 @@
   var NEXT = { orig: "cn", cn: "tw", tw: "orig" };
 
   var btn = document.getElementById("script-toggle");
+  var mobileBtn = document.getElementById("mobile-script-toggle");
   if (!btn) return;
 
   var mode = "orig";
@@ -82,6 +83,10 @@
     var label = TITLE[NEXT[mode]];
     btn.setAttribute("aria-label", label);
     btn.title = label;
+    if (mobileBtn) {
+      mobileBtn.textContent = label;
+      mobileBtn.setAttribute("aria-label", label);
+    }
   }
 
   btn.addEventListener("click", function () {
@@ -104,6 +109,11 @@
         // Load failed; loadPromise was already reset so the next click retries.
       });
   });
+  if (mobileBtn) {
+    mobileBtn.addEventListener("click", function () {
+      btn.click();
+    });
+  }
 
   document.body.addEventListener("htmx:afterSettle", function () {
     if (mode === "orig" || typeof OpenCC === "undefined") return;

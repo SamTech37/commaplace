@@ -11,31 +11,38 @@
   var statusEl = document.getElementById("save-status");
   var popup = document.getElementById("ac-popup");
   var list = popup ? popup.querySelector("ul") : null;
+  var recoveryEl = document.getElementById("editor-recovery");
+  var wordCountEl = document.getElementById("word-count");
+  var characterCountEl = document.getElementById("character-count");
+  var cursorPositionEl = document.getElementById("cursor-position");
 
   function tb(name, action, text, title) {
     return { name: name, action: action, text: text, title: title, className: "tb-" + name };
   }
 
   var toolbar = [
-    tb("bold", EasyMDE.toggleBold, "B", "Bold"),
-    tb("italic", EasyMDE.toggleItalic, "i", "Italic"),
+    tb("bold", EasyMDE.toggleBold, "粗體", "粗體 (Ctrl/Cmd + B)"),
+    tb("italic", EasyMDE.toggleItalic, "斜體", "斜體 (Ctrl/Cmd + I)"),
     "|",
-    tb("wikilink", insertWikiLink, "[[ ]]", "Wiki link"),
-    tb("link", EasyMDE.drawLink, "🔗", "External link"),
+    tb("h1", EasyMDE.toggleHeading1, "標題", "一級標題"),
+    tb("h2", EasyMDE.toggleHeading2, "小標", "二級標題"),
+    tb("quote", EasyMDE.toggleBlockquote, "引用", "引用"),
     "|",
-    tb("h1", EasyMDE.toggleHeading1, "T", "Heading 1"),
-    tb("h2", EasyMDE.toggleHeading2, "t", "Heading 2"),
-    tb("quote", EasyMDE.toggleBlockquote, "❝", "Quote"),
-    tb("tag", insertTag, "#", "Tag"),
+    tb("bullets", EasyMDE.toggleUnorderedList, "清單", "項目符號清單"),
+    tb("numbers", EasyMDE.toggleOrderedList, "編號", "編號清單"),
     "|",
-    tb("image", uploadImage, "🖼", "Insert image"),
-    tb("code", EasyMDE.toggleCodeBlock, "</>", "Code"),
+    tb("wikilink", insertWikiLink, "Wiki", "Wiki 連結"),
+    tb("link", EasyMDE.drawLink, "連結", "外部連結"),
+    tb("tag", insertTag, "標籤", "標籤"),
+    "|",
+    tb("image", uploadImage, "圖片", "插入圖片"),
+    tb("code", EasyMDE.toggleCodeBlock, "程式碼", "程式碼區塊"),
   ];
   // Only offer whole-document .md import while still a draft — it replaces the
   // entire doc (and CodeMirror's undo history with it), too destructive to
   // dangle in front of an already-published note.
   if (page.dataset.allowUpload === "1") {
-    toolbar.push("|", tb("mdupload", uploadMdFile, "📄", "從 .md 檔案匯入"));
+    toolbar.push("|", tb("mdupload", uploadMdFile, "匯入", "從 .md 檔案匯入"));
   }
 
   var easymde = new EasyMDE({
@@ -45,12 +52,29 @@
     status: false,
     autoDownloadFontAwesome: false,
     lineWrapping: true,
+    placeholder: "先寫標題，按 Enter 開始正文…",
     previewRender: function () { return ""; }, // preview is the published page (server goldmark)
     toolbar: toolbar,
   });
   window.cmEditor = easymde;
   var cm = easymde.codemirror;
   cm.setOption("viewportMargin", Infinity);
+
+  // EasyMDE exposes tooltips but does not consistently add accessible names.
+  // Keep every formatting action keyboard-readable and prevent form submits.
+  var toolbarEl = page.querySelector(".editor-toolbar");
+  if (toolbarEl) {
+    toolbarEl.setAttribute("aria-label", "文字格式");
+    toolbarEl.querySelectorAll("button").forEach(function (button) {
+      button.type = "button";
+      if (!button.getAttribute("aria-label") && button.title) {
+        button.setAttribute("aria-label", button.title);
+      }
+    });
+    toolbarEl.querySelectorAll("i.separator").forEach(function (separator) {
+      separator.setAttribute("aria-hidden", "true");
+    });
+  }
 
   // First line is the title — style it large, Medium-style.
   function markTitle() {
@@ -60,9 +84,90 @@
   markTitle();
   cm.on("change", markTitle);
 
+  // ---------- document status ----------
+  function countWords(text) {
+    var cjk = text.match(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || [];
+    var latin = text
+      .replace(/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    return cjk.length + latin.length;
+  }
+
+  function updateDocumentStatus() {
+    var value = easymde.value();
+    if (wordCountEl) wordCountEl.textContent = countWords(value) + " 字";
+    if (characterCountEl) characterCountEl.textContent = value.length + " 個字元";
+    var cursor = cm.getCursor();
+    if (cursorPositionEl) {
+      cursorPositionEl.textContent = "第 " + (cursor.line + 1) + " 行，第 " + (cursor.ch + 1) + " 欄";
+    }
+  }
+  updateDocumentStatus();
+  cm.on("change", updateDocumentStatus);
+  cm.on("cursorActivity", updateDocumentStatus);
+
+  // Keep a local safety copy only while the server has not acknowledged the
+  // latest text. A writer can explicitly recover or ignore it on the next open.
+  var draftKey = "commaplace:draft:" + noteId;
+  function readDraftBackup() {
+    try {
+      var raw = localStorage.getItem(draftKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function cacheDraft(value) {
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ document: value, savedAt: Date.now() }));
+    } catch (_err) {}
+  }
+
+  function clearDraftBackup() {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch (_err) {}
+  }
+
+  var backup = readDraftBackup();
+  if (recoveryEl && backup && typeof backup.document === "string" && backup.document !== easymde.value()) {
+    recoveryEl.hidden = false;
+    var recoverButton = recoveryEl.querySelector("[data-recover-draft]");
+    var discardButton = recoveryEl.querySelector("[data-discard-draft]");
+    if (recoverButton) {
+      recoverButton.addEventListener("click", function () {
+        easymde.value(backup.document);
+        recoveryEl.hidden = true;
+        cm.focus();
+        save().catch(function () {});
+      });
+    }
+    if (discardButton) {
+      discardButton.addEventListener("click", function () {
+        clearDraftBackup();
+        recoveryEl.hidden = true;
+        cm.focus();
+      });
+    }
+  }
+
   // ---------- autosave ----------
-  var timer, inflight = false, again = false, loaded = false, lastError = null;
-  function setStatus(t) { if (statusEl) statusEl.textContent = t; }
+  var timer, inflight = false, again = false, lastError = null;
+  function setStatus(t, state) {
+    if (statusEl) statusEl.textContent = t;
+    page.dataset.saveState = state || "saved";
+  }
+
+  function userFacingError(text, fallback) {
+    var value = (text || "").trim();
+    if (!value || /<\/?[a-z][\s\S]*>/i.test(value) || value.length > 120) {
+      return fallback;
+    }
+    return value;
+  }
 
   // Returns a Promise that resolves once the in-flight save (if any) completes,
   // and rejects if that save failed — callers (e.g. publish) must not proceed
@@ -78,50 +183,68 @@
       });
     }
     inflight = true; again = false; lastError = null;
-    setStatus("儲存中…");
+    var requestValue = easymde.value();
+    setStatus("儲存中…", "saving");
     return fetch("/api/notes/" + noteId, {
       method: "PATCH",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "document=" + encodeURIComponent(easymde.value()),
+      body: "document=" + encodeURIComponent(requestValue),
     }).then(function (r) {
       inflight = false;
       if (!r.ok) {
         return r.text().then(function (t) {
-          lastError = t || "儲存失敗";
-          setStatus(lastError);
+          lastError = userFacingError(t, "儲存失敗，內容已保留在此裝置");
+          setStatus(lastError, "error");
           return Promise.reject(lastError);
         });
       }
-      setStatus("已儲存");
-      if (again) save();
+      if (easymde.value() === requestValue) clearDraftBackup();
+      if (again) {
+        save().catch(function () {});
+      } else {
+        setStatus("已儲存", "saved");
+      }
     }).catch(function (err) {
       inflight = false;
-      lastError = typeof err === "string" ? err : "儲存失敗";
-      setStatus(lastError);
+      lastError = typeof err === "string" ? err : "儲存失敗，內容已保留在此裝置";
+      setStatus(lastError, "error");
       return Promise.reject(lastError);
     });
   }
-  // Skip the first change event that fires as EasyMDE loads existing content.
+  // The listener is attached after EasyMDE has loaded the textarea, so its first
+  // event is a real edit and must never be skipped.
   cm.on("change", function () {
-    if (!loaded) { loaded = true; return; }
-    setStatus("…");
+    cacheDraft(easymde.value());
+    setStatus("尚未儲存", "dirty");
     clearTimeout(timer);
-    timer = setTimeout(save, 800);
+    timer = setTimeout(function () { save().catch(function () {}); }, 800);
   });
 
   // ---------- publish ----------
   var pub = document.getElementById("publish-btn");
   if (pub) {
     pub.addEventListener("click", function () {
+      pub.disabled = true;
+      pub.setAttribute("aria-busy", "true");
       save().then(function () {
         fetch("/api/notes/" + noteId + "/publish", { method: "POST" })
           .then(function (r) {
             if (r.ok) return r.json();
-            return r.text().then(function (t) { return Promise.reject(t || "發布失敗"); });
+            return r.text().then(function (t) {
+              return Promise.reject(userFacingError(t, "發布失敗，請再試一次"));
+            });
           })
           .then(function (d) { window.location = d.url; })
-          .catch(function (msg) { setStatus(typeof msg === "string" ? msg : "發布失敗"); });
-      }).catch(function () { /* save() already surfaced the error via setStatus */ });
+          .catch(function (msg) {
+            pub.disabled = false;
+            pub.removeAttribute("aria-busy");
+            setStatus(typeof msg === "string" ? msg : "發布失敗", "error");
+          });
+      }).catch(function () {
+        pub.disabled = false;
+        pub.removeAttribute("aria-busy");
+        // save() already surfaced the error via setStatus.
+      });
     });
   }
 
@@ -157,17 +280,17 @@
     var f = fileInput.files[0];
     fileInput.value = "";
     if (!f) return;
-    setStatus("上傳圖片中…");
+    setStatus("上傳圖片中…", "saving");
     var fd = new FormData();
     fd.append("image", f);
     fetch("/api/notes/" + noteId + "/image", { method: "POST", body: fd })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (d) {
         cm.replaceSelection("![](" + d.url + ")");
-        setStatus("圖片已加入");
+        setStatus("圖片已加入", "dirty");
         cm.focus();
       })
-      .catch(function () { setStatus("圖片上傳失敗"); });
+      .catch(function () { setStatus("圖片上傳失敗", "error"); });
   });
 
   // ---------- .md file import ----------
@@ -189,17 +312,26 @@
       var m = text.match(/^#\s+(.+)/m);
       var title = m ? m[1].trim() : f.name.replace(/\.(md|markdown)$/i, "");
       var body = m ? text.replace(/^#[^\n]*\n?/, "").replace(/^\s+/, "") : text;
-      // On a brand-new, never-edited draft this is the CM instance's first
-      // change event ever, which the "skip EasyMDE's own initial load" guard
-      // above would otherwise swallow — force loaded so it isn't mistaken for
-      // that, then save directly instead of waiting on the debounce/listener.
-      loaded = true;
+      // Save directly instead of making an imported document wait for the
+      // debounce used during ordinary typing.
       easymde.value(title + "\n\n" + body);
-      save();
+      save().catch(function () {});
       cm.focus();
     };
     reader.readAsText(f);
   });
+
+  // On touch devices the formatting bar sits above the bottom dock. When the
+  // software keyboard opens, hide the dock and let the toolbar use that space.
+  function syncKeyboardState() {
+    if (!window.visualViewport) return;
+    var keyboardOpen = window.innerHeight - window.visualViewport.height > 160;
+    document.body.classList.toggle("editor-keyboard-open", keyboardOpen);
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", syncKeyboardState);
+    syncKeyboardState();
+  }
 
   // ---------- [[ wiki-link autocomplete ----------
   if (!popup || !list) return;
@@ -265,6 +397,14 @@
     if (!cursorEl) return;
     var r = cursorEl.getBoundingClientRect();
     var m = 8; // viewport margin
+    var bottomInset = m;
+    if (window.matchMedia("(max-width: 800px)").matches) {
+      var dock = document.querySelector(".mobile-dock");
+      bottomInset += toolbarEl ? toolbarEl.offsetHeight : 0;
+      if (!document.body.classList.contains("editor-keyboard-open") && dock) {
+        bottomInset += dock.offsetHeight;
+      }
+    }
     var pw = popup.offsetWidth || 320;
     var left = r.left;
     if (left + pw > window.innerWidth - m)
@@ -273,7 +413,7 @@
     // Prefer dropping below the cursor; flip above only when there's more room
     // there. Cap the height to the chosen side so a long list scrolls in place
     // instead of running off-screen.
-    var below = window.innerHeight - m - (r.bottom + 4);
+    var below = window.innerHeight - bottomInset - (r.bottom + 4);
     var above = r.top - 4 - m;
     var ph = popup.scrollHeight;
     var top;

@@ -39,7 +39,7 @@ templ defaultMeta(c ChromeProps) {
 templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Component) {
 	<!doctype html>
 	<html
-		lang="en"
+		lang="zh-Hant"
 		if c.Theme != "" {
 			data-theme-server={ c.Theme }
 			data-theme={ c.Theme }
@@ -136,6 +136,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
         }
         // Theme toggle (icon button: flips light <-> dark)
         var tg = document.getElementById("theme-toggle");
+        var mobileTg = document.getElementById("mobile-theme-toggle");
         if (tg) {
           var syncIcon = function () {
             var t =
@@ -152,6 +153,12 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
               "title",
               t === "light" ? "切換到夜間" : "切換到日間",
             );
+            if (mobileTg) {
+              var mobileLabel =
+                t === "light" ? "切換到夜間" : "切換到日間";
+              mobileTg.textContent = mobileLabel;
+              mobileTg.setAttribute("aria-label", mobileLabel);
+            }
           };
           syncIcon();
           tg.addEventListener("click", function () {
@@ -176,9 +183,15 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
               });
             } catch (e) {}
           });
+          if (mobileTg) {
+            mobileTg.addEventListener("click", function () {
+              tg.click();
+            });
+          }
         }
         // Motion toggle (icon button: flips reduced <-> normal, localStorage only)
         var mg = document.getElementById("motion-toggle");
+        var mobileMg = document.getElementById("mobile-motion-toggle");
         if (mg) {
           var syncMotion = function () {
             var on =
@@ -187,6 +200,10 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
             mg.setAttribute("aria-pressed", on ? "true" : "false");
             mg.setAttribute("aria-label", on ? "恢復動畫" : "減少動畫");
             mg.setAttribute("title", on ? "恢復動畫" : "減少動畫");
+            if (mobileMg) {
+              mobileMg.textContent = on ? "恢復動畫" : "減少動畫";
+              mobileMg.setAttribute("aria-pressed", on ? "true" : "false");
+            }
           };
           syncMotion();
           mg.addEventListener("click", function () {
@@ -199,11 +216,17 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
             } catch (e) {}
             syncMotion();
           });
+          if (mobileMg) {
+            mobileMg.addEventListener("click", function () {
+              mg.click();
+            });
+          }
         }
       });
     </script>
 		</head>
 		<body>
+			<a class="skip-link" href="#main-content">跳到主要內容</a>
 			<div class={ pageClassAttr(pageClass) }>
 				<header class="topbar">
 					<a class="brand" href="/" title="回到首頁">
@@ -216,7 +239,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 							name="q"
 							placeholder="搜尋… (Ctrl/Cmd + K)"
 							value={ c.SearchQuery }
-							aria-label="search"
+							aria-label="搜尋筆記"
 						/>
 						<button
 							type="button"
@@ -240,7 +263,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 							</svg>
 						</button>
 					</form>
-					<nav class="nav">
+					<nav class="nav" aria-label="主要導覽">
 						<div class="nav-links">
 							if c.User != nil {
 								<a href="/write" title="寫一篇新筆記">{ c.Nav.Write }</a>
@@ -262,14 +285,14 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 						<button
 							type="button"
 							id="theme-toggle"
-							class="icon-btn"
+							class="icon-btn topbar-preference"
 							aria-label="切換主題"
 							title="切換深色／淺色主題"
 						></button>
 						<button
 							type="button"
 							id="motion-toggle"
-							class="icon-btn"
+							class="icon-btn topbar-preference"
 							aria-pressed="false"
 							aria-label="減少動畫"
 							title="減少動畫"
@@ -279,7 +302,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 						<button
 							type="button"
 							id="script-toggle"
-							class="icon-btn"
+							class="icon-btn topbar-preference"
 							aria-label="切換為简体显示"
 							title="切換為简体显示"
 						>
@@ -321,6 +344,12 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 									<a href="/graph" title="筆記之間的連結圖">{ c.Nav.Graph }</a>
 									<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
 								}
+								<div class="mobile-menu-sep"></div>
+								<div class="mobile-preferences" role="group" aria-label="顯示設定">
+									<button type="button" id="mobile-theme-toggle">切換外觀</button>
+									<button type="button" id="mobile-motion-toggle" aria-pressed="false">減少動畫</button>
+									<button type="button" id="mobile-script-toggle">切換繁簡</button>
+								</div>
 							</div>
 						</details>
 						if c.User == nil {
@@ -328,7 +357,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 						}
 					</nav>
 				</header>
-				<main class="content">
+				<main id="main-content" class="content" tabindex="-1">
 					@contents
 				</main>
 				<footer class="site-footer">
@@ -338,6 +367,20 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 					<span class="crumb-sep">·</span>
 					<a href="/privacy">隱私政策</a>
 				</footer>
+				<nav class="mobile-dock" aria-label="手機主要導覽">
+					<a href="/feed"><span aria-hidden="true">⌂</span><span>動態</span></a>
+					if c.User != nil {
+						<a href="/write"><span aria-hidden="true">＋</span><span>寫作</span></a>
+					} else {
+						<a href="/graph"><span aria-hidden="true">⌘</span><span>圖譜</span></a>
+					}
+					<button type="button" id="mobile-palette-btn"><span aria-hidden="true">⌕</span><span>搜尋</span></button>
+					if c.User != nil {
+						<a href={ templ.URL("/" + c.User.Handle) }><span aria-hidden="true">◉</span><span>我的</span></a>
+					} else {
+						<a href="/login"><span aria-hidden="true">→</span><span>登入</span></a>
+					}
+				</nav>
 			</div>
 		</body>
 	</html>

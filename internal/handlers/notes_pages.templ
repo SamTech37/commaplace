@@ -26,39 +26,70 @@ templ writePage(p WriteProps) {
 		data-note-id={ p.NoteID }
 		data-allow-upload={ templ.KV("1", !p.Published) }
 	>
-		<div class="editor-bar">
-			if p.Published {
-				<a href={ templ.URL(p.NoteURL) } class="link-btn editor-back-btn">← 返回</a>
-			} else {
-				<form
-					class="inline-form editor-back-btn"
-					method="post"
-					action={ templ.URL("/delete/" + p.NoteID) }
-					onsubmit="return confirm('放棄這篇草稿？');"
-				>
-					<button type="submit" class="link-btn">捨棄</button>
-				</form>
-			}
-			<span id="save-status" class="save-status" aria-live="polite"></span>
-			if p.IsEdit && p.Published {
-				<form
-					class="inline-form"
-					method="post"
-					action={ templ.URL("/delete/" + p.NoteID) }
-					onsubmit="return confirm('確定刪除這篇筆記？');"
-				>
-					<button type="submit" class="editor-delete-btn">🗑 刪除</button>
-				</form>
-			}
-			<button type="button" id="publish-btn" class="publish-btn">
+		<header class="editor-bar">
+			<div class="editor-bar-start">
 				if p.Published {
-					更新
+					<a href={ templ.URL(p.NoteURL) } class="editor-back-btn" aria-label="返回筆記">← <span>返回</span></a>
 				} else {
-					發布
+					<form
+						class="inline-form editor-back-btn"
+						method="post"
+						action={ templ.URL("/delete/" + p.NoteID) }
+						onsubmit="return confirm('放棄這篇草稿？');"
+					>
+						<button type="submit" class="editor-quiet-btn">捨棄</button>
+					</form>
 				}
-			</button>
+				<span class="editor-document-state">
+					if p.Published {
+						已發布
+					} else {
+						草稿
+					}
+				</span>
+			</div>
+			<div class="editor-bar-end">
+				<span class="save-state" aria-label="儲存狀態">
+					<span class="save-state-dot" aria-hidden="true"></span>
+					<span id="save-status" class="save-status" aria-live="polite">已儲存</span>
+				</span>
+				if p.IsEdit && p.Published {
+					<form
+						class="inline-form"
+						method="post"
+						action={ templ.URL("/delete/" + p.NoteID) }
+						onsubmit="return confirm('確定刪除這篇筆記？');"
+					>
+						<button type="submit" class="editor-delete-btn">刪除</button>
+					</form>
+				}
+				<button type="button" id="publish-btn" class="publish-btn">
+					if p.Published {
+						更新
+					} else {
+						發布
+					}
+				</button>
+			</div>
+		</header>
+		<div id="editor-recovery" class="editor-recovery" role="status" hidden>
+			<span>這台裝置有一份尚未同步的內容。</span>
+			<div class="editor-recovery-actions">
+				<button type="button" class="editor-recover-btn" data-recover-draft>復原</button>
+				<button type="button" class="editor-quiet-btn" data-discard-draft>忽略</button>
+			</div>
 		</div>
-		<textarea id="doc">{ p.Document }</textarea>
+		<div class="editor-workspace">
+			<textarea id="doc" aria-label="筆記內容，第一行為標題">{ p.Document }</textarea>
+		</div>
+		<footer class="writer-status" aria-label="文件資訊">
+			<div class="writer-status-counts">
+				<span id="word-count">0 字</span>
+				<span id="character-count">0 個字元</span>
+				<span id="cursor-position">第 1 行，第 1 欄</span>
+			</div>
+			<span class="writer-format">Markdown · 第一行是標題</span>
+		</footer>
 		<div id="ac-popup" class="ac-popup" hidden>
 			<ul></ul>
 		</div>
