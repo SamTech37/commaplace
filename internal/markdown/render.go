@@ -694,8 +694,9 @@ func (p *tagInlineParser) Parse(parent ast.Node, block text.Reader, pc parser.Co
 	if len(line) < 2 || line[0] != '#' {
 		return nil
 	}
-	// word boundary: # must not be preceded by an alphanumeric character
-	if seg.Start > 0 && isAlnumByte(block.Source()[seg.Start-1]) {
+	// Word boundary: # must not be preceded by an alphanumeric character.
+	// In particular, never reinterpret the second # in "##text" as #text.
+	if seg.Start > 0 && (isAlnumByte(block.Source()[seg.Start-1]) || block.Source()[seg.Start-1] == '#') {
 		return nil
 	}
 	rest := line[1:]
@@ -752,8 +753,8 @@ type wikiNode struct {
 	Link WikiLink
 }
 
-func (n *wikiNode) Kind() ast.NodeKind                  { return kindWikiLink }
-func (n *wikiNode) Dump(source []byte, level int)       { ast.DumpHelper(n, source, level, nil, nil) }
+func (n *wikiNode) Kind() ast.NodeKind            { return kindWikiLink }
+func (n *wikiNode) Dump(source []byte, level int) { ast.DumpHelper(n, source, level, nil, nil) }
 
 type wikiInlineParser struct{}
 

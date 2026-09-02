@@ -206,8 +206,9 @@ func ExtractInlineTags(body string) []string {
 			break
 		}
 		pos := i + j
-		// word boundary: # must not be preceded by alphanumeric
-		if pos > 0 && isAlnumByte(s[pos-1]) {
+		// Word boundary: # must not be preceded by alphanumeric. A second
+		// consecutive # is heading-like punctuation, never a new tag opener.
+		if pos > 0 && (isAlnumByte(s[pos-1]) || s[pos-1] == '#') {
 			i = pos + 1
 			continue
 		}

@@ -191,6 +191,16 @@ func TestExtractInlineTags(t *testing.T) {
 			"---\ntags: [philosophy]\n---\n\n#logic is cool",
 			[]string{"logic"},
 		},
+		{
+			"headings are not tags",
+			"# Heading\n## Subheading\n\nBody #real",
+			[]string{"real"},
+		},
+		{
+			"consecutive hashes do not open a tag",
+			"##不是標籤",
+			nil,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

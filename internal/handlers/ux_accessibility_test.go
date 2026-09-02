@@ -50,9 +50,7 @@ func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 		`id="word-count"`,
 		`id="character-count"`,
 		`id="cursor-position"`,
-		`id="editor-preview-pane"`,
-		`id="preview"`,
-		`aria-label="即時預覽"`,
+		`Markdown · 即時預覽 · 第一行是標題`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("editor missing %s", want)
@@ -78,15 +76,32 @@ func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 		`tb("image"`,
 		`tb("code"`,
 		`tb("mdupload"`,
-		`tb("preview"`,
+		`tb("source"`,
 		`tb("quote", EasyMDE.toggleBlockquote, "縮排"`,
 		`tb("bullets", EasyMDE.toggleUnorderedList, "• 清單"`,
 		`tb("numbers", EasyMDE.toggleOrderedList, "1. 編號"`,
 		`previewImagesInEditor: true`,
-		`fetch("/preview"`,
+		`inputStyle: "textarea"`,
+		`cm-live-active-line`,
 	} {
 		if !strings.Contains(js, action) {
 			t.Errorf("editor script missing action %s", action)
+		}
+	}
+
+	stylesheet, err := os.ReadFile("static/style.css")
+	if err != nil {
+		t.Fatalf("read editor stylesheet: %v", err)
+	}
+	css := string(stylesheet)
+	for _, rule := range []string{
+		`.editor-page:not(.source-mode)`,
+		`.CodeMirror-line:not(.cm-live-active-line)`,
+		`:has([data-img-src])`,
+		`.tb-source[aria-pressed="true"]`,
+	} {
+		if !strings.Contains(css, rule) {
+			t.Errorf("editor stylesheet missing %s", rule)
 		}
 	}
 }

@@ -74,6 +74,12 @@ func TestHighlightMultiWord(t *testing.T) {
 	assertContains(t, out, "<mark>hello world</mark>")
 }
 
+func TestHeadingsStayDistinctFromTags(t *testing.T) {
+	out := renderMust(t, "# 標題\n\n## 小標\n\n#hashtag\n\n##不是標籤")
+	assertContains(t, out, ">標題</h1>", ">小標</h2>", `class="tag-chip">#hashtag</a>`)
+	assertNotContains(t, out, `/tag/標題`, `/tag/小標`, `/tag/不是標籤`)
+}
+
 // ---------- Comments %%...%% ----------
 
 func TestCommentInline(t *testing.T) {

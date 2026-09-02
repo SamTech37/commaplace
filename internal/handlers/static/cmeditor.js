@@ -15,8 +15,7 @@
   var wordCountEl = document.getElementById("word-count");
   var characterCountEl = document.getElementById("character-count");
   var cursorPositionEl = document.getElementById("cursor-position");
-  var previewEl = document.getElementById("preview");
-  var previewButton = null;
+  var sourceButton = null;
 
   function tb(name, action, text, title) {
     return { name: name, action: action, text: text, title: title, className: "tb-" + name };
@@ -40,7 +39,7 @@
     tb("image", uploadImage, "圖片", "插入圖片"),
     tb("code", EasyMDE.toggleCodeBlock, "程式碼", "程式碼區塊"),
     "|",
-    tb("preview", toggleLivePreview, "預覽", "顯示或隱藏即時預覽"),
+    tb("source", toggleSourceMode, "原始碼", "切換原始碼／即時預覽"),
   ];
   // Only offer whole-document .md import while still a draft — it replaces the
   // entire doc (and CodeMirror's undo history with it), too destructive to
@@ -56,6 +55,7 @@
     status: false,
     autoDownloadFontAwesome: false,
     lineWrapping: true,
+    inputStyle: "textarea",
     previewImagesInEditor: true,
     placeholder: "先寫標題，按 Enter 開始正文…",
     previewRender: function () { return ""; }, // preview is the published page (server goldmark)
@@ -79,8 +79,8 @@
     toolbarEl.querySelectorAll("i.separator").forEach(function (separator) {
       separator.setAttribute("aria-hidden", "true");
     });
-    previewButton = toolbarEl.querySelector(".tb-preview");
-    if (previewButton) previewButton.setAttribute("aria-pressed", "true");
+    sourceButton = toolbarEl.querySelector(".tb-source");
+    if (sourceButton) sourceButton.setAttribute("aria-pressed", "false");
   }
 
   // First line is the title — style it large, Medium-style.
@@ -115,81 +115,34 @@
   cm.on("change", updateDocumentStatus);
   cm.on("cursorActivity", updateDocumentStatus);
 
-  // ---------- live preview ----------
-  // The server renderer is also used by published notes, so the preview stays
-  // faithful to wiki links, embeds, tags, images, and Markdown extensions.
-  var previewTimer = null;
-  var previewRequest = 0;
+  // ---------- Obsidian-style live preview ----------
+  // CodeMirror keeps the Markdown document as the only source of truth. Away
+  // from the caret, CSS hides punctuation while retaining the formatted token
+  // styles; moving the caret onto a line reveals its source syntax again.
+  var activeLiveLine = null;
 
-  function documentParts(value) {
-    var newline = value.indexOf("\n");
-    if (newline < 0) return { title: value.trim(), body: "" };
-    return {
-      title: value.slice(0, newline).trim(),
-      body: value.slice(newline + 1).replace(/^\s+/, ""),
-    };
+  function updateLivePreviewLine() {
+    if (activeLiveLine) {
+      cm.removeLineClass(activeLiveLine, "text", "cm-live-active-line");
+    }
+    activeLiveLine = cm.getLineHandle(cm.getCursor().line);
+    if (activeLiveLine) {
+      cm.addLineClass(activeLiveLine, "text", "cm-live-active-line");
+    }
   }
 
-  function renderPreview() {
-    if (!previewEl) return;
-    var request = ++previewRequest;
-    var parts = documentParts(easymde.value());
-    previewEl.setAttribute("aria-busy", "true");
-    previewEl.classList.add("preview-loading");
-    fetch("/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "body_md=" + encodeURIComponent(parts.body),
-    }).then(function (response) {
-      if (!response.ok) return Promise.reject();
-      return response.text();
-    }).then(function (html) {
-      if (request !== previewRequest) return;
-      previewEl.replaceChildren();
-      if (parts.title) {
-        var title = document.createElement("h1");
-        title.className = "editor-live-preview-title";
-        title.textContent = parts.title;
-        previewEl.appendChild(title);
-      }
-      if (html.trim()) {
-        previewEl.appendChild(document.createRange().createContextualFragment(html));
-      } else if (!parts.title) {
-        var empty = document.createElement("p");
-        empty.className = "editor-preview-empty";
-        empty.textContent = "開始輸入後，排版會即時顯示在這裡。";
-        previewEl.appendChild(empty);
-      }
-    }).catch(function () {
-      if (request !== previewRequest) return;
-      previewEl.replaceChildren();
-      var error = document.createElement("p");
-      error.className = "editor-preview-empty";
-      error.textContent = "預覽暫時無法更新，內容仍會照常儲存。";
-      previewEl.appendChild(error);
-    }).finally(function () {
-      if (request !== previewRequest) return;
-      previewEl.setAttribute("aria-busy", "false");
-      previewEl.classList.remove("preview-loading");
-    });
-  }
-
-  function schedulePreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(renderPreview, 300);
-  }
-
-  function toggleLivePreview() {
-    var collapsed = page.classList.toggle("preview-collapsed");
-    if (previewButton) {
-      previewButton.setAttribute("aria-pressed", collapsed ? "false" : "true");
-      previewButton.title = collapsed ? "顯示即時預覽" : "隱藏即時預覽";
+  function toggleSourceMode() {
+    var sourceMode = page.classList.toggle("source-mode");
+    if (sourceButton) {
+      sourceButton.setAttribute("aria-pressed", sourceMode ? "true" : "false");
+      sourceButton.title = sourceMode ? "切換到即時預覽" : "切換到原始碼";
     }
     window.setTimeout(function () { cm.refresh(); }, 0);
   }
 
-  renderPreview();
-  cm.on("change", schedulePreview);
+  updateLivePreviewLine();
+  cm.on("change", updateLivePreviewLine);
+  cm.on("cursorActivity", updateLivePreviewLine);
 
   // Keep a local safety copy only while the server has not acknowledged the
   // latest text. A writer can explicitly recover or ignore it on the next open.
