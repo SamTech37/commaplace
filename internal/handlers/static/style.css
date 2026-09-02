@@ -3637,10 +3637,63 @@ button:disabled {
 }
 
 .editor-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.82fr);
   overflow: clip;
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   background: var(--bg-2);
+}
+.editor-compose {
+  min-width: 0;
+}
+.editor-preview-pane {
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+}
+.editor-preview-label {
+  position: sticky;
+  top: calc(60px + 3.5rem);
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  min-height: 3.25rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-glass);
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.editor-live-preview {
+  min-height: calc(100dvh - 15rem);
+  margin: 0;
+  padding: clamp(1.5rem, 4vw, 3.25rem) clamp(1.25rem, 3vw, 2.5rem) 8rem;
+  overflow-wrap: anywhere;
+}
+.editor-live-preview-title {
+  margin: 0 0 1.15rem;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: var(--fs-2xl);
+  line-height: 1.2;
+}
+.editor-preview-empty {
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+.editor-live-preview.preview-loading {
+  opacity: 0.55;
+}
+.editor-page.preview-collapsed .editor-workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+.editor-page.preview-collapsed .editor-preview-pane {
+  display: none;
 }
 .editor-workspace .EasyMDEContainer {
   display: flex;
@@ -3724,6 +3777,13 @@ button:disabled {
 .editor-workspace .CodeMirror-placeholder {
   color: var(--text-3);
   opacity: 1;
+}
+.editor-workspace .CodeMirror span[data-img-src]::after {
+  margin: 0.75rem 0 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--bg-3);
+  background-position: left center;
 }
 .writer-status {
   display: flex;
@@ -3898,10 +3958,22 @@ button:disabled {
     margin-inline: 0;
   }
   .editor-workspace {
+    grid-template-columns: minmax(0, 1fr);
     margin-inline: -0.75rem;
     border-right: 0;
     border-left: 0;
     border-radius: 0;
+  }
+  .editor-preview-pane {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+  .editor-preview-label {
+    position: static;
+  }
+  .editor-live-preview {
+    min-height: 18rem;
+    padding: 1.5rem 1rem 8rem;
   }
   .editor-workspace .EasyMDEContainer .editor-toolbar {
     position: fixed;

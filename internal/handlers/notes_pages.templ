@@ -80,7 +80,15 @@ templ writePage(p WriteProps) {
 			</div>
 		</div>
 		<div class="editor-workspace">
-			<textarea id="doc" aria-label="筆記內容，第一行為標題">{ p.Document }</textarea>
+			<div class="editor-compose">
+				<textarea id="doc" aria-label="筆記內容，第一行為標題">{ p.Document }</textarea>
+			</div>
+			<section id="editor-preview-pane" class="editor-preview-pane" aria-label="即時預覽">
+				<div class="editor-preview-label">即時預覽</div>
+				<div id="preview" class="article-body editor-live-preview" aria-busy="false">
+					<p class="editor-preview-empty">開始輸入後，排版會即時顯示在這裡。</p>
+				</div>
+			</section>
 		</div>
 		<footer class="writer-status" aria-label="文件資訊">
 			<div class="writer-status-counts">

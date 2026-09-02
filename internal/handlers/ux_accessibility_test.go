@@ -50,6 +50,9 @@ func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 		`id="word-count"`,
 		`id="character-count"`,
 		`id="cursor-position"`,
+		`id="editor-preview-pane"`,
+		`id="preview"`,
+		`aria-label="即時預覽"`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("editor missing %s", want)
@@ -75,6 +78,12 @@ func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 		`tb("image"`,
 		`tb("code"`,
 		`tb("mdupload"`,
+		`tb("preview"`,
+		`tb("quote", EasyMDE.toggleBlockquote, "縮排"`,
+		`tb("bullets", EasyMDE.toggleUnorderedList, "• 清單"`,
+		`tb("numbers", EasyMDE.toggleOrderedList, "1. 編號"`,
+		`previewImagesInEditor: true`,
+		`fetch("/preview"`,
 	} {
 		if !strings.Contains(js, action) {
 			t.Errorf("editor script missing action %s", action)
