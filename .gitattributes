@@ -4,3 +4,8 @@
 *.woff2 binary linguist-vendored
 *.otf   binary linguist-vendored
 *.ttf   binary linguist-vendored
+
+# templ embeds source newlines inside generated Go string literals. Keep both
+# inputs and outputs on LF so generation is identical on Windows and Linux CI.
+*.templ    text eol=lf
+*_templ.go text eol=lf
