@@ -49,7 +49,7 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{
+	s.renderPage(w, r, pageTitle("Write"), "page-editor", nil, writePage(WriteProps{
 		NoteID:   draftID.String(),
 		Document: doc,
 	}))
@@ -74,12 +74,12 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	// as-is rather than fixed here; it's the "publish guard"/lost-draft
 	// behavior already tracked in .claude/runs.md's TODO list.
 	if title == "" {
-		s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{}))
+		s.renderPage(w, r, pageTitle("Write"), "page-editor", nil, writePage(WriteProps{}))
 		return
 	}
 	slug := kebabSlug(title)
 	if slug == "" {
-		s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{}))
+		s.renderPage(w, r, pageTitle("Write"), "page-editor", nil, writePage(WriteProps{}))
 		return
 	}
 
@@ -90,7 +90,7 @@ func (s *Server) PostWrite(w http.ResponseWriter, r *http.Request) {
 	tags := parseTags(tagsInput)
 	noteID, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags)
 	if err != nil {
-		s.renderPage(w, r, pageTitle("Write"), "", nil, writePage(WriteProps{}))
+		s.renderPage(w, r, pageTitle("Write"), "page-editor", nil, writePage(WriteProps{}))
 		return
 	}
 	if err := s.saveNoteImage(r, noteID); err != nil {
@@ -177,7 +177,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		doc += "\n\n" + strings.Join(extra, " ")
 	}
 
-	s.renderPage(w, r, pageTitle("Edit"), "", nil, writePage(WriteProps{
+	s.renderPage(w, r, pageTitle("Edit"), "page-editor", nil, writePage(WriteProps{
 		NoteID:    noteID.String(),
 		Document:  doc,
 		IsEdit:    true,
