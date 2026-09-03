@@ -30,29 +30,48 @@ var cardRenderers = map[string]func(feedCard) templ.Component{
 
 // renderCards renders every card in view.Cards through view.Layout's
 // registered renderer (falling back to masonry for an empty/unknown key).
-// When GroupByDate is set, a date header is inserted above each run of
-// same-day cards — an infinite-scroll continuation re-derives its own runs
-// independently, so a run split across a page boundary gets its header
-// repeated rather than merged; harmless, since it still reads as "cards from
-// this day".
+// When GroupByDate is set, each run of same-day cards is wrapped in a
+// timeline-group (date rail on the left, cards stacked on the right) — the
+// same markup the standalone /me/calendar timeline view used before it was
+// folded into the profile page. An infinite-scroll continuation re-derives
+// its own runs independently, so a run split across a page boundary becomes
+// two adjacent groups with the same date label rather than one merged group.
 func renderCards(view NoteListView) templ.Component {
 	render, ok := cardRenderers[view.Layout]
 	if !ok {
 		render = cardRenderers["masonry"]
 	}
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-		lastDate := ""
-		for _, c := range view.Cards {
-			if view.GroupByDate {
-				d := time.Unix(c.UpdatedAt, 0).In(time.Local).Format("2006/01/02")
-				if d != lastDate {
-					if err := timelineDateHeader(d).Render(ctx, w); err != nil {
-						return err
-					}
-					lastDate = d
+		if !view.GroupByDate {
+			for _, c := range view.Cards {
+				if err := render(c).Render(ctx, w); err != nil {
+					return err
 				}
 			}
+			return nil
+		}
+		lastDate := ""
+		groupOpen := false
+		for _, c := range view.Cards {
+			d := time.Unix(c.UpdatedAt, 0).In(time.Local).Format("01/02")
+			if d != lastDate {
+				if groupOpen {
+					if _, err := io.WriteString(w, `</div></div>`); err != nil {
+						return err
+					}
+				}
+				if _, err := io.WriteString(w, `<div class="timeline-group"><div class="timeline-date">`+d+`</div><div class="timeline-cards">`); err != nil {
+					return err
+				}
+				lastDate = d
+				groupOpen = true
+			}
 			if err := render(c).Render(ctx, w); err != nil {
+				return err
+			}
+		}
+		if groupOpen {
+			if _, err := io.WriteString(w, `</div></div>`); err != nil {
 				return err
 			}
 		}
@@ -89,7 +108,7 @@ templ notesView(view NoteListView) {
 	if len(view.Cards) == 0 {
 		<p class="note-meta">@view.Empty</p>
 	} else {
-		<div class={ notesItemsClass(view.Layout) }>
+		<div class={ notesItemsClass(view) }>
 			@renderCards(view)
 		</div>
 		@notesSentinel(view.OlderURL)
@@ -100,11 +119,17 @@ templ notesView(view NoteListView) {
 // own fallback rule exactly (unrecognized/empty Layout defaults to
 // masonry): "masonry" lays cards out in CSS columns (feed/preview); "list"
 // is a plain vertical stack — .note-card is block-level, no column CSS.
-func notesItemsClass(layout string) string {
-	if layout == "list" {
-		return "notes-items"
+// GroupByDate adds "timeline" (flex column, gap between groups) since
+// renderCards wraps its output in timeline-group divs instead of bare cards.
+func notesItemsClass(view NoteListView) string {
+	class := "notes-items"
+	if view.Layout != "list" {
+		class = "masonry " + class
 	}
-	return "masonry notes-items"
+	if view.GroupByDate {
+		class = "timeline " + class
+	}
+	return class
 }
 
 // notesFragment is the HTMX infinite-scroll response: new cards appended via
@@ -112,10 +137,6 @@ func notesItemsClass(layout string) string {
 templ notesFragment(view NoteListView) {
 	@renderCards(view)
 	@notesSentinelOOB(view.OlderURL)
-}
-
-templ timelineDateHeader(label string) {
-	<div class="timeline-date">{ label }</div>
 }
 
 // listCard is a plain title/excerpt/meta row — the layout every list-shaped

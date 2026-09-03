@@ -1266,15 +1266,16 @@ html[data-theme="dark"] .masonry-card:hover {
   flex: 1;
   min-width: 0;
 }
+.timeline { display: flex; flex-direction: column; gap: 1.5rem; }
+.timeline-group { display: flex; flex-direction: row; gap: 1rem; align-items: baseline; }
 .timeline-date {
+  flex: 0 0 auto;
+  width: 3.2rem;
   font-size: var(--fs-sm);
   color: var(--text-3);
   font-family: var(--font-sans);
-  padding-top: 1.1em;
 }
-.timeline-date:first-child {
-  padding-top: 0;
-}
+.timeline-cards { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
 
 /* ── Older / load more ──────────────────────────────────────────────────── */
 .older-link {
