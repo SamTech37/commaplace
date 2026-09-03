@@ -507,7 +507,6 @@
       draw();
 
       if (busy || draggingNode || activePointers.size > 0) requestFrame();
-      else running = false;
     }
     themeListeners.push(requestFrame);
 
