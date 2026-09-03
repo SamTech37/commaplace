@@ -27,3 +27,31 @@ document.addEventListener('click', e => {
     if (!d.contains(e.target)) d.removeAttribute('open');
   });
 });
+
+// Esc closes an open action-menu and hands focus back to its trigger.
+// <details> gives us click-to-open and a sane tab order for free, but no
+// keyboard dismiss — without this a keyboard user is stranded in the panel.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('details.action-menu[open]').forEach(d => {
+    d.removeAttribute('open');
+    const summary = d.querySelector('summary');
+    if (summary && d.contains(document.activeElement)) summary.focus();
+  });
+});
+
+// Mirror the native open state onto aria-expanded so screen readers are told
+// whether the panel is showing. Derived from the element rather than written
+// into the markup: the attribute cannot then drift out of sync with reality.
+// Note <details> fires toggle asynchronously, so this lands on the next tick.
+function syncMenuExpanded(d) {
+  const summary = d.querySelector('summary');
+  if (summary) summary.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+}
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d instanceof HTMLDetailsElement && d.classList.contains('action-menu')) syncMenuExpanded(d);
+}, true);
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('details.action-menu').forEach(syncMenuExpanded);
+});
