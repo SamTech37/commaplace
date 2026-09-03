@@ -2,17 +2,7 @@
 
 ## Meta-App view Substrate + Templ — 已完成（2026-08-31）
 
-規格：`.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`「v1 — as built」有完整記錄，這裡只留摘要，細節去那邊看。
-
-四步都做了，一次到位：templ 工具鏈接上 air 的 dev loop（`go get -tool` 釘版本，不用另外 `go install`；`.air.toml` 的 `cmd` 先跑 `templ generate` 再 build）；`NoteListView{ Cards, Layout, OlderURL, Empty }` + `feedCard` + `cardRenderers` registry 定義在 `internal/handlers/notes_view.templ`；六個消費者都接上去——`feed`/`tag`/`search`/`profile`/`saved`（規格漏掉的 `saved` 補上了）加上規格完全沒提到的 `preview.go`（`/api/preview/{user}/{slug}` hover 預覽，本來就吃同一顆 `masonry_card`）；`feedItem`/`profileNote`/`searchHit` 三個型別、七個 scan loop、`Pages`/`LoadPages`/`ParseFS`、整個 `templates/` 目錄全刪了，`grep` 乾淨。不只清單那五個模板——19 個模板一次全轉 templ，不留 html/template 尾巴（跟原計畫「遷一個模板驗證流程」不同，那個只是拿來證明 air+templ 迴圈能動，動完發現一次做完比留著兩套系統共存久一點更省事）。
-
-**沒做的，刻意的：** 版面切換鈕跟 `?layout=` 沒做。registry 只註冊一種 layout（`masonry`），加新的是一個 `func(NoteListView) templ.Component` + 一行 registry，不用碰 handler——這就是「UI 是狀態的函數」要的東西，但目前沒人要多一種版面，先不生只有一個選項的切換鈕。上面「待決」的問題（`feed.layout` 全站共用還是分開存）因此還沒有到要決定的時候。
-
-**順便修的兩個真 bug，不是重構順帶壞掉、是重構順帶發現：** 搜尋摘要的 XSS——`ts_headline` 輸出直接當 `template.HTML` 印出去，筆記內文只要長得像 HTML 就會在搜到的人畫面上原樣執行；profile 的 infinite-scroll 端點本來就是壞的，`RenderPartial` 查一個從沒註冊過的 partial name，會 500，沒有測試蓋到過。
-
-**多做的（規格裡就有寫，這次一起做掉）：** `tag`/`saved` 加了真游標分頁（原本 `LIMIT 200`/`50` 到底，沒有「載入更多」）；三種 infinite-scroll 寫法統一成 feed 那套 OOB sentinel（profile 原本是另一套 self-outerHTML-swap）。`search` 沒加分頁——`ts_rank` 排序沒有便宜的游標，維持原樣不生假分頁。
-
-**盯過 N+1：** 六個消費者共用同一批 helper（`scanCards`/`attachTagsToCards`），查詢數沒有隨卡片數變多。
+19 個模板全轉 templ、`NoteListView`/`feedCard`/`cardRenderers` registry 收斂六個消費者。完整記錄（含順便修的兩個 bug、決定不做的版面切換鈕）在 `.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`「v1 — as built」。
 
 ## MVP 設定收尾 — 三人內部發文
 
@@ -32,13 +22,11 @@
 
 已完成：Blueprint 部署、自訂網域（apex 為主，www 301 導過去）、Auto-Deploy 開著、`SEED_DEV=0`、`PLAYTEST_LOGIN_KEY`、`.github/workflows/ci.yml` 測試閘、`db-backup.yml` 手動 pg_dump。破壞性操作的完整程序見 `docs/RUNBOOK-db-purge.md`。
 
-種子帳號已清乾淨（migration 007/008，prod 9 個 migration 全上）。刪的條件是 email 網域 `@dev.local`，不是手寫 handle 名單——名單漏一個就是誤刪真人。`hankforwork2315`、`noshawn50` 長得像種子但是真人；`shawn` 反而是 `ApplyDemo` 的種子，已改名 `shawn_demo`（`seed.DemoHandle` 要一起改，否則守衛失效會再長一份 demo vault）。這些只有拿真 prod dump 試跑才看得到，dev DB 看不出來。
+種子帳號已清乾淨（migration 007/008，prod 9 個 migration 全上）。刪帳號時哪些看似種子其實是真人、哪個看似真人其實是種子——完整故事在 `docs/RUNBOOK-db-purge.md`。
 
 ### Google OAuth
 
-redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`），Google 逐字比對，`www.` 有無算兩個 host。後台手改的 env var 會蓋掉 `render.yaml`。`Error 400: invalid_request` 就去看 `redirect_uri=` 那串。
-
-現在能登入是靠運氣：apex 才是主網域，但 `BASE_URL` 指著 www。`oauth_state` cookie 沒有 `Domain`、只綁 apex；Google 把人送到 www 的 callback，www 301 回 apex 時**有帶 query string**，cookie 才送得出去。哪天那個 301 不保留 query，登入就掛 `invalid OAuth state`。這是上面「`BASE_URL` 改成 apex」那項要修的。
+現在能登入是靠運氣：apex 才是主網域，但 `BASE_URL` 指著 www，`oauth_state` cookie 沒有 `Domain`、只綁 apex——靠 www→apex 的 301 帶著 query string 才把 cookie 送得出去。哪天那個 301 不保留 query，登入就掛 `invalid OAuth state`。上面「`BASE_URL` 改成 apex」那項修的就是這個。其他失敗排查見下面「Google OAuth 本機測試」的對照表。
 
 ---
 
@@ -160,22 +148,10 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 - [ ] DDoS prevention
 - [ ] 並發：寫入佇列？讀取？
 
-### Benchmark（2026-06-20，本機 `benchmark` DB，100 Users × 1000 Notes = 100K Notes / 300K note_tags / 100K Resolved links）
-
-單一查詢、無並發，看相對值不是絕對延遲。
-
-| 查詢 | @100K | 判讀 |
-| --- | --- | --- |
-| Feed（`idx_notes_feed`） | **0.07 ms** | 跟 200 列一樣快——partial index 掃到 LIMIT 就停，不會排序 90K。撐得住預估規模 |
-| **Tag chips**（`loadTopTagChips`，**每次 feed 都跑**） | **~40 ms** | **唯一真瓶頸**。整個 note_tags⋈notes join 做 HashAggregate，隨表成長 |
-| Tag page | ~21 ms | 最慢的頁，可接受，盯著 |
-| Backlinks（`idx_links_resolved`） | 快 | bitmap scan，沒問題 |
-| FTS | n/a | 測試無效（每篇 seed 內文都命中），要換多樣語料重測 |
-
 - [ ] **Tag chips 的修法（等它真的痛再做，40 ms 現在無所謂）**：它變得很慢，所以快取（Render Key Value 或 in-process TTL map），或乾脆移出 feed 的同步渲染路徑
 - [ ] **並發沒測過** — 單查詢 SQL ≠ 並發負載。要用 k6 / vegeta 打真的 binary，看連線池飽和與寫入爭用
 
-DB 們：prod（Render）、`commaplace`（dev）、`benchmark`（壓測）、`commaplace_test`（測試）。
+原始數字：`docs/BENCHMARK-2026-06-20.md`（已過期，未對照 007-009 之後的 schema 重測）。
 
 ## Some Concerns
 
