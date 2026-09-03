@@ -62,7 +62,20 @@ func graphPage(title, source string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><canvas id=\"graph-canvas\"></canvas><div id=\"graph-empty\" class=\"graph-empty\" hidden>還沒有筆記可以畫。<a href=\"/write\">寫一篇</a> 試試。</div><div id=\"graph-tooltip\" class=\"graph-tooltip\" hidden></div></div><script src=\"/assets/linkpreview.js\" defer></script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><canvas id=\"graph-canvas\"></canvas><div id=\"graph-empty\" class=\"graph-empty\" hidden>還沒有筆記可以畫。<a href=\"/write\">寫一篇</a> 試試。</div><div id=\"graph-tooltip\" class=\"graph-tooltip\" hidden></div></div><script src=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(assetURL("linkpreview.js"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/graph_page.templ`, Line: 17, Col: 41}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" defer></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
