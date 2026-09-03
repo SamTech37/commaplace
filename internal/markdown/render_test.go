@@ -235,6 +235,20 @@ func TestEmbedResolvedRendersBody(t *testing.T) {
 	assertNotContains(t, got, "embed-missing")
 }
 
+func TestEmbedSameVaultHeaderLinks(t *testing.T) {
+	// Regression: same-vault embeds (![[note]], no @user) rendered a plain
+	// text header with no link, since currentUser never reached embedRenderer.
+	resolver := func(l WikiLink) (string, template.HTML, bool) {
+		return "Link Topology", template.HTML("<p>body</p>"), true
+	}
+	html, err := Render("![[link-topology]]", "testuser", nil, resolver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(html)
+	assertContains(t, got, `<a href="/testuser/link-topology">`, "Link Topology")
+}
+
 func TestEmbedNotFoundResolverShowsMissing(t *testing.T) {
 	resolver := func(l WikiLink) (string, template.HTML, bool) {
 		return "", "", false

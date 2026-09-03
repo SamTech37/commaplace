@@ -53,7 +53,7 @@ func Render(md, currentUser string, resolve Resolver, embed EmbedResolver) (temp
 	md = stripComments(md)
 	exts := make([]goldmark.Extender, 0, len(staticExts)+2)
 	exts = append(exts, &wikiExt{currentUser: currentUser, resolve: resolve})
-	exts = append(exts, &embedExt{embed: embed})
+	exts = append(exts, &embedExt{currentUser: currentUser, embed: embed})
 	exts = append(exts, staticExts...)
 	g := goldmark.New(goldmark.WithExtensions(exts...))
 	var buf bytes.Buffer
@@ -853,7 +853,8 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 // ---------- markdown embed extension ![[...]] ----------
 
 type embedExt struct {
-	embed EmbedResolver
+	currentUser string
+	embed       EmbedResolver
 }
 
 func (e *embedExt) Extend(m goldmark.Markdown) {
@@ -863,7 +864,7 @@ func (e *embedExt) Extend(m goldmark.Markdown) {
 		util.Prioritized(&embedInlineParser{}, 100),
 	))
 	m.Renderer().AddOptions(renderer.WithNodeRenderers(
-		util.Prioritized(&embedRenderer{embed: e.embed}, 100),
+		util.Prioritized(&embedRenderer{currentUser: e.currentUser, embed: e.embed}, 100),
 	))
 }
 
@@ -912,7 +913,8 @@ func (p *embedInlineParser) Parse(parent ast.Node, block text.Reader, pc parser.
 }
 
 type embedRenderer struct {
-	embed EmbedResolver
+	currentUser string
+	embed       EmbedResolver
 }
 
 func (r *embedRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
@@ -937,10 +939,7 @@ func (r *embedRenderer) render(w util.BufWriter, source []byte, node ast.Node, e
 		w.WriteString(`]]</code></blockquote>`)
 		return ast.WalkSkipChildren, nil
 	}
-	url := n.Link.URL("")
-	if n.Link.User == "" {
-		url = "" // can't link without a user context; embed header is plain text
-	}
+	url := n.Link.URL(r.currentUser)
 	w.WriteString(`<blockquote class="embed">`)
 	w.WriteString(`<div class="embed-header">↳ `)
 	if url != "" {
