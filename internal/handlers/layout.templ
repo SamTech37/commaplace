@@ -90,20 +90,20 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 				@defaultMeta(c)
 			}
 			<link rel="icon" type="image/svg+xml" href="/assets/comma_mascot_logo.svg"/>
-			<link rel="stylesheet" href="/assets/fonts/tc/result.css"/>
-			<link rel="stylesheet" href="/assets/style.css"/>
+			<link rel="stylesheet" href={ templ.URL(assetURL("fonts/tc/result.css")) }/>
+			<link rel="stylesheet" href={ templ.URL(assetURL("style.css")) }/>
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"/>
-			<script src="/assets/htmx.min.js" defer></script>
-			<script src="/assets/copy.js" defer></script>
-			<script src="/assets/share.js" defer></script>
-			<script src="/assets/d3-force.min.js" defer></script>
-			<script src="/assets/graph.js" defer></script>
-			<script src="/assets/reveal.js" defer></script>
-			<script src="/assets/reader.js" defer></script>
-			<script src="/assets/rsvp.js" defer></script>
-			<script src="/assets/palette.js" defer></script>
-			<script src="/assets/opencc-toggle.js" defer></script>
-			<script src="/assets/prefs.js" defer></script>
+			<script src={ assetURL("htmx.min.js") } defer></script>
+			<script src={ assetURL("copy.js") } defer></script>
+			<script src={ assetURL("share.js") } defer></script>
+			<script src={ assetURL("d3-force.min.js") } defer></script>
+			<script src={ assetURL("graph.js") } defer></script>
+			<script src={ assetURL("reveal.js") } defer></script>
+			<script src={ assetURL("reader.js") } defer></script>
+			<script src={ assetURL("rsvp.js") } defer></script>
+			<script src={ assetURL("palette.js") } defer></script>
+			<script src={ assetURL("opencc-toggle.js") } defer></script>
+			<script src={ assetURL("prefs.js") } defer></script>
 			<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" defer></script>
 			<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
 			<script>

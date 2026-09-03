@@ -3,7 +3,7 @@ package handlers
 import "strconv"
 
 templ importBatchPage(items []batchItem) {
-	<script src="/assets/import-batch.js" defer></script>
+	<script src={ assetURL("import-batch.js") } defer></script>
 	<header class="batch-head">
 		<h1>批次匯入 <span class="batch-count">{ strconv.Itoa(len(items)) } 篇</span></h1>
 		<p class="batch-hint note-meta">沒按 <code>儲存</code> 的不會留下，重整就沒了。</p>

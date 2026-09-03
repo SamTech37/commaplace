@@ -18,9 +18,9 @@ type WriteProps struct {
 }
 
 templ writePage(p WriteProps) {
-	<link rel="stylesheet" href="/assets/easymde.min.css"/>
-	<script src="/assets/easymde.min.js" defer></script>
-	<script src="/assets/cmeditor.js" defer></script>
+	<link rel="stylesheet" href={ templ.URL(assetURL("easymde.min.css")) }/>
+	<script src={ assetURL("easymde.min.js") } defer></script>
+	<script src={ assetURL("cmeditor.js") } defer></script>
 	<div
 		class="editor-page"
 		data-note-id={ p.NoteID }
@@ -317,7 +317,7 @@ templ noteContent(p NoteViewProps) {
 		</div>
 		<h1 class="article-title">{ p.Note.Title }</h1>
 		<div class="article-body">@templ.Raw(string(p.BodyHTML))</div>
-		<script src="/assets/linkpreview.js" defer></script>
+		<script src={ assetURL("linkpreview.js") } defer></script>
 	</article>
 	if len(p.OutgoingSame) > 0 || len(p.OutgoingCross) > 0 {
 		<section class="connected-section" data-reveal data-reveal-delay="3">

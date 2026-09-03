@@ -123,16 +123,25 @@ func (s *Server) Routes() http.Handler {
 	return gzipMiddleware(mux)
 }
 
-// cacheControl tags responses with a conservative 1-day cache. Not "immutable"/
-// far-future: assets are go:embed'd and change on redeploy, so without
-// content-hashed URLs an immutable cache would serve stale JS/CSS. The stdlib
-// FileServer's ETag handles revalidation after the day expires.
+// cacheControl caches assets by how precisely the URL identifies its bytes.
+//
+// A URL carrying ?v=<hash> (see assetURL) names one exact build of one file, so
+// it can never serve different bytes later — that earns a year and "immutable".
+// A bare path can, since assets are go:embed'd under fixed names and change on
+// redeploy, so it keeps the conservative day; the stdlib FileServer's ETag
+// handles revalidation once that expires.
+//
+// The distinction matters: unversioned assets on a long cache are how a browser
+// ends up pairing today's HTML with last week's JS.
 // In debug mode, disable caching so air-rebuilt assets show up immediately.
 func cacheControl(next http.Handler, debug bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if debug {
+		switch {
+		case debug:
 			w.Header().Set("Cache-Control", "no-store")
-		} else {
+		case r.URL.Query().Get("v") != "":
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		default:
 			w.Header().Set("Cache-Control", "public, max-age=86400")
 		}
 		next.ServeHTTP(w, r)
