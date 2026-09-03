@@ -218,7 +218,7 @@ func writePage(p WriteProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</textarea></div></div><footer class=\"writer-status\" aria-label=\"文件資訊\"><div class=\"writer-status-counts\"><span id=\"word-count\">0 字</span> <span id=\"character-count\">0 個字元</span> <span id=\"cursor-position\">第 1 行，第 1 欄</span></div><span class=\"writer-format\">Markdown · 即時預覽 · 第一行是標題</span></footer><div id=\"ac-popup\" class=\"ac-popup\" hidden><ul></ul></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</textarea></div></div><footer class=\"writer-status\" aria-label=\"文件資訊\"><div class=\"writer-status-counts\"><span id=\"word-count\">0 字</span> <span id=\"character-count\">0 個字元</span> <span id=\"cursor-position\">第 1 行，第 1 欄</span></div></footer><div id=\"ac-popup\" class=\"ac-popup\" hidden><ul></ul></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -261,7 +261,7 @@ func noteStubContent(p NoteStubProps) templ.Component {
 		var templ_7745c5c3_Var12 templ.SafeURL
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + p.Handle))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 110, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 109, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -274,7 +274,7 @@ func noteStubContent(p NoteStubProps) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs("@" + p.Handle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 110, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 109, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -287,7 +287,7 @@ func noteStubContent(p NoteStubProps) templ.Component {
 		var templ_7745c5c3_Var14 templ.SafeURL
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + p.Handle))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 111, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 110, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -356,7 +356,7 @@ func noteMeta(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.ResolveAttributeValue(siteCfg.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 143, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 142, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var16)
 		if templ_7745c5c3_Err != nil {
@@ -369,7 +369,7 @@ func noteMeta(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Note.Title + " · @" + p.AuthorHandle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 144, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 143, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 		if templ_7745c5c3_Err != nil {
@@ -382,7 +382,7 @@ func noteMeta(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue("@" + p.AuthorHandle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 146, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 145, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 		if templ_7745c5c3_Err != nil {
@@ -395,7 +395,7 @@ func noteMeta(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.OGDescription)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 147, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 146, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -408,7 +408,7 @@ func noteMeta(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.OGImage)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 148, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 147, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 		if templ_7745c5c3_Err != nil {
@@ -421,7 +421,7 @@ func noteMeta(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.OGURL)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 149, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 148, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 		if templ_7745c5c3_Err != nil {
@@ -468,7 +468,7 @@ func connectedGrid(items []outlink) templ.Component {
 			var templ_7745c5c3_Var23 templ.SafeURL
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(bl.URL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 156, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 155, Col: 48}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -481,7 +481,7 @@ func connectedGrid(items []outlink) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(bl.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 157, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 156, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -494,7 +494,7 @@ func connectedGrid(items []outlink) templ.Component {
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color:" + avatarColor(bl.AuthorHandle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 159, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 158, Col: 98}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -507,7 +507,7 @@ func connectedGrid(items []outlink) templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(avatarInitial(bl.AuthorHandle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 159, Col: 133}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 158, Col: 133}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -520,7 +520,7 @@ func connectedGrid(items []outlink) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs("@" + bl.AuthorHandle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 160, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 159, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -572,7 +572,7 @@ func backlinksList(items []backlink, icon string) templ.Component {
 			var templ_7745c5c3_Var29 templ.SafeURL
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(bl.URL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 170, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 169, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -585,7 +585,7 @@ func backlinksList(items []backlink, icon string) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(icon)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 171, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 170, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -598,7 +598,7 @@ func backlinksList(items []backlink, icon string) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(bl.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 172, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 171, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -611,7 +611,7 @@ func backlinksList(items []backlink, icon string) templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color:" + avatarColor(bl.AuthorHandle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 174, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 173, Col: 98}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -624,7 +624,7 @@ func backlinksList(items []backlink, icon string) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(avatarInitial(bl.AuthorHandle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 174, Col: 133}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 173, Col: 133}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -637,7 +637,7 @@ func backlinksList(items []backlink, icon string) templ.Component {
 			var templ_7745c5c3_Var34 string
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs("@" + bl.AuthorHandle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 175, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 174, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {
@@ -690,7 +690,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var36 templ.SafeURL
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + p.AuthorHandle))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 187, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 186, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 		if templ_7745c5c3_Err != nil {
@@ -703,7 +703,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color:" + avatarColor(p.AuthorHandle))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 187, Col: 125}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 186, Col: 125}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -716,7 +716,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(avatarInitial(p.AuthorHandle))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 187, Col: 159}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 186, Col: 159}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -729,7 +729,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var39 templ.SafeURL
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + p.AuthorHandle))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 190, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 189, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -742,7 +742,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs("@" + p.AuthorHandle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 190, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 189, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -755,7 +755,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(p.AuthorStats.Followers))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 193, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 192, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -768,7 +768,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(p.AuthorStats.Notes))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 193, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 192, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -786,7 +786,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.AuthorID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 198, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 197, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
 			if templ_7745c5c3_Err != nil {
@@ -841,7 +841,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(p.UpdatedRel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 212, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 211, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {
@@ -854,7 +854,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(p.ReadingMinutes))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 212, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 211, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -873,7 +873,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var48 templ.SafeURL
 				templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/tag/" + t))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 215, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 214, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 				if templ_7745c5c3_Err != nil {
@@ -886,7 +886,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var49 string
 				templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(t)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 215, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 214, Col: 65}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 				if templ_7745c5c3_Err != nil {
@@ -910,7 +910,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var50 string
 			templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Note.ID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 222, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 221, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var50)
 			if templ_7745c5c3_Err != nil {
@@ -945,7 +945,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatBool(p.Liked))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 223, Col: 121}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 222, Col: 121}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var53)
 			if templ_7745c5c3_Err != nil {
@@ -973,7 +973,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var54 string
 			templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(p.LikeCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 229, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 228, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 			if templ_7745c5c3_Err != nil {
@@ -991,7 +991,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var55 string
 			templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(p.LikeCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 233, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 232, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 			if templ_7745c5c3_Err != nil {
@@ -1010,7 +1010,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Note.ID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 237, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 236, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var56)
 			if templ_7745c5c3_Err != nil {
@@ -1045,7 +1045,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var59 string
 			templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatBool(p.Saved))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 238, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 237, Col: 130}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var59)
 			if templ_7745c5c3_Err != nil {
@@ -1079,7 +1079,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var60 string
 			templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Note.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 248, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 247, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var60)
 			if templ_7745c5c3_Err != nil {
@@ -1102,7 +1102,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var61 templ.SafeURL
 			templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/write?reply-to=" + p.Note.ID.String()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 283, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 282, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 			if templ_7745c5c3_Err != nil {
@@ -1121,7 +1121,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var62 templ.SafeURL
 			templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/edit/" + p.Note.ID.String()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 287, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 286, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 			if templ_7745c5c3_Err != nil {
@@ -1134,7 +1134,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var63 templ.SafeURL
 			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/delete/" + p.Note.ID.String()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 288, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 287, Col: 98}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 			if templ_7745c5c3_Err != nil {
@@ -1152,7 +1152,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var64 templ.SafeURL
 		templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(string(obsidianURL(p.Note.Slug, p.Note.BodyMD))))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 293, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 292, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 		if templ_7745c5c3_Err != nil {
@@ -1165,7 +1165,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var65 templ.SafeURL
 		templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/api/notes/" + p.Note.ID.String() + "/raw"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 296, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 295, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 		if templ_7745c5c3_Err != nil {
@@ -1178,7 +1178,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var66 string
 		templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.ResolveAttributeValue("/api/notes/" + p.Note.ID.String() + "/raw")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 297, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 296, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var66)
 		if templ_7745c5c3_Err != nil {
@@ -1196,7 +1196,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var67 string
 			templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Note.ID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 309, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 308, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var67)
 			if templ_7745c5c3_Err != nil {
@@ -1214,7 +1214,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var68 string
 		templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(p.Note.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 318, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 317, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 		if templ_7745c5c3_Err != nil {
@@ -1235,7 +1235,7 @@ func noteContent(p NoteViewProps) templ.Component {
 		var templ_7745c5c3_Var69 string
 		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.ResolveAttributeValue(assetURL("linkpreview.js"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 320, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 319, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var69)
 		if templ_7745c5c3_Err != nil {
@@ -1253,7 +1253,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var70 string
 			templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingSame) + len(p.OutgoingCross)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 326, Col: 90}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 325, Col: 90}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 			if templ_7745c5c3_Err != nil {
@@ -1271,7 +1271,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var71 string
 				templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(p.AuthorHandle)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 330, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 329, Col: 50}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 				if templ_7745c5c3_Err != nil {
@@ -1284,7 +1284,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var72 string
 				templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingSame)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 330, Col: 107}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 329, Col: 107}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 				if templ_7745c5c3_Err != nil {
@@ -1307,7 +1307,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var73 string
 				templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingCross)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 336, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 335, Col: 73}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 				if templ_7745c5c3_Err != nil {
@@ -1335,7 +1335,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var74 string
 			templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksSame) + len(p.BacklinksCross)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 346, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 345, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 			if templ_7745c5c3_Err != nil {
@@ -1353,7 +1353,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var75 string
 				templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(p.AuthorHandle)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 350, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 349, Col: 50}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 				if templ_7745c5c3_Err != nil {
@@ -1366,7 +1366,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var76 string
 				templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksSame)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 350, Col: 115}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 349, Col: 115}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 				if templ_7745c5c3_Err != nil {
@@ -1389,7 +1389,7 @@ func noteContent(p NoteViewProps) templ.Component {
 				var templ_7745c5c3_Var77 string
 				templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksCross)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 356, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 355, Col: 65}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 				if templ_7745c5c3_Err != nil {
@@ -1417,7 +1417,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.ResolveAttributeValue("/api/graph/local?note=" + p.Note.ID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 365, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 364, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var78)
 			if templ_7745c5c3_Err != nil {

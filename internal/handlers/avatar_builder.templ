@@ -26,10 +26,7 @@ templ avatarPickerStrip(cat string, ids []string) {
 
 templ avatarBuilderPage(choice AvatarChoice) {
 	<div class="avatar-builder" data-reveal>
-		<h1 style="margin-bottom:0.25em">選擇你的大頭貼</h1>
-		<p class="note-meta" style="margin-bottom:1.5em">
-			從四個部位各選一個。
-		</p>
+		<h1 style="margin-bottom:1.5em">選擇你的大頭貼</h1>
 		<form method="POST" action="/me/avatar" id="avatar-form" class="avatar-builder-grid">
 			<div class="avatar-preview-col">
 				<div class="avatar-preview" aria-label="預覽">

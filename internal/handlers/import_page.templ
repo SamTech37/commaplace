@@ -6,11 +6,6 @@ type ImportPageProps struct {
 
 templ importPage(props ImportPageProps) {
 	<h1>匯入筆記</h1>
-	<p class="note-meta">
-		上傳 <code>.md</code> 檔。一篇直接存進 vault，2–10 篇會打開批次編輯器讓你逐篇審稿。
-		標題抓自 frontmatter <code>title:</code>、第一個 <code>#</code> 標題，或檔名。
-		標籤抓自 frontmatter <code>tags:</code> 與內文 <code>#tag</code>。
-	</p>
 	if props.Error != "" {
 		<p class="error">{ props.Error }</p>
 	}

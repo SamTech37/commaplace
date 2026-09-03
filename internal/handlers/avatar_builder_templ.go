@@ -146,14 +146,14 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"avatar-builder\" data-reveal><h1 style=\"margin-bottom:0.25em\">選擇你的大頭貼</h1><p class=\"note-meta\" style=\"margin-bottom:1.5em\">從四個部位各選一個。</p><form method=\"POST\" action=\"/me/avatar\" id=\"avatar-form\" class=\"avatar-builder-grid\"><div class=\"avatar-preview-col\"><div class=\"avatar-preview\" aria-label=\"預覽\"><img id=\"avatar-face\" alt=\"\" src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"avatar-builder\" data-reveal><h1 style=\"margin-bottom:1.5em\">選擇你的大頭貼</h1><form method=\"POST\" action=\"/me/avatar\" id=\"avatar-form\" class=\"avatar-builder-grid\"><div class=\"avatar-preview-col\"><div class=\"avatar-preview\" aria-label=\"預覽\"><img id=\"avatar-face\" alt=\"\" src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue("/assets/avatar/face/" + choice.Face + ".png")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 36, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 33, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
@@ -166,7 +166,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue("/assets/avatar/eyes/" + choice.Eyes + ".png")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 37, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 34, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -179,7 +179,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue("/assets/avatar/mouth/" + choice.Mouth + ".png")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 38, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 35, Col: 88}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -192,7 +192,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("/assets/avatar/acc/" + choice.Acc + ".png")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 39, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 36, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 		if templ_7745c5c3_Err != nil {
@@ -205,7 +205,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(choice.Face)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 44, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 41, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -218,7 +218,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(choice.Eyes)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 45, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 42, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -231,7 +231,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(choice.Mouth)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 46, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 43, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
@@ -244,7 +244,7 @@ func avatarBuilderPage(choice AvatarChoice) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(choice.Acc)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 47, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/avatar_builder.templ`, Line: 44, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 		if templ_7745c5c3_Err != nil {

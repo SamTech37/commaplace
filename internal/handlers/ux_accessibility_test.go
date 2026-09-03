@@ -55,7 +55,6 @@ func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 		`id="word-count"`,
 		`id="character-count"`,
 		`id="cursor-position"`,
-		`Markdown · 即時預覽 · 第一行是標題`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("editor missing %s", want)

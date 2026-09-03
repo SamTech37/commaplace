@@ -3843,10 +3843,6 @@ button:disabled {
   gap: 0.85rem;
   min-width: 0;
 }
-.writer-format {
-  white-space: nowrap;
-}
-
 @media (max-width: 800px) {
   body {
     padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom));
@@ -4032,8 +4028,7 @@ button:disabled {
     flex-wrap: wrap;
     gap: 0.25rem 0.75rem;
   }
-  #cursor-position,
-  .writer-format {
+  #cursor-position {
     display: none;
   }
 }
