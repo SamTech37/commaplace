@@ -161,7 +161,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><script>\n      (function () {\n        var html = document.documentElement;\n        if (html.getAttribute(\"data-theme-server\")) return;\n        var pref = null;\n        try {\n          pref = localStorage.getItem(\"theme\");\n        } catch (e) {}\n        var resolved = pref || \"auto\";\n        if (resolved === \"auto\") {\n          resolved = matchMedia(\"(prefers-color-scheme: light)\").matches\n            ? \"light\"\n            : \"dark\";\n        }\n        html.setAttribute(\"data-theme\", resolved);\n      })();\n      (function () {\n        var v = null;\n        try {\n          v = localStorage.getItem(\"motion\");\n        } catch (e) {}\n        if (v === \"reduced\")\n          document.documentElement.setAttribute(\"data-motion\", \"reduced\");\n      })();\n      (function () {\n        try {\n          var s = localStorage.getItem(\"reader-size\");\n          var f = localStorage.getItem(\"reader-font\");\n          if (s && s !== \"m\")\n            document.documentElement.setAttribute(\"data-reader-size\", s);\n          if (f && f !== \"serif\")\n            document.documentElement.setAttribute(\"data-reader-font\", f);\n        } catch (e) {}\n      })();\n    </script><title>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><script>\n      (function () {\n        var html = document.documentElement;\n        if (html.getAttribute(\"data-theme-server\")) return;\n        var pref = null;\n        try {\n          pref = localStorage.getItem(\"theme\");\n        } catch (e) {}\n        var resolved = pref || \"auto\";\n        if (resolved === \"auto\") {\n          resolved = matchMedia(\"(prefers-color-scheme: light)\").matches\n            ? \"light\"\n            : \"dark\";\n        }\n        html.setAttribute(\"data-theme\", resolved);\n      })();\n      (function () {\n        var v = null;\n        try {\n          v = localStorage.getItem(\"motion\");\n        } catch (e) {}\n        if (v === \"reduced\" || v === \"full\")\n          document.documentElement.setAttribute(\"data-motion\", v);\n      })();\n      (function () {\n        try {\n          var s = localStorage.getItem(\"reader-size\");\n          var f = localStorage.getItem(\"reader-font\");\n          if (s && s !== \"m\")\n            document.documentElement.setAttribute(\"data-reader-size\", s);\n          if (f && f !== \"serif\")\n            document.documentElement.setAttribute(\"data-reader-font\", f);\n        } catch (e) {}\n      })();\n    </script><title>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -189,7 +189,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/assets/comma_mascot_logo.svg\"><link rel=\"stylesheet\" href=\"/assets/fonts/tc/result.css\"><link rel=\"stylesheet\" href=\"/assets/style.css\"><link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css\" crossorigin=\"anonymous\"><script src=\"/assets/htmx.min.js\" defer></script><script src=\"/assets/copy.js\" defer></script><script src=\"/assets/share.js\" defer></script><script src=\"/assets/d3-force.min.js\" defer></script><script src=\"/assets/graph.js\" defer></script><script src=\"/assets/reveal.js\" defer></script><script src=\"/assets/reader.js\" defer></script><script src=\"/assets/rsvp.js\" defer></script><script src=\"/assets/palette.js\" defer></script><script src=\"/assets/opencc-toggle.js\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js\" crossorigin=\"anonymous\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js\" defer></script><script>\n      document.addEventListener(\"DOMContentLoaded\", function () {\n        if (window.katex) {\n          document.querySelectorAll(\".math-inline\").forEach(function (el) {\n            var src = el.textContent.replace(/^\\$|\\$$/g, \"\");\n            try {\n              el.innerHTML = katex.renderToString(src, {\n                displayMode: false,\n                throwOnError: false,\n              });\n            } catch (e) {}\n          });\n          document.querySelectorAll(\".math-block\").forEach(function (el) {\n            var src = el.textContent;\n            try {\n              el.innerHTML = katex.renderToString(src, {\n                displayMode: true,\n                throwOnError: false,\n              });\n            } catch (e) {}\n          });\n        }\n        if (window.mermaid) {\n          var mt =\n            document.documentElement.getAttribute(\"data-theme\") === \"light\"\n              ? \"default\"\n              : \"dark\";\n          mermaid.initialize({ startOnLoad: true, theme: mt });\n        }\n        // Theme toggle (icon button: flips light <-> dark)\n        var tg = document.getElementById(\"theme-toggle\");\n        var mobileTg = document.getElementById(\"mobile-theme-toggle\");\n        if (tg) {\n          var syncIcon = function () {\n            var t =\n              document.documentElement.getAttribute(\"data-theme\") === \"light\"\n                ? \"light\"\n                : \"dark\";\n            // Same convention as 動 / 原: the glyph names the current state.\n            tg.textContent = t === \"light\" ? \"明\" : \"暗\";\n            tg.setAttribute(\n              \"aria-label\",\n              t === \"light\" ? \"切換到夜間\" : \"切換到日間\",\n            );\n            tg.setAttribute(\n              \"title\",\n              t === \"light\" ? \"切換到夜間\" : \"切換到日間\",\n            );\n            if (mobileTg) {\n              var mobileLabel =\n                t === \"light\" ? \"切換到夜間\" : \"切換到日間\";\n              mobileTg.textContent = mobileLabel;\n              mobileTg.setAttribute(\"aria-label\", mobileLabel);\n            }\n          };\n          syncIcon();\n          tg.addEventListener(\"click\", function () {\n            var cur =\n              document.documentElement.getAttribute(\"data-theme\") === \"light\"\n                ? \"light\"\n                : \"dark\";\n            var next = cur === \"light\" ? \"dark\" : \"light\";\n            document.documentElement.setAttribute(\"data-theme\", next);\n            syncIcon();\n            try {\n              localStorage.setItem(\"theme\", next);\n            } catch (e) {}\n            try {\n              fetch(\"/settings/theme\", {\n                method: \"POST\",\n                headers: {\n                  \"Content-Type\": \"application/x-www-form-urlencoded\",\n                },\n                body: \"theme=\" + encodeURIComponent(next),\n                credentials: \"same-origin\",\n              });\n            } catch (e) {}\n          });\n          if (mobileTg) {\n            mobileTg.addEventListener(\"click\", function () {\n              tg.click();\n            });\n          }\n        }\n        // Motion toggle (icon button: flips reduced <-> normal, localStorage only)\n        var mg = document.getElementById(\"motion-toggle\");\n        var mobileMg = document.getElementById(\"mobile-motion-toggle\");\n        if (mg) {\n          var syncMotion = function () {\n            var on =\n              document.documentElement.getAttribute(\"data-motion\") ===\n              \"reduced\";\n            mg.setAttribute(\"aria-pressed\", on ? \"true\" : \"false\");\n            mg.setAttribute(\"aria-label\", on ? \"恢復動畫\" : \"減少動畫\");\n            mg.setAttribute(\"title\", on ? \"恢復動畫\" : \"減少動畫\");\n            if (mobileMg) {\n              mobileMg.textContent = on ? \"恢復動畫\" : \"減少動畫\";\n              mobileMg.setAttribute(\"aria-pressed\", on ? \"true\" : \"false\");\n            }\n          };\n          syncMotion();\n          mg.addEventListener(\"click\", function () {\n            var html = document.documentElement;\n            var reduced = html.getAttribute(\"data-motion\") !== \"reduced\";\n            if (reduced) html.setAttribute(\"data-motion\", \"reduced\");\n            else html.removeAttribute(\"data-motion\");\n            try {\n              localStorage.setItem(\"motion\", reduced ? \"reduced\" : \"normal\");\n            } catch (e) {}\n            syncMotion();\n          });\n          if (mobileMg) {\n            mobileMg.addEventListener(\"click\", function () {\n              mg.click();\n            });\n          }\n        }\n      });\n    </script></head><body><a class=\"skip-link\" href=\"#main-content\">跳到主要內容</a>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/assets/comma_mascot_logo.svg\"><link rel=\"stylesheet\" href=\"/assets/fonts/tc/result.css\"><link rel=\"stylesheet\" href=\"/assets/style.css\"><link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css\" crossorigin=\"anonymous\"><script src=\"/assets/htmx.min.js\" defer></script><script src=\"/assets/copy.js\" defer></script><script src=\"/assets/share.js\" defer></script><script src=\"/assets/d3-force.min.js\" defer></script><script src=\"/assets/graph.js\" defer></script><script src=\"/assets/reveal.js\" defer></script><script src=\"/assets/reader.js\" defer></script><script src=\"/assets/rsvp.js\" defer></script><script src=\"/assets/palette.js\" defer></script><script src=\"/assets/opencc-toggle.js\" defer></script><script src=\"/assets/prefs.js\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js\" crossorigin=\"anonymous\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js\" defer></script><script>\n      document.addEventListener(\"DOMContentLoaded\", function () {\n        if (window.katex) {\n          document.querySelectorAll(\".math-inline\").forEach(function (el) {\n            var src = el.textContent.replace(/^\\$|\\$$/g, \"\");\n            try {\n              el.innerHTML = katex.renderToString(src, {\n                displayMode: false,\n                throwOnError: false,\n              });\n            } catch (e) {}\n          });\n          document.querySelectorAll(\".math-block\").forEach(function (el) {\n            var src = el.textContent;\n            try {\n              el.innerHTML = katex.renderToString(src, {\n                displayMode: true,\n                throwOnError: false,\n              });\n            } catch (e) {}\n          });\n        }\n        if (window.mermaid) {\n          var mt =\n            document.documentElement.getAttribute(\"data-theme\") === \"light\"\n              ? \"default\"\n              : \"dark\";\n          mermaid.initialize({ startOnLoad: true, theme: mt });\n        }\n      });\n    </script></head><body><a class=\"skip-link\" href=\"#main-content\">跳到主要內容</a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -218,7 +218,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(c.Site.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 234, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 147, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -231,7 +231,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.SearchQuery)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 241, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 154, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -249,7 +249,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Write)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 269, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 182, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -262,7 +262,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Feed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 270, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 183, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -275,7 +275,7 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Graph)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 271, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 184, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -288,266 +288,274 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Calendar)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 272, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 185, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a><form method=\"POST\" action=\"/logout\" class=\"inline-form\"><button type=\"submit\" class=\"link-btn\" title=\"登出目前帳號\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<a href=\"/feed\" title=\"看大家的最新筆記\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var17 string
-			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Logout)
+			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Feed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 276, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 188, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</button></form>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<a href=\"/feed\" title=\"看大家的最新筆記\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</a> <a href=\"/graph\" title=\"筆記之間的關係圖譜\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var18 string
-			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Feed)
+			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Graph)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 280, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 189, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</a> <a href=\"/graph\" title=\"筆記之間的關係圖譜\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if c.User != nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<details class=\"action-menu user-menu\"><summary class=\"avatar\" style=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var19 string
-			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Graph)
+			templ_7745c5c3_Var19, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color:" + avatarColor(c.User.Handle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 281, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 197, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" aria-haspopup=\"menu\" aria-expanded=\"false\" aria-label=\"帳號與偏好設定\" title=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div><button type=\"button\" id=\"theme-toggle\" class=\"icon-btn topbar-preference\" aria-label=\"切換主題\" title=\"切換深色／淺色主題\"></button> <button type=\"button\" id=\"motion-toggle\" class=\"icon-btn topbar-preference\" aria-pressed=\"false\" aria-label=\"減少動畫\" title=\"減少動畫\">動</button> <button type=\"button\" id=\"script-toggle\" class=\"icon-btn topbar-preference\" aria-label=\"切換為简体显示\" title=\"切換為简体显示\">原</button> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if c.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<a class=\"avatar\" href=\"")
+			var templ_7745c5c3_Var20 string
+			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue("@" + c.User.Handle)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 201, Col: 36}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var20 templ.SafeURL
-			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + c.User.Handle))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 314, Col: 45}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" style=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\"><img class=\"avatar-img\" src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var21 string
-			templ_7745c5c3_Var21, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color:" + avatarColor(c.User.Handle))
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(avatarURL(c.User.Handle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 315, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 203, Col: 63}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" title=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" alt=\"\" onerror=\"this.remove()\"> <span class=\"avatar-initial\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var22 string
-			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue("@" + c.User.Handle)
+			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(avatarInitial(c.User.Handle))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 316, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 204, Col: 68}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\"><img class=\"avatar-img\" src=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var23 string
-			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(avatarURL(c.User.Handle))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 320, Col: 39}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</span></summary><div class=\"action-menu-list prefs-panel\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\" alt=\"\" onerror=\"this.remove()\"> <span class=\"avatar-initial\">")
+			templ_7745c5c3_Err = prefRows().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<div class=\"action-menu-sep\"></div><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var23 templ.SafeURL
+			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + c.User.Handle))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 209, Col: 49}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\" title=\"你的個人頁\">個人頁</a><form method=\"POST\" action=\"/logout\" class=\"inline-form\"><button type=\"submit\" class=\"action-menu-danger\" title=\"登出目前帳號\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var24 string
-			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(avatarInitial(c.User.Handle))
+			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Logout)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 324, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 212, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</span></a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</button></form></div></details> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<details class=\"action-menu prefs-menu\"><summary class=\"icon-btn\" aria-haspopup=\"menu\" aria-expanded=\"false\" aria-label=\"偏好設定\" title=\"偏好設定\">設</summary><div class=\"action-menu-list prefs-panel\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = prefRows().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</div></details> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<details class=\"action-menu mobile-menu\"><summary aria-label=\"選單\" title=\"更多\">≡</summary><div class=\"mobile-menu-list action-menu-list\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<details class=\"action-menu mobile-menu\"><summary aria-label=\"選單\" title=\"更多\">≡</summary><div class=\"mobile-menu-list action-menu-list\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if c.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<a href=\"/write\" title=\"寫一篇新筆記\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<a href=\"/write\" title=\"寫一篇新筆記\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Write)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 331, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 229, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</a> <a href=\"/feed\" title=\"大家的最新筆記\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</a> <a href=\"/feed\" title=\"大家的最新筆記\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Feed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 332, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 230, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</a> <a href=\"/graph\" title=\"筆記之間的連結圖\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</a> <a href=\"/graph\" title=\"筆記之間的連結圖\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Graph)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 333, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 231, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</a> <a href=\"/me/calendar\" title=\"用月曆看自己的筆記\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</a> <a href=\"/me/calendar\" title=\"用月曆看自己的筆記\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var28 string
 			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Calendar)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 334, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 232, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a><div class=\"mobile-menu-sep\"></div><form method=\"POST\" action=\"/logout\" class=\"inline-form\"><button type=\"submit\" class=\"link-btn\" title=\"登出目前帳號\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<a href=\"/feed\" title=\"大家的最新筆記\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var29 string
-			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Logout)
+			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Feed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 339, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 235, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</button></form>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<a href=\"/feed\" title=\"大家的最新筆記\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</a> <a href=\"/graph\" title=\"筆記之間的連結圖\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var30 string
-			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Feed)
+			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Graph)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 343, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 236, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</a> <a href=\"/graph\" title=\"筆記之間的連結圖\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</div></details> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if c.User == nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<a href=\"/login\" class=\"nav-login\" title=\"登入或註冊\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var31 string
-			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Graph)
+			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Login)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 344, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 242, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</a> <a href=\"/random\" title=\"隨機跳到一篇筆記\">漫遊</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"mobile-menu-sep\"></div><div class=\"mobile-preferences\" role=\"group\" aria-label=\"顯示設定\"><button type=\"button\" id=\"mobile-theme-toggle\">切換外觀</button> <button type=\"button\" id=\"mobile-motion-toggle\" aria-pressed=\"false\">減少動畫</button> <button type=\"button\" id=\"mobile-script-toggle\">切換繁簡</button></div></div></details> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if c.User == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<a href=\"/login\" class=\"nav-login\" title=\"登入或註冊\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var32 string
-			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(c.Nav.Login)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 356, Col: 79}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</a>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</nav></header><main id=\"main-content\" class=\"content\" tabindex=\"-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</nav></header><main id=\"main-content\" class=\"content\" tabindex=\"-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -555,63 +563,95 @@ func Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compone
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</main><footer class=\"site-footer\"><span>© ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "</main><footer class=\"site-footer\"><span>© ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var33 string
-		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(c.Site.Title)
+		var templ_7745c5c3_Var32 string
+		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(c.Site.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 364, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 250, Col: 28}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</span> <span class=\"crumb-sep\">·</span> <a href=\"/terms\">服務條款</a> <span class=\"crumb-sep\">·</span> <a href=\"/privacy\">隱私政策</a></footer><nav class=\"mobile-dock\" aria-label=\"手機主要導覽\"><a href=\"/feed\"><span aria-hidden=\"true\">⌂</span><span>動態</span></a> ")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if c.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<a href=\"/write\"><span aria-hidden=\"true\">＋</span><span>寫作</span></a> ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<a href=\"/graph\"><span aria-hidden=\"true\">⌘</span><span>圖譜</span></a> ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<button type=\"button\" id=\"mobile-palette-btn\"><span aria-hidden=\"true\">⌕</span><span>搜尋</span></button> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</span> <span class=\"crumb-sep\">·</span> <a href=\"/terms\">服務條款</a> <span class=\"crumb-sep\">·</span> <a href=\"/privacy\">隱私政策</a></footer><nav class=\"mobile-dock\" aria-label=\"手機主要導覽\"><a href=\"/feed\"><span aria-hidden=\"true\">⌂</span><span>動態</span></a> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if c.User != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<a href=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var34 templ.SafeURL
-			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + c.User.Handle))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 379, Col: 46}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\"><span aria-hidden=\"true\">◉</span><span>我的</span></a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<a href=\"/write\"><span aria-hidden=\"true\">＋</span><span>寫作</span></a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "<a href=\"/login\"><span aria-hidden=\"true\">→</span><span>登入</span></a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<a href=\"/graph\"><span aria-hidden=\"true\">⌘</span><span>圖譜</span></a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</nav></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<button type=\"button\" id=\"mobile-palette-btn\"><span aria-hidden=\"true\">⌕</span><span>搜尋</span></button> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if c.User != nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "<a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var33 templ.SafeURL
+			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/" + c.User.Handle))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/layout.templ`, Line: 265, Col: 46}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "\"><span aria-hidden=\"true\">◉</span><span>我的</span></a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<a href=\"/login\"><span aria-hidden=\"true\">→</span><span>登入</span></a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</nav></div></body></html>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// prefRows renders the three display preferences shared by the account menu
+// (signed in) and the settings menu (signed out). The segmented controls reuse
+// the reader-* styles so they match the note reading-options popover.
+func prefRows() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var34 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var34 == nil {
+			templ_7745c5c3_Var34 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div class=\"reader-row\"><span class=\"reader-label\">外觀</span><div class=\"reader-seg\" role=\"group\" aria-label=\"外觀\"><button type=\"button\" class=\"reader-opt\" data-pref-set=\"theme\" data-val=\"auto\" aria-pressed=\"false\" title=\"跟隨系統設定\">系統</button> <button type=\"button\" class=\"reader-opt\" data-pref-set=\"theme\" data-val=\"light\" aria-pressed=\"false\" title=\"一律淺色\">淺色</button> <button type=\"button\" class=\"reader-opt\" data-pref-set=\"theme\" data-val=\"dark\" aria-pressed=\"false\" title=\"一律深色\">深色</button></div></div><div class=\"reader-row\"><span class=\"reader-label\">動畫</span><div class=\"reader-seg\" role=\"group\" aria-label=\"動畫\"><button type=\"button\" class=\"reader-opt\" data-pref-set=\"motion\" data-val=\"system\" aria-pressed=\"false\" title=\"跟隨系統的動畫偏好\">系統</button> <button type=\"button\" class=\"reader-opt\" data-pref-set=\"motion\" data-val=\"full\" aria-pressed=\"false\" title=\"一律播放完整動畫\">完整</button> <button type=\"button\" class=\"reader-opt\" data-pref-set=\"motion\" data-val=\"reduced\" aria-pressed=\"false\" title=\"減少動畫\">減量</button></div></div><div class=\"reader-row\"><span class=\"reader-label\">文字</span><div class=\"reader-seg\" role=\"group\" aria-label=\"文字\"><button type=\"button\" class=\"reader-opt\" data-pref-set=\"script\" data-val=\"orig\" aria-pressed=\"false\" title=\"顯示作者原本的字體\">原</button> <button type=\"button\" class=\"reader-opt\" data-pref-set=\"script\" data-val=\"cn\" aria-pressed=\"false\" title=\"轉為简体显示\">简</button> <button type=\"button\" class=\"reader-opt\" data-pref-set=\"script\" data-val=\"tw\" aria-pressed=\"false\" title=\"轉為繁體顯示\">繁</button></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

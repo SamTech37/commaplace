@@ -23,9 +23,14 @@ func TestLayoutExposesReachableNavigation(t *testing.T) {
 		`aria-label="主要導覽"`,
 		`class="mobile-dock"`,
 		`id="mobile-palette-btn"`,
-		`id="mobile-theme-toggle"`,
-		`id="mobile-motion-toggle"`,
-		`id="mobile-script-toggle"`,
+		// The display preferences used to be mirrored here as three buttons,
+		// because the topbar hid them below 800px. They now live in the account
+		// menu (or the 設 menu when signed out), which renders at every width,
+		// so the mirrors were removed rather than left as a second path to the
+		// same settings.
+		`data-pref-set="theme"`,
+		`data-pref-set="motion"`,
+		`data-pref-set="script"`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("layout missing %s", want)

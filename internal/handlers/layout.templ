@@ -69,8 +69,8 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
         try {
           v = localStorage.getItem("motion");
         } catch (e) {}
-        if (v === "reduced")
-          document.documentElement.setAttribute("data-motion", "reduced");
+        if (v === "reduced" || v === "full")
+          document.documentElement.setAttribute("data-motion", v);
       })();
       (function () {
         try {
@@ -103,6 +103,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 			<script src="/assets/rsvp.js" defer></script>
 			<script src="/assets/palette.js" defer></script>
 			<script src="/assets/opencc-toggle.js" defer></script>
+			<script src="/assets/prefs.js" defer></script>
 			<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" defer></script>
 			<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
 			<script>
@@ -133,94 +134,6 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
               ? "default"
               : "dark";
           mermaid.initialize({ startOnLoad: true, theme: mt });
-        }
-        // Theme toggle (icon button: flips light <-> dark)
-        var tg = document.getElementById("theme-toggle");
-        var mobileTg = document.getElementById("mobile-theme-toggle");
-        if (tg) {
-          var syncIcon = function () {
-            var t =
-              document.documentElement.getAttribute("data-theme") === "light"
-                ? "light"
-                : "dark";
-            // Same convention as 動 / 原: the glyph names the current state.
-            tg.textContent = t === "light" ? "明" : "暗";
-            tg.setAttribute(
-              "aria-label",
-              t === "light" ? "切換到夜間" : "切換到日間",
-            );
-            tg.setAttribute(
-              "title",
-              t === "light" ? "切換到夜間" : "切換到日間",
-            );
-            if (mobileTg) {
-              var mobileLabel =
-                t === "light" ? "切換到夜間" : "切換到日間";
-              mobileTg.textContent = mobileLabel;
-              mobileTg.setAttribute("aria-label", mobileLabel);
-            }
-          };
-          syncIcon();
-          tg.addEventListener("click", function () {
-            var cur =
-              document.documentElement.getAttribute("data-theme") === "light"
-                ? "light"
-                : "dark";
-            var next = cur === "light" ? "dark" : "light";
-            document.documentElement.setAttribute("data-theme", next);
-            syncIcon();
-            try {
-              localStorage.setItem("theme", next);
-            } catch (e) {}
-            try {
-              fetch("/settings/theme", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: "theme=" + encodeURIComponent(next),
-                credentials: "same-origin",
-              });
-            } catch (e) {}
-          });
-          if (mobileTg) {
-            mobileTg.addEventListener("click", function () {
-              tg.click();
-            });
-          }
-        }
-        // Motion toggle (icon button: flips reduced <-> normal, localStorage only)
-        var mg = document.getElementById("motion-toggle");
-        var mobileMg = document.getElementById("mobile-motion-toggle");
-        if (mg) {
-          var syncMotion = function () {
-            var on =
-              document.documentElement.getAttribute("data-motion") ===
-              "reduced";
-            mg.setAttribute("aria-pressed", on ? "true" : "false");
-            mg.setAttribute("aria-label", on ? "恢復動畫" : "減少動畫");
-            mg.setAttribute("title", on ? "恢復動畫" : "減少動畫");
-            if (mobileMg) {
-              mobileMg.textContent = on ? "恢復動畫" : "減少動畫";
-              mobileMg.setAttribute("aria-pressed", on ? "true" : "false");
-            }
-          };
-          syncMotion();
-          mg.addEventListener("click", function () {
-            var html = document.documentElement;
-            var reduced = html.getAttribute("data-motion") !== "reduced";
-            if (reduced) html.setAttribute("data-motion", "reduced");
-            else html.removeAttribute("data-motion");
-            try {
-              localStorage.setItem("motion", reduced ? "reduced" : "normal");
-            } catch (e) {}
-            syncMotion();
-          });
-          if (mobileMg) {
-            mobileMg.addEventListener("click", function () {
-              mg.click();
-            });
-          }
         }
       });
     </script>
@@ -271,58 +184,43 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 								<a href="/graph" title="筆記之間的關係圖譜">{ c.Nav.Graph }</a>
 								<a href="/me/calendar" title="用月曆看自己的筆記">{ c.Nav.Calendar }</a>
 								<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
-								<form method="POST" action="/logout" class="inline-form">
-									<button type="submit" class="link-btn" title="登出目前帳號">
-										{ c.Nav.Logout }
-									</button>
-								</form>
 							} else {
 								<a href="/feed" title="看大家的最新筆記">{ c.Nav.Feed }</a>
 								<a href="/graph" title="筆記之間的關係圖譜">{ c.Nav.Graph }</a>
 								<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
 							}
 						</div>
-						<button
-							type="button"
-							id="theme-toggle"
-							class="icon-btn topbar-preference"
-							aria-label="切換主題"
-							title="切換深色／淺色主題"
-						></button>
-						<button
-							type="button"
-							id="motion-toggle"
-							class="icon-btn topbar-preference"
-							aria-pressed="false"
-							aria-label="減少動畫"
-							title="減少動畫"
-						>
-							動
-						</button>
-						<button
-							type="button"
-							id="script-toggle"
-							class="icon-btn topbar-preference"
-							aria-label="切換為简体显示"
-							title="切換為简体显示"
-						>
-							原
-						</button>
 						if c.User != nil {
-							<a
-								class="avatar"
-								href={ templ.URL("/" + c.User.Handle) }
-								style={ "background-color:" + avatarColor(c.User.Handle) }
-								title={ "@" + c.User.Handle }
-							>
-								<img
-									class="avatar-img"
-									src={ avatarURL(c.User.Handle) }
-									alt=""
-									onerror="this.remove()"
-								/>
-								<span class="avatar-initial">{ avatarInitial(c.User.Handle) }</span>
-							</a>
+							<details class="action-menu user-menu">
+								<summary
+									class="avatar"
+									style={ "background-color:" + avatarColor(c.User.Handle) }
+									aria-haspopup="menu"
+									aria-expanded="false"
+									aria-label="帳號與偏好設定"
+									title={ "@" + c.User.Handle }
+								>
+									<img class="avatar-img" src={ avatarURL(c.User.Handle) } alt="" onerror="this.remove()"/>
+									<span class="avatar-initial">{ avatarInitial(c.User.Handle) }</span>
+								</summary>
+								<div class="action-menu-list prefs-panel">
+									@prefRows()
+									<div class="action-menu-sep"></div>
+									<a href={ templ.URL("/" + c.User.Handle) } title="你的個人頁">個人頁</a>
+									<form method="POST" action="/logout" class="inline-form">
+										<button type="submit" class="action-menu-danger" title="登出目前帳號">
+											{ c.Nav.Logout }
+										</button>
+									</form>
+								</div>
+							</details>
+						} else {
+							<details class="action-menu prefs-menu">
+								<summary class="icon-btn" aria-haspopup="menu" aria-expanded="false" aria-label="偏好設定" title="偏好設定">設</summary>
+								<div class="action-menu-list prefs-panel">
+									@prefRows()
+								</div>
+							</details>
 						}
 						<details class="action-menu mobile-menu">
 							<summary aria-label="選單" title="更多">≡</summary>
@@ -333,23 +231,11 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 									<a href="/graph" title="筆記之間的連結圖">{ c.Nav.Graph }</a>
 									<a href="/me/calendar" title="用月曆看自己的筆記">{ c.Nav.Calendar }</a>
 									<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
-									<div class="mobile-menu-sep"></div>
-									<form method="POST" action="/logout" class="inline-form">
-										<button type="submit" class="link-btn" title="登出目前帳號">
-											{ c.Nav.Logout }
-										</button>
-									</form>
 								} else {
 									<a href="/feed" title="大家的最新筆記">{ c.Nav.Feed }</a>
 									<a href="/graph" title="筆記之間的連結圖">{ c.Nav.Graph }</a>
 									<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
 								}
-								<div class="mobile-menu-sep"></div>
-								<div class="mobile-preferences" role="group" aria-label="顯示設定">
-									<button type="button" id="mobile-theme-toggle">切換外觀</button>
-									<button type="button" id="mobile-motion-toggle" aria-pressed="false">減少動畫</button>
-									<button type="button" id="mobile-script-toggle">切換繁簡</button>
-								</div>
 							</div>
 						</details>
 						if c.User == nil {
@@ -384,4 +270,34 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 			</div>
 		</body>
 	</html>
+}
+
+// prefRows renders the three display preferences shared by the account menu
+// (signed in) and the settings menu (signed out). The segmented controls reuse
+// the reader-* styles so they match the note reading-options popover.
+templ prefRows() {
+	<div class="reader-row">
+		<span class="reader-label">外觀</span>
+		<div class="reader-seg" role="group" aria-label="外觀">
+			<button type="button" class="reader-opt" data-pref-set="theme" data-val="auto" aria-pressed="false" title="跟隨系統設定">系統</button>
+			<button type="button" class="reader-opt" data-pref-set="theme" data-val="light" aria-pressed="false" title="一律淺色">淺色</button>
+			<button type="button" class="reader-opt" data-pref-set="theme" data-val="dark" aria-pressed="false" title="一律深色">深色</button>
+		</div>
+	</div>
+	<div class="reader-row">
+		<span class="reader-label">動畫</span>
+		<div class="reader-seg" role="group" aria-label="動畫">
+			<button type="button" class="reader-opt" data-pref-set="motion" data-val="system" aria-pressed="false" title="跟隨系統的動畫偏好">系統</button>
+			<button type="button" class="reader-opt" data-pref-set="motion" data-val="full" aria-pressed="false" title="一律播放完整動畫">完整</button>
+			<button type="button" class="reader-opt" data-pref-set="motion" data-val="reduced" aria-pressed="false" title="減少動畫">減量</button>
+		</div>
+	</div>
+	<div class="reader-row">
+		<span class="reader-label">文字</span>
+		<div class="reader-seg" role="group" aria-label="文字">
+			<button type="button" class="reader-opt" data-pref-set="script" data-val="orig" aria-pressed="false" title="顯示作者原本的字體">原</button>
+			<button type="button" class="reader-opt" data-pref-set="script" data-val="cn" aria-pressed="false" title="轉為简体显示">简</button>
+			<button type="button" class="reader-opt" data-pref-set="script" data-val="tw" aria-pressed="false" title="轉為繁體顯示">繁</button>
+		</div>
+	</div>
 }
