@@ -24,9 +24,14 @@
   "use strict";
 
   var TAU = Math.PI * 2;
+  // html[data-motion] is the reader's explicit choice and outranks the OS
+  // preference in both directions; with neither set the OS decides.
+  var motionPref = document.documentElement.getAttribute("data-motion");
   var reducedMotion =
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    motionPref === "reduced" ||
+    (motionPref !== "full" &&
+      !!window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;

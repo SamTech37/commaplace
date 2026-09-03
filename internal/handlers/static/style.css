@@ -223,13 +223,16 @@ body {
   }
 }
 
-/* ── Reduce motion — OS preference or the nav toggle (html[data-motion]) ── */
+/* ── Reduce motion — OS preference or the menu control (html[data-motion]) ──
+   The OS preference is the default, but html[data-motion="full"] opts back
+   out of it: without that escape hatch the "完整" segment would be a control
+   that visibly does nothing for anyone whose system asks for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
-  .content {
+  html:not([data-motion="full"]) .content {
     animation: none;
     transition-duration: 0.001ms !important;
   }
-  [data-reveal] {
+  html:not([data-motion="full"]) [data-reveal] {
     transition-duration: 0.001ms;
     transition-delay: 0s;
     /* !important beats the inline clip-path reveal.js sets pre-reveal; with
@@ -2004,6 +2007,46 @@ html[data-theme="dark"] .action-menu-list {
   font-family: var(--font-sans);
 }
 
+/* Preference panel in the account / settings menu. Same metrics as the note
+   reader popover — they are the same kind of control, so they should not drift. */
+.prefs-panel {
+  /* Wide enough that no label or segment wraps once the rows are inset below:
+     two-character labels like 外觀 breaking across lines is worse than a
+     slightly wider panel. */
+  min-width: 16em;
+  gap: 0.55em;
+  padding: 0.6em;
+}
+
+/* Menu items below carry their own 0.85em inset, so without a matching one
+   here the labels sit flush against the panel edge while 個人頁 and 登出 are
+   indented — two different left margins in one small panel. Same font-size so
+   the em resolves to the identical value. */
+.prefs-panel .reader-row {
+  padding: 0 0.85em;
+  font-size: var(--fs-sm);
+}
+.prefs-panel .reader-label,
+.prefs-panel .reader-opt {
+  white-space: nowrap;
+}
+.prefs-panel .reader-label {
+  font-weight: 600;
+}
+
+/* One column of controls, not three ragged ones. The groups hold labels of
+   different widths (系統/淺色 against 原/简), and space-between only lines up
+   their right edges — equal columns at a shared min-width lines up the left
+   edges too, so the three controls read as a single stack. */
+.prefs-panel .reader-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  min-width: 11.5em;
+}
+.prefs-panel .reader-opt {
+  justify-content: center;
+}
+
 /* ── Legal pages + site footer ──────────────────────────────────────────── */
 .legal {
   max-width: var(--maxw-article);
@@ -2228,6 +2271,12 @@ html[data-theme="dark"] .action-menu-list {
   font-family: var(--font-sans);
   transition: background var(--dur-fast) ease;
   width: 100%;
+}
+/* .action-menu-list button (0,1,1) outranks .action-menu-danger (0,1,0), so
+   without this the destructive colour silently loses to the ordinary menu-item
+   colour — the delete action in the note menu was already affected. */
+.action-menu-list .action-menu-danger {
+  color: var(--danger);
 }
 .action-menu-danger:hover {
   background: var(--bg-2);
@@ -3848,14 +3897,6 @@ button:disabled {
     display: flex;
     align-items: center;
     min-height: 2.75rem;
-  }
-  .nav > .topbar-preference {
-    display: none;
-  }
-  .mobile-preferences {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.15rem;
   }
   .mobile-dock {
     position: fixed;
