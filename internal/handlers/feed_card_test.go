@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"database/sql"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 // A leading blockquote renders in its own card slot; the excerpt must continue
@@ -54,5 +57,35 @@ func TestExcerptSkipsLeadingH1(t *testing.T) {
 	}
 	if !strings.Contains(excerpt, "Where to find books") {
 		t.Fatalf("excerpt = %q", excerpt)
+	}
+}
+
+// A draft with no title yet (PublishNote requires one, so this can only be a
+// draft) must not render as a blank line — it should show the placeholder,
+// and the card must know it's a draft.
+func TestToCardUntitledDraftShowsPlaceholder(t *testing.T) {
+	row := noteRow{ID: uuid.New(), Title: "", AuthorHandle: "alice", Slug: "draft-abc"}
+	c := row.toCard()
+	if c.Title != untitledDraftLabel {
+		t.Fatalf("Title = %q, want %q", c.Title, untitledDraftLabel)
+	}
+	if !c.IsDraft {
+		t.Fatal("IsDraft = false, want true for a note with no published_at")
+	}
+}
+
+// A published note always has a title (enforced at publish time) — toCard
+// must never rewrite real content, only the empty-draft case.
+func TestToCardPublishedTitleUntouched(t *testing.T) {
+	row := noteRow{
+		ID: uuid.New(), Title: "Real Title", AuthorHandle: "alice", Slug: "real-title",
+		PublishedAt: sql.NullInt64{Int64: 1, Valid: true},
+	}
+	c := row.toCard()
+	if c.Title != "Real Title" {
+		t.Fatalf("Title = %q, want unchanged %q", c.Title, "Real Title")
+	}
+	if c.IsDraft {
+		t.Fatal("IsDraft = true, want false for a published note")
 	}
 }

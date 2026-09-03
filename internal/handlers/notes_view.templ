@@ -4,16 +4,18 @@ import (
 	"context"
 	"io"
 	"strconv"
+	"time"
 )
 
 // NoteListView is the shared view-model for every note-listing surface
 // (feed/tag/search/profile/saved, and the hover-preview endpoint): one data
 // source (a []feedCard query), one rendering.
 type NoteListView struct {
-	Cards    []feedCard
-	Layout   string // registry key into cardRenderers; "" defaults to "masonry"
-	OlderURL string // "" = no infinite scroll (end marker shown instead)
-	Empty    templ.Component // shown (inside a <p class="note-meta">) when len(Cards) == 0
+	Cards       []feedCard
+	Layout      string // registry key into cardRenderers; "" defaults to "masonry"
+	OlderURL    string // "" = no infinite scroll (end marker shown instead)
+	Empty       templ.Component // shown (inside a <p class="note-meta">) when len(Cards) == 0
+	GroupByDate bool // profile's timeline mode: a date header above each run of same-day cards
 }
 
 // cardRenderers maps a layout name to the component that renders one card in
@@ -28,13 +30,28 @@ var cardRenderers = map[string]func(feedCard) templ.Component{
 
 // renderCards renders every card in view.Cards through view.Layout's
 // registered renderer (falling back to masonry for an empty/unknown key).
+// When GroupByDate is set, a date header is inserted above each run of
+// same-day cards — an infinite-scroll continuation re-derives its own runs
+// independently, so a run split across a page boundary gets its header
+// repeated rather than merged; harmless, since it still reads as "cards from
+// this day".
 func renderCards(view NoteListView) templ.Component {
 	render, ok := cardRenderers[view.Layout]
 	if !ok {
 		render = cardRenderers["masonry"]
 	}
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		lastDate := ""
 		for _, c := range view.Cards {
+			if view.GroupByDate {
+				d := time.Unix(c.UpdatedAt, 0).In(time.Local).Format("2006/01/02")
+				if d != lastDate {
+					if err := timelineDateHeader(d).Render(ctx, w); err != nil {
+						return err
+					}
+					lastDate = d
+				}
+			}
 			if err := render(c).Render(ctx, w); err != nil {
 				return err
 			}
@@ -95,6 +112,10 @@ func notesItemsClass(layout string) string {
 templ notesFragment(view NoteListView) {
 	@renderCards(view)
 	@notesSentinelOOB(view.OlderURL)
+}
+
+templ timelineDateHeader(label string) {
+	<div class="timeline-date">{ label }</div>
 }
 
 // listCard is a plain title/excerpt/meta row — the layout every list-shaped

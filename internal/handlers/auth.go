@@ -147,6 +147,10 @@ func (s *Server) GetMe(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
-	http.Redirect(w, r, "/"+u.Handle, http.StatusSeeOther)
+	target := "/" + u.Handle
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 

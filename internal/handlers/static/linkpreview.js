@@ -22,31 +22,23 @@
   var hideTimer = null;
   var activeKey = null; // whatever hover target is currently shown/pending
 
+  // Always docks directly above or below the anchor, left-aligned with it
+  // (clamped to the viewport). A "beside" placement used to be preferred
+  // when there was room to either side, but on this site's narrow centered
+  // column that "room" is almost always empty page margin, not anything
+  // near the link — the card ended up floating disconnected from what you
+  // were hovering. Stacking above/below always stays visually attached.
   function position(rect) {
     var pw = popup.offsetWidth;
     var ph = popup.offsetHeight;
 
-    // Prefer a side that clears the text column entirely, so the card sits
-    // beside what you are reading instead of on top of it.
-    var left, beside = true;
-    if (window.innerWidth - rect.right >= pw + MARGIN * 2) left = rect.right + MARGIN;
-    else if (rect.left >= pw + MARGIN * 2) left = rect.left - pw - MARGIN;
-    else {
-      left = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - pw - MARGIN));
-      beside = false;
-    }
+    var left = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - pw - MARGIN));
 
+    var below = window.innerHeight - MARGIN - (rect.bottom + 4);
+    var above = rect.top - 4 - MARGIN;
     var top;
-    if (beside) {
-      // Beside the anchor: line the card up with it, only clamped to the viewport.
-      top = Math.max(MARGIN, Math.min(rect.top - 4, window.innerHeight - ph - MARGIN));
-    } else {
-      // Over the column: drop below, flip above only when there is more room.
-      var below = window.innerHeight - MARGIN - (rect.bottom + 4);
-      var above = rect.top - 4 - MARGIN;
-      if (ph <= below || below >= above) top = rect.bottom + 4;
-      else top = Math.max(MARGIN, rect.top - ph - 4);
-    }
+    if (ph <= below || below >= above) top = rect.bottom + 4;
+    else top = Math.max(MARGIN, rect.top - ph - 4);
 
     popup.style.left = left + "px";
     popup.style.top = top + "px";
@@ -153,6 +145,12 @@
   document.addEventListener("mouseout", function (e) {
     var a = e.target.closest("a");
     if (!a || a !== hoverAnchor) return;
+    // mouseout fires on every child-element boundary crossing too (it
+    // bubbles), not just on actually leaving the anchor — mini-card and
+    // backlink-row have several sibling spans inside one <a>, and moving
+    // between them looked identical to leaving. Only a real exit (the
+    // pointer's next target isn't inside this anchor) counts.
+    if (e.relatedTarget && a.contains(e.relatedTarget)) return;
     hoverAnchor = null;
     scheduleHide();
   });

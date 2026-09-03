@@ -14,12 +14,11 @@ type Site struct {
 // Changing a value here renames the label everywhere it appears,
 // without grepping templates. URL paths are deliberately not coupled.
 type Nav struct {
-	Write    string
-	Feed     string
-	Graph    string
-	Login    string
-	Logout   string
-	Calendar string
+	Write  string
+	Feed   string
+	Graph  string
+	Login  string
+	Logout string
 }
 
 // Pagination contains pagination limits.
@@ -68,9 +67,8 @@ func DefaultNav() Nav {
 		Write:    "書寫",
 		Feed:     "閱覽",
 		Graph:    "圖譜",
-		Login:    "登入",
-		Logout:   "登出",
-		Calendar: "月曆",
+		Login:  "登入",
+		Logout: "登出",
 	}
 }
 

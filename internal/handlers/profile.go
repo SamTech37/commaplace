@@ -39,34 +39,56 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var olderThan int64
-	if s := r.URL.Query().Get("older"); s != "" {
-		olderThan, _ = strconv.ParseInt(s, 10, 64)
-	}
-
-	tab := r.URL.Query().Get("tab")
-
 	viewer, _ := s.Auth.CurrentUser(r)
 	var viewerID uuid.UUID
 	if viewer != nil {
 		viewerID = viewer.ID
 	}
+	isSelf := viewer != nil && viewer.ID == profile.ID
 
-	recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, olderThan)
-	if err != nil {
-		s.renderError(w, r, http.StatusInternalServerError, err.Error())
-		return
+	mode := r.URL.Query().Get("view")
+	if mode != "calendar" {
+		mode = "timeline"
 	}
 
-	view := NoteListView{
-		Cards:    recent,
-		Layout:   "list",
-		OlderURL: profileOlderURL(profile.Handle, nextCursor, tab),
-		Empty:    profileEmpty(tab),
-	}
-	if r.Header.Get("HX-Request") == "true" {
-		s.renderFragment(w, r, notesFragment(view))
-		return
+	var (
+		view       NoteListView
+		tab        string
+		bulkDelete bool
+		calendar   *calendarGridProps
+	)
+	if mode == "calendar" {
+		grid, err := s.buildCalendarGrid(r.Context(), profile.ID, r.URL.Query().Get("m"), isSelf)
+		if err != nil {
+			s.renderError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		calendar = &grid
+	} else {
+		var olderThan int64
+		if s := r.URL.Query().Get("older"); s != "" {
+			olderThan, _ = strconv.ParseInt(s, 10, 64)
+		}
+		tab = r.URL.Query().Get("tab")
+
+		recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, olderThan)
+		if err != nil {
+			s.renderError(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		view = NoteListView{
+			Cards:       recent,
+			Layout:      "list",
+			OlderURL:    profileOlderURL(profile.Handle, nextCursor, tab),
+			Empty:       profileEmpty(tab),
+			GroupByDate: true,
+		}
+		bulkDelete = isSelf && tab == "drafts"
+		if r.Header.Get("HX-Request") == "true" {
+			s.renderFragment(w, r, notesFragment(view))
+			return
+		}
 	}
 
 	following, _ := userFollows(r.Context(), s.DB, viewerID, profile.ID)
@@ -89,7 +111,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		estYear = time.Unix(createdAt, 0).Year()
 	}
 
-	isSelf := viewer != nil && viewer.ID == profile.ID
 	var pinned *pinnedNote
 	if isSelf {
 		pinned, _ = pinnedNoteForUser(r.Context(), s.DB, profile.ID)
@@ -98,7 +119,9 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	s.renderPage(w, r, pageTitle("@"+profile.Handle), "", nil, profilePage(ProfilePageProps{
 		Handle:         profile.Handle,
 		ProfileID:      profile.ID,
+		Mode:           mode,
 		View:           view,
+		Calendar:       calendar,
 		Tab:            tab,
 		IsSelf:         isSelf,
 		ViewerLoggedIn: viewer != nil,
@@ -108,7 +131,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		NoteCount:      noteCount,
 		EstYear:        estYear,
 		Pinned:         pinned,
-		BulkDelete:     isSelf && tab == "drafts",
+		BulkDelete:     bulkDelete,
 	}))
 }
 

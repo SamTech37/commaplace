@@ -1266,6 +1266,15 @@ html[data-theme="dark"] .masonry-card:hover {
   flex: 1;
   min-width: 0;
 }
+.timeline-date {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  font-family: var(--font-sans);
+  padding-top: 1.1em;
+}
+.timeline-date:first-child {
+  padding-top: 0;
+}
 
 /* ── Older / load more ──────────────────────────────────────────────────── */
 .older-link {
@@ -3308,16 +3317,6 @@ dialog.palette::backdrop {
 }
 .calendar-view-tab:hover { color: var(--text); border-color: var(--border-2); text-decoration: none; }
 .calendar-view-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-.timeline { display: flex; flex-direction: column; gap: 1.5rem; }
-.timeline-group { display: flex; flex-direction: row; gap: 1rem; align-items: baseline; }
-.timeline-date {
-  flex: 0 0 auto;
-  width: 3.2rem;
-  font-size: var(--fs-sm);
-  color: var(--text-3);
-  font-family: var(--font-sans);
-}
-.timeline-cards { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

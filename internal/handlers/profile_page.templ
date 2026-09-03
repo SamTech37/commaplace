@@ -9,7 +9,9 @@ import (
 type ProfilePageProps struct {
 	Handle         string
 	ProfileID      uuid.UUID
+	Mode           string // "timeline" (default) or "calendar"
 	View           NoteListView
+	Calendar       *calendarGridProps
 	Tab            string
 	IsSelf         bool
 	ViewerLoggedIn bool
@@ -91,20 +93,28 @@ templ profilePage(p ProfilePageProps) {
 			</button>
 		</form>
 	}
-	if p.IsSelf {
-		<nav class="feed-tabs" style="margin-top: 1.5em;">
-			<a href={ templ.URL("/" + p.Handle) } class={ "feed-tab", templ.KV("active", p.Tab != "drafts") }>公開</a>
-			<a href={ templ.URL("/" + p.Handle + "?tab=drafts") } class={ "feed-tab", templ.KV("active", p.Tab == "drafts") }>草稿</a>
-		</nav>
+	<div class="calendar-view-toggle" style="margin-top: 1.5em;">
+		<a class={ "calendar-view-tab", templ.KV("active", p.Mode != "calendar") } href={ templ.URL("/" + p.Handle) }>時間軸</a>
+		<a class={ "calendar-view-tab", templ.KV("active", p.Mode == "calendar") } href={ templ.URL("/" + p.Handle + "?view=calendar") }>月曆</a>
+	</div>
+	if p.Mode == "calendar" {
+		@calendarGridView(p.Handle, *p.Calendar)
 	} else {
-		<div class="profile-notes-heading" style="margin-top:1.5em">最近的筆記</div>
-	}
-	if p.BulkDelete {
-		<form method="post" action="/api/notes/bulk-delete" id="bulk-delete-drafts-form" onsubmit="return confirm('刪除所選的草稿？');">
+		if p.IsSelf {
+			<nav class="feed-tabs" style="margin-top: 1em;">
+				<a href={ templ.URL("/" + p.Handle) } class={ "feed-tab", templ.KV("active", p.Tab != "drafts") }>公開</a>
+				<a href={ templ.URL("/" + p.Handle + "?tab=drafts") } class={ "feed-tab", templ.KV("active", p.Tab == "drafts") }>草稿</a>
+			</nav>
+		} else {
+			<div class="profile-notes-heading" style="margin-top:1em">最近的筆記</div>
+		}
+		if p.BulkDelete {
+			<form method="post" action="/api/notes/bulk-delete" id="bulk-delete-drafts-form" onsubmit="return confirm('刪除所選的草稿？');">
+				@profileNotesList(p)
+				<button type="submit" class="bulk-delete-btn" style="margin-top: 1em">刪除所選</button>
+			</form>
+		} else {
 			@profileNotesList(p)
-			<button type="submit" class="bulk-delete-btn" style="margin-top: 1em">刪除所選</button>
-		</form>
-	} else {
-		@profileNotesList(p)
+		}
 	}
 }

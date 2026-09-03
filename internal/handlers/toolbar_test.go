@@ -45,7 +45,7 @@ func navLinks(t *testing.T, html string) string {
 func TestNavLinksAreNavigationOnly(t *testing.T) {
 	nav := navLinks(t, renderChrome(t, &auth.User{Handle: "alice", Theme: "auto"}))
 
-	for _, want := range []string{navCfg.Write, navCfg.Feed, navCfg.Graph, navCfg.Calendar, "漫遊"} {
+	for _, want := range []string{navCfg.Write, navCfg.Feed, navCfg.Graph, "漫遊"} {
 		if !strings.Contains(nav, want) {
 			t.Errorf("navigation link %q missing from nav-links", want)
 		}
