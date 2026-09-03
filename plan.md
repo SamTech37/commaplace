@@ -1,12 +1,12 @@
 # `Comma,` Dev Roadmap
 
-## Meta-App view substrate + templ — 已完成（2026-08-31）
+## Meta-App view Substrate + Templ — 已完成（2026-08-31）
 
 規格：`.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`「v1 — as built」有完整記錄，這裡只留摘要，細節去那邊看。
 
 四步都做了，一次到位：templ 工具鏈接上 air 的 dev loop（`go get -tool` 釘版本，不用另外 `go install`；`.air.toml` 的 `cmd` 先跑 `templ generate` 再 build）；`NoteListView{ Cards, Layout, OlderURL, Empty }` + `feedCard` + `cardRenderers` registry 定義在 `internal/handlers/notes_view.templ`；六個消費者都接上去——`feed`/`tag`/`search`/`profile`/`saved`（規格漏掉的 `saved` 補上了）加上規格完全沒提到的 `preview.go`（`/api/preview/{user}/{slug}` hover 預覽，本來就吃同一顆 `masonry_card`）；`feedItem`/`profileNote`/`searchHit` 三個型別、七個 scan loop、`Pages`/`LoadPages`/`ParseFS`、整個 `templates/` 目錄全刪了，`grep` 乾淨。不只清單那五個模板——19 個模板一次全轉 templ，不留 html/template 尾巴（跟原計畫「遷一個模板驗證流程」不同，那個只是拿來證明 air+templ 迴圈能動，動完發現一次做完比留著兩套系統共存久一點更省事）。
 
-**沒做的，刻意的：** 版面切換鈕跟 `?layout=` 沒做。registry 只註冊一種 layout（`masonry`），加新的是一個 `func(NoteListView) templ.Component` +一行 registry，不用碰 handler——這就是「UI 是狀態的函數」要的東西，但目前沒人要多一種版面，先不生只有一個選項的切換鈕。上面「待決」的問題（`feed.layout` 全站共用還是分開存）因此還沒有到要決定的時候。
+**沒做的，刻意的：** 版面切換鈕跟 `?layout=` 沒做。registry 只註冊一種 layout（`masonry`），加新的是一個 `func(NoteListView) templ.Component` + 一行 registry，不用碰 handler——這就是「UI 是狀態的函數」要的東西，但目前沒人要多一種版面，先不生只有一個選項的切換鈕。上面「待決」的問題（`feed.layout` 全站共用還是分開存）因此還沒有到要決定的時候。
 
 **順便修的兩個真 bug，不是重構順帶壞掉、是重構順帶發現：** 搜尋摘要的 XSS——`ts_headline` 輸出直接當 `template.HTML` 印出去，筆記內文只要長得像 HTML 就會在搜到的人畫面上原樣執行；profile 的 infinite-scroll 端點本來就是壞的，`RenderPartial` 查一個從沒註冊過的 partial name，會 500，沒有測試蓋到過。
 
@@ -24,7 +24,7 @@
 - [ ] **`ADMIN_HANDLE`** 後台設成 `admin`，但 prod 沒有這個 user，等於沒人進得去 `/admin`。改成自己的 handle
 - [ ] **`BASE_URL` 改成 apex** `https://commaplace.app`，Console 補 `https://commaplace.app/auth/google/callback`
 
-**明確不做**（等三人真的用起來再說）：timeline、dora mode、搜尋強化、tag 文字雲、付費、私有筆記。
+**明確不做**（等三人真的用起來再說）：搜尋強化、付費、私人/不公開筆記。
 
 ### Render
 
@@ -51,30 +51,32 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
   - [ ] **外部連結預覽** — `linkpreview.js` 的 `previewURLFor()` 就是留好的接口，缺的是抓 og tag 那半（fetcher + 快取表 + SSRF 防護）
 - [ ] 搜尋
   - [x] Cmd+K 模糊標題（不是 Ctrl+O，避開瀏覽器熱鍵）
-  - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格
+  - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格 → maybe `cmd+shift+K`, using similar set of hotkeys for fuzzy/exact search 
 - [ ] **Meta App** — 同一份資料多種呈現，有 Obsidian Search / GraphView 等級的查詢力
   - [x] masonry（list/grid 曾經上線又被 `014ed21` revert 掉，見 spec 的 v0 update；substrate 現在是 pluggable registry，加回 list/grid 是一個 func + 一行 registry，還沒人要）、global + local graph（單擊即跳）、calendar、RSVP 快速閱讀
   - [ ] **2-hop graph** — 目前 local graph 只有直接的 inlink/outlink（一跳）。兩跳才看得到「朋友的朋友」那層結構，也是 dora mode 真正需要的資料。`/api/graph` 已經是單一 endpoint 吃篩選，加一個 `?hops=` 比開新 handler 合理
-  - [ ] **timeline（linear）— 卡上線**。橫的還直的？
+  - [x] **timeline（linear）** — 直的。跟 calendar 一起併進個人頁，`?view=timeline`（預設）/ `?view=calendar` 切換，獨立的 `/me/calendar` 路由已移除。時間軸是左側日期軌 + 右側卡片（`NoteListView.GroupByDate` → `timeline-group`）
   - [ ] **dora mode — 卡上線**。star-graph，聚光燈打在當前節點，可換焦點
-  - [ ] canvas（靜態可拖曳的便利貼牆，不要 graph 那種會抖的）、kanban — backlog
+  - [ ] **canvas**（靜態可拖曳的便利貼牆，不要 graph 那種會抖的）、kanban — backlog 
+	  - like a workbench with a bunch of post-it notes to shuffle around
 - [x] Tag page 文字雲（可關），依使用次數 — 是**相關標籤**雲（與當前標籤同篇出現的），不是全站標籤。全站雲會隨標籤語彙無上限成長，而且那個聚合本來就是最慢的查詢（見下方 benchmark）；「跟這個標籤一起出現的是什麼」也才是有用的問題，點下去就進入那個標籤自己的雲。範圍外的標籤走標籤搜尋
 - [x] design 加 Small Caps — 用 Alegreya SC（獨立的 small-caps 字族，小寫碼位畫的是真的小型大寫，cap height 的 78%），不是 `font-variant-caps`：思源宋體沒有 `smcp`（fontTools 驗過），瀏覽器只會拿大寫縮放合成，正是 Butterick 說不要的假貨。走 jsDelivr（`docs/DECISIONS.md` 2），Latin-only `unicode-range`，只用在作者 handle 一種角色
 - [x] 資料模型 / 後端架構 — Postgres（UUID PK、link 表用 ID 解析）、單一 Go binary on Render，serverless 否決。理由見 `docs/DECISIONS.md` 3 與 6
 - [ ] 逆向 Obsidian 的殺手功能 — obsidian-flavored markdown 做了，其餘翻 [Developer Documentation](https://docs.obsidian.md/Home)
+  - Obsidian 的 `app.js` 沒有完全混淆原始碼，反編譯就看得到——真的要對齊行為時的最後手段
   - [vscode-markdown-preview-enhanced](https://github.com/shd101wyy/vscode-markdown-preview-enhanced) 實作了很相近的一套功能，比較簡單但夠穩，可以直接讀它怎麼做（[DeepWiki](https://deepwiki.com/shd101wyy/vscode-markdown-preview-enhanced)）
-  - Obsidian 的 `app.js` 沒混淆，反編譯就看得到——真的要對齊行為時的最後手段
 - [x] 匯出 — .md / .zip 下載、複製到剪貼簿、`obsidian://` 一鍵開啟
 - [x] 上傳與編輯 — 空白起手、從 markdown 起手、Medium 風格編輯器
-- [ ] 批次匯入
+- [ ] 批次匯入**還沒做好**
   - [x] 內部連結跨批次保留 — `saveNote` 在目標筆記一出現就 backfill stub link，順序無所謂
   - [ ] 匯入時撰寫 `[[@user/note]]` 跨 vault 連結 — 還沒有這回事，跟「保留」是兩件事
 - [ ] 權限
   - **MVP 全公開**，只有草稿 vs 已發布，作者本人才能改刪
   - private（僅自己）與 unlisted（有連結才看得到、不進 feed/search/graph）留到上線後。見 `docs/DECISIONS.md` 7
-- [x] 管理後台 — [ ] 還沒實際試用過
+- [x] 管理後台 
+	- [ ] 還沒實際試用過
 - [ ] 付費牆
-  - **Stripe out**：沒有美國公司。不卡上線，先免費跑，等有人表現出付費意願再做——瓶頸是需求不是串接
+  - ***Stripe* is out**：沒有美國公司。不卡上線，先免費跑，等有人表現出付費意願再做——瓶頸是需求不是串接
   - 真要做就走 Merchant-of-Record（Paddle / Lemon Squeezy / Gumroad），台灣本地選項 ECPay / NewebPay / TapPay 需要公司實體。⚠️ 每家的台灣賣家/出金資格都要先查，會變
   - [ ] **先擺一顆 Buy Me a Coffee 鈕**（或 Ko-fi，都不用公司）。不用等付費牆，這是最小的付費意願訊號。卡在你先去申請帳號拿連結——拿到就是加一個連結的事
   - 付費項目構想：private/unlisted 筆記（免費版草稿只留 3~7 天）、更多圖、更深的巢狀 embed、無限收藏清單（免費只有「喜歡」跟「稍後」兩個）
@@ -87,7 +89,6 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 
 **中文 UI 現況**：使用者流程幾乎都中文了；`admin_dashboard.html` / `admin_reports.html` 刻意留英文（內部工具）。i18n 框架**還不需要**——沒有語言切換機制，真要做約是 20 個模板裡數百條字串。繁簡轉換是另一回事（中文內部的字形轉換），沒有共用管線。
 
-**各華語區的名字**（構想，未定案）：台灣「逗陣」、中國「逗知」、港澳「佬逗」、新馬待想、海外華僑維持 **Comma,**。這跟繁簡切換是同一件事的兩面——同一個站按讀者所在地換字形也換名字。真要做的話，站名就不能寫死在模板裡，得跟繁簡三態鈕走同一條路。
 
 ## Should Have
 
@@ -99,7 +100,7 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 - [ ] 一鍵鏡像 — 已經在經營 blog 的人怎麼同步過來？普通 blog 與密集連結的 hypertext blog 又是兩種做法
   - 抄 [obsidian-clipper](https://github.com/obsidianmd/obsidian-clipper)：開源，抓網頁轉乾淨 markdown 的部分正是「從既有 blog 匯入」缺的那塊，不用自己寫爬蟲跟正文抽取
 - [ ] 維持個人 vault 內部結構之外，為什麼該跟 Comma 上的人互動？
-  - THE WHOLE PREMISE AND VALUE PROPOSITION IS COMMUNITY. COMMA: THINK TOGETHER WITH US.
+  - THE WHOLE PREMISE AND VALUE PROPOSITION IS COMMUNITY. **COMMA,** THINK TOGETHER WITH US.
 
 ## Could Have
 
@@ -125,7 +126,7 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 
 ### 待還的技術債
 
-- [ ] `notes.go` 800 行（CRUD + link resolution + backlinks + stats）拆成 `notes.go` / `links.go` / `notestats.go`。「主要邏輯在哪個檔案」今天沒有答案就是因為這個
+- [x] ~~`notes.go` 800 行拆成 `notes.go` / `links.go` / `notestats.go`~~ — `cfdc0af` 做完了（631 / 283 / 56 行），順便把五段各自的 query+scan 收斂成單一 `noteCardColumns` + `scanCards`
 - [x] ~~`feedItem` / `profileNote` / `searchHit` 三個卡片型別 + 7 個 scan loop 收斂成一個 `feedCard`~~ — 2026-08-31 做完了
 - [x] ~~`map[string]any` 換成 typed struct~~ — templ 直接給了型別安全的元件，這項被上面的 Meta-App view substrate 工作吸收掉了
 
@@ -155,11 +156,11 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
 ## Scaling
 
 - [x] Postgres on Render，Go server 單一 binary，不走 serverless
-- [ ] Cloudflare 全家桶（未評估，仍開放）
-- [ ] DDoS
+- [ ] Render.com more expensive tiers 
+- [ ] DDoS prevention
 - [ ] 並發：寫入佇列？讀取？
 
-### Benchmark（2026-06-20，本機 `benchmark` DB，100 users × 1000 notes = 100K notes / 300K note_tags / 100K resolved links）
+### Benchmark（2026-06-20，本機 `benchmark` DB，100 Users × 1000 Notes = 100K Notes / 300K note_tags / 100K Resolved links）
 
 單一查詢、無並發，看相對值不是絕對延遲。
 
@@ -178,9 +179,9 @@ DB 們：prod（Render）、`commaplace`（dev）、`benchmark`（壓測）、`c
 
 ## Some Concerns
 
-- [ ] **上線前把 `001_init.sql`…`009_*.sql` 壓成一個檔**。趁 DB 還能隨便丟的時候做，有真用戶就沒這個自由了（`docs/DECISIONS.md` 3 的 "Revisit when"）
 - [x] 讚與收藏分開 — `saves` 表（migration 006）。**`/me/saved` 從空的開始**，006 只建表沒搬資料。要帶的話：`INSERT INTO saves SELECT user_id, note_id, created_at FROM likes ON CONFLICT DO NOTHING;`
-  - [ ] 多清單 / playlist 管理 — 目前只有單一收藏清單
+- [ ] 多清單 / playlist 管理 — 目前只有單一收藏清單
+- [ ] **上線前把 `001_init.sql`…`009_*.sql` 壓成一個檔**。趁 DB 還能隨便丟的時候做，有真用戶就沒這個自由了（`docs/DECISIONS.md` 3 的 "Revisit when"）
 - [x] 連結分區 — outbound（這篇連到誰）vs inbound（誰引用這篇），各自再分「自己的 vault」vs「其他人」
 - [x] 改 `@handle` — 連結靠 UUID 不斷鏈
 - [x] 沒有資料夾，用 tag + 連結組織（`folder_path` 欄位已整個刪掉）

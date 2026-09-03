@@ -137,20 +137,34 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-// GetGraphLocal returns the ego graph (center note + 1-hop neighbors + all
-// edges among them) for a single note.
+// maxLocalGraphNodes caps the ego graph. One hop is self-limiting, two is
+// not: a hub note reaches thousands, which neither the 280px canvas nor the
+// force sim can show.
+// ponytail: raise it if someone actually wants a bigger local map.
+const maxLocalGraphNodes = 150
+
+// GetGraphLocal returns the ego graph (center note + neighbors within ?hops=
+// (1 or 2, default 1) + all edges among them) for a single note.
 func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(r.URL.Query().Get("note"))
 	if err != nil {
 		http.Error(w, `note ref must be a note id`, http.StatusBadRequest)
 		return
 	}
+	hops := 1
+	if h, err := strconv.Atoi(r.URL.Query().Get("hops")); err == nil && h > 1 {
+		hops = 2
+	}
 	ctx := r.Context()
 
 	ids := map[uuid.UUID]bool{id: true}
-	if err := s.collectNeighbors(ctx, id, ids); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	frontier := []uuid.UUID{id}
+	for h := 0; h < hops && len(frontier) > 0; h++ {
+		frontier, err = s.expandNeighbors(ctx, frontier, ids)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	payload := graphPayload{Nodes: []graphNode{}, Edges: []graphEdge{}}
@@ -194,23 +208,40 @@ func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(localPayload{graphPayload: payload, Center: id.String()})
 }
 
-// collectNeighbors finds every note with a direct link to/from the center
-// and adds their IDs to the running set.
-func (s *Server) collectNeighbors(ctx context.Context, id uuid.UUID, ids map[uuid.UUID]bool) error {
-	q := func(query string, args []any) error {
+// expandNeighbors finds every note with a direct link to/from any note in
+// `from`, adds them to the running set, and returns only the ones that were
+// not already there — the next hop's frontier. Two queries per hop, not per
+// node, so hop 2 costs the same round trips as hop 1.
+func (s *Server) expandNeighbors(ctx context.Context, from []uuid.UUID, ids map[uuid.UUID]bool) ([]uuid.UUID, error) {
+	var added []uuid.UUID
+	ph := inPlaceholders(len(from))
+	args := toAnySlice(from)
+	q := func(query string) error {
 		rows, err := s.DB.QueryContext(ctx, query, args...)
 		if err != nil {
 			return err
 		}
-		return scanIDs(rows, ids)
+		defer rows.Close()
+		for rows.Next() {
+			var id uuid.UUID
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			if ids[id] || len(ids) >= maxLocalGraphNodes {
+				continue
+			}
+			ids[id] = true
+			added = append(added, id)
+		}
+		return rows.Err()
 	}
-	if err := q(`SELECT resolved_target_id FROM links WHERE source_note_id = $1 AND resolved_target_id IS NOT NULL`, []any{id}); err != nil {
-		return err
+	if err := q(`SELECT resolved_target_id FROM links WHERE source_note_id IN (` + ph + `) AND resolved_target_id IS NOT NULL`); err != nil {
+		return nil, err
 	}
-	if err := q(`SELECT source_note_id FROM links WHERE resolved_target_id = $1`, []any{id}); err != nil {
-		return err
+	if err := q(`SELECT source_note_id FROM links WHERE resolved_target_id IN (` + ph + `)`); err != nil {
+		return nil, err
 	}
-	return nil
+	return added, nil
 }
 
 // collectEdges adds every edge whose endpoints are both already in the node
