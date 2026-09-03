@@ -9,7 +9,7 @@ import (
 type ProfilePageProps struct {
 	Handle         string
 	ProfileID      uuid.UUID
-	Mode           string // "timeline" (default) or "calendar"
+	Mode           string // "timeline" (default), "calendar", or "graph"
 	View           NoteListView
 	Calendar       *calendarGridProps
 	Tab            string
@@ -94,11 +94,19 @@ templ profilePage(p ProfilePageProps) {
 		</form>
 	}
 	<div class="calendar-view-toggle" style="margin-top: 1.5em;">
-		<a class={ "calendar-view-tab", templ.KV("active", p.Mode != "calendar") } href={ templ.URL("/" + p.Handle) }>時間軸</a>
+		<a class={ "calendar-view-tab", templ.KV("active", p.Mode != "calendar" && p.Mode != "graph") } href={ templ.URL("/" + p.Handle) }>時間軸</a>
 		<a class={ "calendar-view-tab", templ.KV("active", p.Mode == "calendar") } href={ templ.URL("/" + p.Handle + "?view=calendar") }>月曆</a>
+		<a class={ "calendar-view-tab", templ.KV("active", p.Mode == "graph") } href={ templ.URL("/" + p.Handle + "?view=graph") }>圖譜</a>
 	</div>
 	if p.Mode == "calendar" {
 		@calendarGridView(p.Handle, *p.Calendar)
+	} else if p.Mode == "graph" {
+		<div id="graph-wrap" data-graph-source={ "/api/graph?user=" + p.Handle } style="margin-top:1em">
+			<canvas id="graph-canvas"></canvas>
+			<div class="graph-empty" hidden>還沒有筆記可以畫。</div>
+			<div class="graph-tooltip" hidden></div>
+		</div>
+		<script src={ assetURL("linkpreview.js") } defer></script>
 	} else {
 		if p.IsSelf {
 			<nav class="feed-tabs" style="margin-top: 1em;">

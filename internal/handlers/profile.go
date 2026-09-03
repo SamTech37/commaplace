@@ -47,7 +47,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	isSelf := viewer != nil && viewer.ID == profile.ID
 
 	mode := r.URL.Query().Get("view")
-	if mode != "calendar" {
+	if mode != "calendar" && mode != "graph" {
 		mode = "timeline"
 	}
 
@@ -57,14 +57,18 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		bulkDelete bool
 		calendar   *calendarGridProps
 	)
-	if mode == "calendar" {
+	switch mode {
+	case "calendar":
 		grid, err := s.buildCalendarGrid(r.Context(), profile.ID, r.URL.Query().Get("m"), isSelf)
 		if err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 		calendar = &grid
-	} else {
+	case "graph":
+		// Nothing to load server-side — the graph box fetches
+		// /api/graph?user=... itself, same as /u/{user}/graph.
+	default:
 		var olderThan int64
 		if s := r.URL.Query().Get("older"); s != "" {
 			olderThan, _ = strconv.ParseInt(s, 10, 64)
