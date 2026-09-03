@@ -54,7 +54,7 @@ redirect URI 是 `BASE_URL + /auth/google/callback`（`cmd/server/main.go:176`�
   - [ ] Ctrl+F 內文搜尋 + `line()` / `tag()` / `section()` 運算子 — 運算子語意未定案，先確認規格 → maybe `cmd+shift+K`, using similar set of hotkeys for fuzzy/exact search 
 - [ ] **Meta App** — 同一份資料多種呈現，有 Obsidian Search / GraphView 等級的查詢力
   - [x] masonry（list/grid 曾經上線又被 `014ed21` revert 掉，見 spec 的 v0 update；substrate 現在是 pluggable registry，加回 list/grid 是一個 func + 一行 registry，還沒人要）、global + local graph（單擊即跳）、calendar、RSVP 快速閱讀
-  - [ ] **2-hop graph** — 目前 local graph 只有直接的 inlink/outlink（一跳）。兩跳才看得到「朋友的朋友」那層結構，也是 dora mode 真正需要的資料。`/api/graph` 已經是單一 endpoint 吃篩選，加一個 `?hops=` 比開新 handler 合理
+  - [x] **2-hop graph** — `/api/graph/local` 加了 `?hops=`（1 或 2，預設 1），`expandNeighbors` 按層擴張，`maxLocalGraphNodes=150` 防一個 hub 兩跳炸開畫布。筆記頁的關聯圖盒子仍用預設一跳（試過兩跳，畫面太亂，改回去，見 `notes_pages.templ`）；API 本身留著兩跳能力，dora mode 或別的消費者要用隨時接
   - [x] **timeline（linear）** — 直的。跟 calendar 一起併進個人頁，`?view=timeline`（預設）/ `?view=calendar` 切換，獨立的 `/me/calendar` 路由已移除。時間軸是左側日期軌 + 右側卡片（`NoteListView.GroupByDate` → `timeline-group`）
   - [ ] **dora mode — 卡上線**。star-graph，聚光燈打在當前節點，可換焦點
   - [ ] **canvas**（靜態可拖曳的便利貼牆，不要 graph 那種會抖的）、kanban — backlog 
