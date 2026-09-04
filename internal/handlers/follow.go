@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/a-h/templ"
 	"github.com/google/uuid"
 )
 
@@ -46,29 +48,88 @@ func (s *Server) PostFollow(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	followers, _ := followerCount(r.Context(), s.DB, targetID)
-	writeFollowFragment(w, targetID, following, followers)
-}
 
-func writeFollowFragment(w http.ResponseWriter, targetID uuid.UUID, following bool, followers int) {
+	// The button replaces itself; the count lives elsewhere on the page and
+	// rides along out-of-band. Both render from the same templ components the
+	// pages use, so the swapped-in markup matches what was there before.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	cls := "follow-btn"
-	label := "Follow"
-	if following {
-		cls += " following"
-		label = "Following"
-	}
-	fmt.Fprintf(w, `<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
-  <input type="hidden" name="user_id" value="%s">
-  <button type="submit" class="%s" aria-pressed="%t">%s</button>
-  <span class="follower-count"> · %d follower%s</span>
-</form>`, targetID, cls, following, label, followers, plural(followers))
+	_ = followForm(targetID, following).Render(r.Context(), w)
+	_ = followCount("followers", followers, templ.Attributes{"hx-swap-oob": "outerHTML"}).Render(r.Context(), w)
 }
 
-func plural(n int) string {
-	if n == 1 {
-		return ""
+// followCountText is the wording for a follow count. One function, so the
+// page and the out-of-band swap can't word the same number differently.
+func followCountText(rel string, n int) string {
+	if rel == "following" {
+		return strconv.Itoa(n) + " 追蹤中"
 	}
-	return "s"
+	return strconv.Itoa(n) + " 追蹤者"
+}
+
+// GetFollowList renders one follow list as a fragment for the count dropdown.
+// rel is "followers" (who follows this user) or "following" (who they follow).
+func (s *Server) GetFollowList(w http.ResponseWriter, r *http.Request) {
+	handle := r.PathValue("user")
+	rel := r.URL.Query().Get("rel")
+	if rel != "followers" && rel != "following" {
+		http.Error(w, "bad rel", http.StatusBadRequest)
+		return
+	}
+
+	var profileID uuid.UUID
+	err := s.DB.QueryRowContext(r.Context(),
+		`SELECT id FROM users WHERE handle = $1`, handle).Scan(&profileID)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, "no such user", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	viewer, _ := s.Auth.CurrentUser(r)
+	var viewerID uuid.UUID
+	if viewer != nil {
+		viewerID = viewer.ID
+	}
+
+	rows, err := followRows(r.Context(), s.DB, profileID, viewerID, rel)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	s.renderFragment(w, r, followList(rows, rel, viewer != nil, viewerID))
+}
+
+// followRows lists one side of the follow graph, newest first. Both directions
+// hit an existing index (idx_follows_followed / idx_follows_follower_created).
+// No pagination: a hard cap is the whole of it at this scale.
+func followRows(ctx context.Context, db *sql.DB, profileID, viewerID uuid.UUID, rel string) ([]followRow, error) {
+	join, filter := "f.follower_id", "f.followed_id"
+	if rel == "following" {
+		join, filter = "f.followed_id", "f.follower_id"
+	}
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(`
+		SELECT u.id, u.handle,
+		       EXISTS (SELECT 1 FROM follows v WHERE v.follower_id = $2 AND v.followed_id = u.id)
+		FROM follows f JOIN users u ON u.id = %s
+		WHERE %s = $1
+		ORDER BY f.created_at DESC LIMIT 100`, join, filter), profileID, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []followRow
+	for rows.Next() {
+		var fr followRow
+		if err := rows.Scan(&fr.ID, &fr.Handle, &fr.Following); err != nil {
+			return nil, err
+		}
+		out = append(out, fr)
+	}
+	return out, rows.Err()
 }
 
 func followerCount(ctx context.Context, db *sql.DB, userID uuid.UUID) (int, error) {

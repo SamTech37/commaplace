@@ -44,12 +44,9 @@ templ profilePage(p ProfilePageProps) {
 		</div>
 	</header>
 	<div class="note-meta profile-meta">
-		{ strconv.Itoa(p.FollowerCount) } follower
-		if p.FollowerCount != 1 {
-			s
-		}
+		@followCountMenu(p.Handle, "followers", p.FollowerCount)
 		<span class="crumb-sep">·</span>
-		{ strconv.Itoa(p.FollowingCount) } following
+		@followCountMenu(p.Handle, "following", p.FollowingCount)
 		if p.IsSelf {
 			<span class="crumb-sep">·</span>
 			<a href="/me/avatar">編輯大頭貼</a>
@@ -82,16 +79,9 @@ templ profilePage(p ProfilePageProps) {
 		</div>
 	}
 	if p.ViewerLoggedIn && !p.IsSelf {
-		<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML" style="margin-bottom: 1.25em">
-			<input type="hidden" name="user_id" value={ p.ProfileID.String() }/>
-			<button type="submit" class={ "follow-btn", templ.KV("following", p.Following) } aria-pressed={ strconv.FormatBool(p.Following) }>
-				if p.Following {
-					Following
-				} else {
-					Follow
-				}
-			</button>
-		</form>
+		<div class="profile-follow">
+			@followForm(p.ProfileID, p.Following)
+		</div>
 	}
 	<div class="calendar-view-toggle" style="margin-top: 1.5em;">
 		<a class={ "calendar-view-tab", templ.KV("active", p.Mode != "calendar" && p.Mode != "graph") } href={ templ.URL("/" + p.Handle) }>時間軸</a>

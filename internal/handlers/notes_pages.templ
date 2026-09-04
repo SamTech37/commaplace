@@ -189,20 +189,13 @@ templ noteContent(p NoteViewProps) {
 				<a class="author-name" href={ templ.URL("/" + p.AuthorHandle) }>{ "@" + p.AuthorHandle }</a>
 			</div>
 			<div class="author-stats">
-				{ strconv.Itoa(p.AuthorStats.Followers) } 訂閱者 · { strconv.Itoa(p.AuthorStats.Notes) } 篇筆記
+				@followCount("followers", p.AuthorStats.Followers, nil)
+				{ " · " }
+				{ strconv.Itoa(p.AuthorStats.Notes) } 篇筆記
 			</div>
 		</div>
 		if p.ViewerLoggedIn && !p.IsAuthor {
-			<form class="inline-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
-				<input type="hidden" name="user_id" value={ p.AuthorID.String() }/>
-				<button type="submit" class={ "follow-btn", templ.KV("following", p.ViewerFollows) }>
-					if p.ViewerFollows {
-						已追蹤
-					} else {
-						+ 追蹤
-					}
-				</button>
-			</form>
+			@followForm(p.AuthorID, p.ViewerFollows)
 		}
 	</div>
 	<article class="article" data-reveal data-reveal-delay="2">

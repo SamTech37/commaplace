@@ -1363,10 +1363,54 @@ html[data-theme="dark"] .masonry-card:hover {
   border-color: var(--danger);
   color: var(--danger);
 }
-.follower-count {
-  color: var(--text-3);
+.profile-follow {
+  margin-bottom: 1.25em;
+}
+
+/* ── Follow-count dropdown ──────────────────────────────────────────────── */
+.follow-menu {
+  display: inline-block;
+}
+.follow-menu summary:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.follow-panel {
+  min-width: 15em;
+  max-height: 20em;
+  overflow-y: auto;
+  gap: 0.15em;
+}
+.follow-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75em;
+  padding: 0.3em 0.5em;
+}
+.follow-row-name {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--text);
   font-size: var(--fs-sm);
-  font-family: var(--font-sans);
+}
+.follow-row-name .avatar-img {
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: var(--r-pill);
+}
+.follow-row .follow-btn {
+  padding: 0.25em 0.8em;
+  font-size: var(--fs-xs);
+}
+.follow-empty {
+  margin: 0;
+  padding: 0.4em 0.5em;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
 }
 
 /* ── Feed shell (sidebar + main) ────────────────────────────────────────── */
