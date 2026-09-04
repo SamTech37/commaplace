@@ -1367,6 +1367,12 @@ html[data-theme="dark"] .masonry-card:hover {
   margin-bottom: 1.25em;
 }
 
+.batch-stripped {
+  margin: 0 0 0.5em;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
 /* ── Follow-count dropdown ──────────────────────────────────────────────── */
 .follow-menu {
   display: inline-block;
