@@ -62,7 +62,7 @@ templ followCount(handle, rel string, n int, attrs templ.Attributes)
 
 ```html
 <details class="action-menu follow-menu">
-  <summary id="follower-count">3 追蹤者</summary>
+  <summary><span id="follow-count-followers">3 追蹤者</span></summary>
   <div class="action-menu-list" hx-get="/api/follows/{handle}?rel=followers"
        hx-trigger="toggle once" hx-target="this">…</div>
 </details>
@@ -215,13 +215,13 @@ feed 的卡片縮圖**。每個看 feed 的人都會去打那台伺服器——�
 # 驗收條件
 
 **追蹤**
-1. `POST /api/follow` 回應同時含按鈕與帶 `hx-swap-oob` 的 `#follower-count`，數字為 toggle 後的值
+1. `POST /api/follow` 回應同時含按鈕與帶 `hx-swap-oob` 的 `#follow-count-followers`，數字為 toggle 後的值
 2. 再 POST 一次，OOB 數字回到 `0 追蹤者`
 3. 回應不含 `Follow` / `Following` / `follower` 任何英文字串
 4. `GET /api/follows/{user}?rel=followers` 列出追蹤者 handle；`rel=following` 列出被追蹤者
 5. `rel` 非法值 → 400
 6. 未登入取名單 → 200 且不含 `hx-post="/api/follow"`
-7. profile 與筆記頁 markup 各含一個 `id="follower-count"`（OOB 目標必須存在，htmx-rules #7：不存在時 htmx 靜默不動）
+7. profile 與筆記頁 markup 各含一個 `id="follow-count-followers"`（OOB 目標必須存在，htmx-rules #7：不存在時 htmx 靜默不動）
 
 **feed**
 8. 一位作者發 10 篇、另一位發 1 篇 → 第一頁最多含該作者 3 篇
