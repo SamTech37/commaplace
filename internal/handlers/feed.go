@@ -56,10 +56,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		tab = "recommended"
 	}
 	tagFilter := normalizeTag(q.Get("tag"))
-	var older int64
-	if v := q.Get("older"); v != "" {
-		older, _ = strconv.ParseInt(v, 10, 64)
-	}
+	cursor := parseFeedCursor(q.Get("older"), q.Get("older_id"))
 
 	viewer, _ := s.Auth.CurrentUser(r)
 
@@ -71,10 +68,10 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		if viewer == nil {
 			cards = nil
 		} else {
-			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, older, pageCfg.FeedPageSize)
+			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, cursor.UpdatedAt, pageCfg.FeedPageSize)
 		}
 	} else {
-		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, older, pageCfg.FeedPageSize)
+		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, cursor, pageCfg.FeedPageSize)
 	}
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
@@ -82,12 +79,17 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 	}
 	attachTagsToCards(r.Context(), s.DB, cards)
 
-	// "older" cursor for pagination — last item's updated_at, or empty.
+	// Cursor: the last card's (updated_at, id). The id half is what makes a
+	// batch of notes sharing one timestamp paginable at all — see feedCursor.
+	// A full page is no longer the test for "there is more": maxPerAuthor can
+	// leave a page short while notes remain, so ask again whenever anything
+	// came back and let the next request return nothing.
 	var olderURL string
-	if len(cards) == pageCfg.FeedPageSize {
+	if len(cards) > 0 {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+		v.Set("older_id", last.NoteID.String())
 		olderURL = "/feed?" + v.Encode()
 	}
 
@@ -126,24 +128,61 @@ func feedEmpty(tagFilter string) templ.Component {
 	return feedEmptyNoTag()
 }
 
-func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, older int64, limit int) ([]feedCard, error) {
+// maxPerAuthorPerPage caps how much of one page a single author may occupy.
+// Without it the recommended feed is pure recency, so the first person to
+// import a large vault owns every page of it — and because import publishes
+// immediately, that is the first such person, not the thousandth.
+const maxPerAuthorPerPage = 3
+
+// feedCursor is the recommended feed's pagination key. updated_at alone is not
+// enough: a bulk import writes one timestamp across every note it creates, and
+// "updated_at < last" then steps over every sibling sharing that second — those
+// notes become unreachable by scrolling rather than merely late. The note id
+// breaks the tie, and the same (updated_at, id) pair orders the rows.
+type feedCursor struct {
+	UpdatedAt int64
+	NoteID    uuid.UUID
+}
+
+func parseFeedCursor(older, olderID string) feedCursor {
+	var c feedCursor
+	c.UpdatedAt, _ = strconv.ParseInt(older, 10, 64)
+	c.NoteID, _ = uuid.Parse(olderID)
+	return c
+}
+
+func (c feedCursor) set() bool { return c.UpdatedAt > 0 && c.NoteID != uuid.Nil }
+
+func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cursor feedCursor, limit int) ([]feedCard, error) {
+	// The CTE holds the filters and the per-author ranking; the outer query
+	// only adds the columns. Written this way the filters exist once, and
+	// noteCardColumns needs no aliasing to survive a subquery.
 	args := []any{}
 	q := strings.Builder{}
-	fmt.Fprintf(&q, `
-		SELECT %s
-		FROM notes n
-		JOIN users u ON u.id = n.author_id
-		WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`, noteCardColumns)
+	q.WriteString(`
+		WITH ranked AS (
+		  SELECT n.id,
+		         ROW_NUMBER() OVER (PARTITION BY n.author_id
+		                            ORDER BY n.updated_at DESC, n.id DESC) AS rn
+		  FROM notes n
+		  WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
 	}
-	if older > 0 {
-		args = append(args, older)
-		fmt.Fprintf(&q, ` AND n.updated_at < $%d`, len(args))
+	if cursor.set() {
+		args = append(args, cursor.UpdatedAt, cursor.NoteID)
+		fmt.Fprintf(&q, ` AND (n.updated_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
 	}
+	args = append(args, maxPerAuthorPerPage)
+	fmt.Fprintf(&q, `
+		)
+		SELECT %s
+		FROM notes n
+		JOIN users u ON u.id = n.author_id
+		JOIN ranked r ON r.id = n.id AND r.rn <= $%d`, noteCardColumns, len(args))
 	args = append(args, limit)
-	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC LIMIT $%d`, len(args))
+	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC, n.id DESC LIMIT $%d`, len(args))
 	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
 	if err != nil {
 		return nil, err
