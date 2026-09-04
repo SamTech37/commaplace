@@ -49,6 +49,25 @@
     return 1 - Math.pow(1 - t, 3);
   }
 
+  // Canvas cards cannot inherit CSS border-radius. Keep their corners aligned
+  // with the graph's small-surface radius token instead of drawing hard-edged
+  // rectangles beside rounded previews and controls.
+  var GRAPH_CARD_RADIUS = 6;
+  function roundedRectPath(ctx, x, y, w, h, radius) {
+    var r = Math.min(Math.max(radius, 0), Math.abs(w) / 2, Math.abs(h) / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
   // ---- theme ----------------------------------------------------------
   // Parse the CSS custom properties once and pre-build every rgba() string
   // the renderer needs, so draw() never allocates color strings.
@@ -715,10 +734,11 @@
           y = n.y - h / 2;
         ctx.globalAlpha = alpha * cardT;
         ctx.fillStyle = isCenter ? theme.text : theme.bg;
-        ctx.fillRect(x, y, w, h);
+        roundedRectPath(ctx, x, y, w, h, GRAPH_CARD_RADIUS);
+        ctx.fill();
         ctx.strokeStyle = isHov ? theme.text : theme.border;
         ctx.lineWidth = isHov ? 1.2 : 0.6;
-        ctx.strokeRect(x, y, w, h);
+        ctx.stroke();
         ctx.fillStyle = isCenter ? theme.bg : theme.text;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
