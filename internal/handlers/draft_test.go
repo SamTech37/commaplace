@@ -24,7 +24,7 @@ func publishedAt(t *testing.T, s *Server, id uuid.UUID) (val int64, valid bool) 
 
 func feedHasSlug(t *testing.T, s *Server, slug string) bool {
 	t.Helper()
-	cards, err := s.queryRecommendedCards(context.Background(), "", 0, 50)
+	cards, err := s.queryRecommendedCards(context.Background(), "", feedCursor{}, 50)
 	if err != nil {
 		t.Fatalf("queryRecommendedCards: %v", err)
 	}

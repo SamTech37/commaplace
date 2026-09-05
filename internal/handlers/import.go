@@ -25,11 +25,12 @@ func (s *Server) GetImport(w http.ResponseWriter, r *http.Request) {
 
 // batchItem is one pending note in the batch-edit UI.
 type batchItem struct {
-	Idx   int
-	Title string
-	Body  string
-	Tags  string
-	Slug  string
+	Idx      int
+	Title    string
+	Body     string
+	Tags     string
+	Slug     string
+	Stripped int // media references removed by StripMedia, 0 for most files
 }
 
 func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +61,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]batchItem, 0, len(headers))
 	for i, hdr := range headers {
-		title, body, tagsInput, err := parseUploadedNote(hdr)
+		title, body, tagsInput, stripped, err := parseUploadedNote(hdr)
 		if err != nil {
 			s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{
 				Error: fmt.Sprintf("%s: %s", hdr.Filename, err.Error()),
@@ -68,11 +69,12 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		items = append(items, batchItem{
-			Idx:   i,
-			Title: title,
-			Body:  body,
-			Tags:  tagsInput,
-			Slug:  kebabSlug(title),
+			Idx:      i,
+			Title:    title,
+			Body:     body,
+			Tags:     tagsInput,
+			Slug:     kebabSlug(title),
+			Stripped: stripped,
 		})
 	}
 
@@ -163,18 +165,24 @@ func htmlEscape(s string) string {
 	return r.Replace(s)
 }
 
-func parseUploadedNote(hdr *multipart.FileHeader) (title, body, tagsInput string, err error) {
+func parseUploadedNote(hdr *multipart.FileHeader) (title, body, tagsInput string, stripped int, err error) {
 	f, err := hdr.Open()
 	if err != nil {
-		return "", "", "", fmt.Errorf("could not open: %w", err)
+		return "", "", "", 0, fmt.Errorf("could not open: %w", err)
 	}
 	defer f.Close()
 	raw, err := io.ReadAll(f)
 	if err != nil {
-		return "", "", "", fmt.Errorf("could not read: %w", err)
+		return "", "", "", 0, fmt.Errorf("could not read: %w", err)
 	}
 
 	fm, body := parseFrontmatter(raw)
+
+	// Nothing here can host an attachment, so an imported image, video or
+	// audio reference could only point at somebody else's server — and the
+	// first image in a body becomes a feed card's thumbnail, hotlinked for
+	// every viewer. Hyperlinks stay; media does not.
+	body, stripped = markdown.StripMedia(body)
 
 	title = fm["title"]
 	if title == "" {
@@ -185,7 +193,7 @@ func parseUploadedNote(hdr *multipart.FileHeader) (title, body, tagsInput string
 	}
 	title = strings.TrimSpace(title)
 	if title == "" {
-		return "", "", "", fmt.Errorf("could not determine a title; add a # heading or title: frontmatter")
+		return "", "", "", 0, fmt.Errorf("could not determine a title; add a # heading or title: frontmatter")
 	}
 
 	if t := fm["tags"]; t != "" {
@@ -197,7 +205,7 @@ func parseUploadedNote(hdr *multipart.FileHeader) (title, body, tagsInput string
 		}
 		tagsInput += strings.Join(inline, ",")
 	}
-	return title, body, tagsInput, nil
+	return title, body, tagsInput, stripped, nil
 }
 
 // parseFrontmatter splits YAML frontmatter (--- block) from the body.

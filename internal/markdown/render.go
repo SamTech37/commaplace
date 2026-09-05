@@ -238,20 +238,30 @@ func StripMDLinks(s string) string {
 
 // FirstImageURL returns the url of the first markdown image (![alt](url)) in
 // md, or "" if none. Used to show one thumbnail on feed cards.
+// Bounded the same way as stripImageLinks: a note embed ![[a note]] is not an
+// image, and the alt text ends at the first "]". Searching ahead for "](
+// instead let ![[a note]] pair up with an unrelated link later in the
+// paragraph and hotlink that link's URL as the card's thumbnail.
 func FirstImageURL(md string) string {
 	for s := md; ; {
 		i := strings.Index(s, "![")
 		if i < 0 {
 			return ""
 		}
+		if strings.HasPrefix(s[i:], "![[") {
+			s = s[i+3:]
+			continue
+		}
 		rest := s[i+2:]
-		close := strings.Index(rest, "](")
-		if close < 0 {
+		alt := strings.IndexByte(rest, ']')
+		if alt < 0 {
 			return ""
 		}
-		after := rest[close+2:]
-		if paren := strings.IndexByte(after, ')'); paren >= 0 {
-			return strings.TrimSpace(after[:paren])
+		if alt+1 < len(rest) && rest[alt+1] == '(' {
+			after := rest[alt+2:]
+			if paren := strings.IndexByte(after, ')'); paren >= 0 {
+				return strings.TrimSpace(after[:paren])
+			}
 		}
 		s = rest
 	}

@@ -1,0 +1,83 @@
+package handlers
+
+import (
+	"strconv"
+
+	"github.com/google/uuid"
+)
+
+// followForm is the one and only follow-button markup — used by profile, the
+// note page's author bar, the follow-list rows, and PostFollow's own response.
+// Hand-written HTML in the handler is what let the swapped-in button drift out
+// of sync with the page's original markup (English label, a second copy of the
+// count) — see .claude/specs/follow-feed-import-spec.md.
+templ followForm(targetID uuid.UUID, following bool) {
+	<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
+		<input type="hidden" name="user_id" value={ targetID.String() }/>
+		<button type="submit" class={ "follow-btn", templ.KV("following", following) } aria-pressed={ strconv.FormatBool(following) }>
+			if following {
+				已追蹤
+			} else {
+				+ 追蹤
+			}
+		</button>
+	</form>
+}
+
+// followCount is the count itself, and the OOB target PostFollow re-renders.
+// attrs carries hx-swap-oob on the swap; the page passes nil. Same component
+// both ways, so the number can't drift from its wording — htmx-rules 5 and 7.
+// Deliberately a bare span: the note page shows it inline inside author-stats,
+// while profile wraps it in the dropdown below.
+templ followCount(rel string, n int, attrs templ.Attributes) {
+	<span id={ "follow-count-" + rel } { attrs... }>{ followCountText(rel, n) }</span>
+}
+
+// followCountMenu wraps followCount in a dropdown that loads its list on first
+// open. Built on .action-menu so it inherits the Esc-dismiss, outside-click and
+// aria-expanded behaviour already delegated in prefs.js (commit cf1c74b) — no
+// new JS. The list loads via hx-trigger="toggle once".
+templ followCountMenu(handle, rel string, n int) {
+	<details class="action-menu follow-menu">
+		<summary aria-haspopup="menu" aria-expanded="false">
+			@followCount(rel, n, nil)
+		</summary>
+		<div
+			class="action-menu-list follow-panel"
+			hx-get={ "/api/follows/" + handle + "?rel=" + rel }
+			hx-trigger="toggle once"
+			hx-target="this"
+		></div>
+	</details>
+}
+
+// followRow is one person in a follow list.
+type followRow struct {
+	ID        uuid.UUID
+	Handle    string
+	Following bool // whether the viewer already follows this person
+}
+
+templ followList(rows []followRow, rel string, viewerLoggedIn bool, viewerID uuid.UUID) {
+	if len(rows) == 0 {
+		<p class="follow-empty">
+			if rel == "following" {
+				還沒有追蹤任何人
+			} else {
+				還沒有人追蹤
+			}
+		</p>
+	} else {
+		for _, row := range rows {
+			<div class="follow-row">
+				<a class="follow-row-name" href={ templ.URL("/" + row.Handle) }>
+					<img class="avatar-img" src={ avatarURL(row.Handle) } alt="" onerror="this.remove()"/>
+					{ "@" + row.Handle }
+				</a>
+				if viewerLoggedIn && row.ID != viewerID {
+					@followForm(row.ID, row.Following)
+				}
+			</div>
+		}
+	}
+}

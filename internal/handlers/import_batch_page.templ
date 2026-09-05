@@ -21,6 +21,9 @@ templ importBatchPage(items []batchItem) {
 					hx-target="closest .batch-item"
 					hx-swap="outerHTML"
 				>
+					if item.Stripped > 0 {
+						<p class="batch-stripped">已移除 { strconv.Itoa(item.Stripped) } 個圖片或影音</p>
+					}
 					<label class="batch-field">
 						<span class="batch-field-label">標題</span>
 						<input

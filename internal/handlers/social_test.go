@@ -91,8 +91,20 @@ func TestPostFollowToggle(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "following") {
 		t.Fatalf("expected following fragment, got %s", w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "1 follower<") {
-		t.Fatalf("expected '1 follower', got %s", w.Body.String())
+	// The count is not inside the swapped form — it rides along out-of-band,
+	// so the number on the page updates without a reload.
+	if !strings.Contains(w.Body.String(), `hx-swap-oob="outerHTML"`) {
+		t.Fatalf("expected an OOB count, got %s", w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "1 追蹤者") {
+		t.Fatalf("expected '1 追蹤者', got %s", w.Body.String())
+	}
+	// The fragment must not reintroduce the English wording the rest of the
+	// UI dropped, nor a second copy of the count inside the form.
+	for _, bad := range []string{"Follow<", "Following<", "follower<", "followers<"} {
+		if strings.Contains(w.Body.String(), bad) {
+			t.Fatalf("English follow wording %q leaked back in: %s", bad, w.Body.String())
+		}
 	}
 
 	w2 := httptest.NewRecorder()
@@ -100,9 +112,75 @@ func TestPostFollowToggle(t *testing.T) {
 	if strings.Contains(w2.Body.String(), "following") {
 		t.Fatalf("expected unfollowed fragment, got %s", w2.Body.String())
 	}
-	if !strings.Contains(w2.Body.String(), "0 followers<") {
-		t.Fatalf("expected '0 followers', got %s", w2.Body.String())
+	if !strings.Contains(w2.Body.String(), "0 追蹤者") {
+		t.Fatalf("expected '0 追蹤者', got %s", w2.Body.String())
 	}
+}
+
+// TestFollowList covers the count dropdown's fragment: both directions, the
+// rel guard, and the signed-out case.
+func TestFollowList(t *testing.T) {
+	s := newTestServer(t)
+	alice := mkUser(t, s, "alice")
+	bob := mkUser(t, s, "bob")
+
+	w := httptest.NewRecorder()
+	s.PostFollow(w, authedRequest(s, alice, http.MethodPost, "/api/follow", "user_id="+bob.String()))
+	if w.Code != http.StatusOK {
+		t.Fatalf("follow: status %d", w.Code)
+	}
+
+	// bob's followers → alice
+	got := followListBody(t, s, alice, "bob", "followers")
+	if !strings.Contains(got, "@alice") {
+		t.Fatalf("bob's followers should list @alice, got %s", got)
+	}
+	// alice's following → bob
+	got = followListBody(t, s, alice, "alice", "following")
+	if !strings.Contains(got, "@bob") {
+		t.Fatalf("alice's following should list @bob, got %s", got)
+	}
+	// alice's own followers → nobody
+	got = followListBody(t, s, alice, "alice", "followers")
+	if !strings.Contains(got, "還沒有人追蹤") {
+		t.Fatalf("expected the empty state, got %s", got)
+	}
+
+	// A bad rel is rejected rather than silently defaulting to one side.
+	wBad := httptest.NewRecorder()
+	rBad := httptest.NewRequest(http.MethodGet, "/api/follows/bob?rel=nonsense", nil)
+	rBad.SetPathValue("user", "bob")
+	s.GetFollowList(wBad, rBad)
+	if wBad.Code != http.StatusBadRequest {
+		t.Fatalf("bad rel: expected 400, got %d", wBad.Code)
+	}
+
+	// Signed out: the list is readable (all-public), but offers no follow button.
+	wOut := httptest.NewRecorder()
+	rOut := httptest.NewRequest(http.MethodGet, "/api/follows/bob?rel=followers", nil)
+	rOut.SetPathValue("user", "bob")
+	s.GetFollowList(wOut, rOut)
+	if wOut.Code != http.StatusOK {
+		t.Fatalf("signed-out list: status %d", wOut.Code)
+	}
+	if !strings.Contains(wOut.Body.String(), "@alice") {
+		t.Fatalf("signed-out list should still show @alice, got %s", wOut.Body)
+	}
+	if strings.Contains(wOut.Body.String(), `hx-post="/api/follow"`) {
+		t.Fatalf("signed-out list must not offer a follow button: %s", wOut.Body)
+	}
+}
+
+func followListBody(t *testing.T, s *Server, viewer uuid.UUID, handle, rel string) string {
+	t.Helper()
+	w := httptest.NewRecorder()
+	r := authedRequest(s, viewer, http.MethodGet, "/api/follows/"+handle+"?rel="+rel, "")
+	r.SetPathValue("user", handle)
+	s.GetFollowList(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("follow list %s/%s: status %d body=%s", handle, rel, w.Code, w.Body)
+	}
+	return w.Body.String()
 }
 
 // TestSearchFindsNote is a regression test for a join-precedence bug: the
