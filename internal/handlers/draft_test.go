@@ -93,12 +93,12 @@ func TestDraftLifecycle(t *testing.T) {
 
 	// Owner sees own draft via drafts tab; stranger does not.
 	ownerReq := authedRequest(s, alice, http.MethodGet, "/alice?tab=drafts", "")
-	owned, _, _ := loadRecentNotes(ownerReq, s.DB, alice, "alice", alice, "drafts", 0)
+	owned, _, _ := loadRecentNotes(ownerReq, s.DB, alice, "alice", alice, "drafts", feedCursor{})
 	if !hasNoteTitle(owned, "My Draft") {
 		t.Fatal("owner should see own draft on drafts tab")
 	}
 	strangerReq := authedRequest(s, bob, http.MethodGet, "/alice", "")
-	seen, _, _ := loadRecentNotes(strangerReq, s.DB, alice, "alice", bob, "", 0)
+	seen, _, _ := loadRecentNotes(strangerReq, s.DB, alice, "alice", bob, "", feedCursor{})
 	if hasNoteTitle(seen, "My Draft") {
 		t.Fatal("stranger should not see alice's draft")
 	}
@@ -149,9 +149,9 @@ func TestSweepOrphanDrafts(t *testing.T) {
 		return id
 	}
 
-	oldEmpty := mkDraft("", "", 8)   // should be swept
-	newEmpty := mkDraft("", "", 6)   // spared (too new)
-	oldFull := mkDraft("x", "y", 8)  // spared (not empty)
+	oldEmpty := mkDraft("", "", 8)  // should be swept
+	newEmpty := mkDraft("", "", 6)  // spared (too new)
+	oldFull := mkDraft("x", "y", 8) // spared (not empty)
 	pub, err := s.saveNote(ctx, alice, "alice", "keep", "Keep", "body", nil)
 	if err != nil {
 		t.Fatalf("saveNote: %v", err)

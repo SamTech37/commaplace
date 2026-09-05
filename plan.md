@@ -1,5 +1,9 @@
 # `Comma,` Dev Roadmap
 
+## 資料夾匯入 Beta — 2026-09-05
+
+書寫頁新增「匯入筆記 Beta」，支援選取 Markdown 檔案或資料夾、在本機查看原文並逐檔勾選、發布勾選內容、進度／結果報告；預設全部不勾選。補齊 profile、tag、saved、following 的複合游標。目標是實際觀察大量匯入帶來的好與壞事件。待討論問題、beta 邊界與 30 分鐘驗證流程見 [`docs/BETA-vault-import.md`](docs/BETA-vault-import.md)。原始日期排序與批次 feed 卡尚未定案。
+
 ## Meta-App view Substrate + Templ — 已完成（2026-08-31）
 
 19 個模板全轉 templ、`NoteListView`/`feedCard`/`cardRenderers` registry 收斂六個消費者。完整記錄（含順便修的兩個 bug、決定不做的版面切換鈕）在 `.claude/specs/feed-layout-toggle-meta-app-interface-spec.md`「v1 — as built」。
@@ -55,7 +59,7 @@
   - [vscode-markdown-preview-enhanced](https://github.com/shd101wyy/vscode-markdown-preview-enhanced) 實作了很相近的一套功能，比較簡單但夠穩，可以直接讀它怎麼做（[DeepWiki](https://deepwiki.com/shd101wyy/vscode-markdown-preview-enhanced)）
 - [x] 匯出 — .md / .zip 下載、複製到剪貼簿、`obsidian://` 一鍵開啟
 - [x] 上傳與編輯 — 空白起手、從 markdown 起手、Medium 風格編輯器
-- [ ] 批次匯入**還沒做好**
+- [x] **批次匯入 Beta** — 書寫頁選取檔案或資料夾、本機檢查並勾選、一次發布與結果報告；細節和仍待驗證的 Obsidian 相容性見 `docs/BETA-vault-import.md`
   - [x] 內部連結跨批次保留 — `saveNote` 在目標筆記一出現就 backfill stub link，順序無所謂
   - [ ] 匯入時撰寫 `[[@user/note]]` 跨 vault 連結 — 還沒有這回事，跟「保留」是兩件事
 - [ ] 權限

@@ -69,10 +69,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		// Nothing to load server-side — the graph box fetches
 		// /api/graph?user=... itself, same as /u/{user}/graph.
 	default:
-		var olderThan int64
-		if s := r.URL.Query().Get("older"); s != "" {
-			olderThan, _ = strconv.ParseInt(s, 10, 64)
-		}
+		olderThan := parseFeedCursor(r.URL.Query().Get("older"), r.URL.Query().Get("older_id"))
 		tab = r.URL.Query().Get("tab")
 
 		recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, olderThan)
@@ -140,12 +137,12 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 // profileOlderURL builds the infinite-scroll cursor URL, or "" when there's
-// no next page (nextCursor == 0, same sentinel loadRecentNotes already uses).
-func profileOlderURL(handle string, nextCursor int64, tab string) string {
-	if nextCursor == 0 {
+// no next page (an unset cursor, as returned by loadRecentNotes).
+func profileOlderURL(handle string, nextCursor feedCursor, tab string) string {
+	if !nextCursor.set() {
 		return ""
 	}
-	href := "/" + handle + "?older=" + strconv.FormatInt(nextCursor, 10)
+	href := "/" + handle + "?older=" + strconv.FormatInt(nextCursor.UpdatedAt, 10) + "&older_id=" + nextCursor.NoteID.String()
 	if tab != "" {
 		href += "&tab=" + url.QueryEscape(tab)
 	}
@@ -162,7 +159,7 @@ func profileEmpty(tab string) templ.Component {
 // loadRecentNotes lists a user's notes as feedCards (the shared card model —
 // see notes_view.templ). Unpublished drafts are included only when the
 // viewer is the author themselves.
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan int64) ([]feedCard, int64, error) {
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan feedCursor) ([]feedCard, feedCursor, error) {
 	query := `SELECT ` + noteCardColumns + `
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
@@ -176,27 +173,28 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 	} else {
 		query += ` AND n.published_at IS NOT NULL`
 	}
-	if olderThan > 0 {
-		args = append(args, olderThan)
-		query += ` AND n.updated_at < $2`
+	if olderThan.set() {
+		args = append(args, olderThan.UpdatedAt, olderThan.NoteID)
+		query += ` AND (n.updated_at, n.id) < ($2, $3)`
 	}
-	query += ` ORDER BY n.updated_at DESC LIMIT 20`
+	query += ` ORDER BY n.updated_at DESC, n.id DESC LIMIT 20`
 	rows, err := db.QueryContext(r.Context(), query, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, feedCursor{}, err
 	}
 	out, err := scanCards(rows)
 	if err != nil {
-		return nil, 0, err
+		return nil, feedCursor{}, err
 	}
 	// AuthorHandle blanked: it's always this profile's own handle, redundant
 	// on your own vault page (listCard omits it when empty).
 	for i := range out {
 		out[i].AuthorHandle = ""
 	}
-	var nextCursor int64
+	var nextCursor feedCursor
 	if len(out) == 20 {
-		nextCursor = out[len(out)-1].UpdatedAt
+		last := out[len(out)-1]
+		nextCursor = feedCursor{UpdatedAt: last.UpdatedAt, NoteID: last.NoteID}
 	}
 	return out, nextCursor, nil
 }

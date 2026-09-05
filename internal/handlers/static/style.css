@@ -3732,6 +3732,66 @@ button:disabled {
 .editor-recovery[hidden] {
   display: none;
 }
+
+/* Folder import beta shares the writer's type and surface tokens. */
+.vault-import-trigger { gap: 0.4rem; }
+.vault-beta {
+  font-family: var(--font-sans);
+  font-size: var(--fs-2xs);
+  font-weight: 650;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+}
+.vault-dialog {
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 3rem);
+  box-sizing: border-box;
+  padding: 1.5rem;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-card);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  overflow-y: auto;
+}
+.vault-dialog::backdrop { background: color-mix(in srgb, var(--ink) 35%, transparent); }
+.vault-dialog-heading, .vault-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.vault-dialog-heading { justify-content: space-between; }
+.vault-dialog h2 { margin: 0; font-size: var(--fs-xl); }
+.vault-description { color: var(--text-2); line-height: 1.7; }
+.vault-actions, #vault-import-status, #vault-import-details { font-size: var(--fs-sm); }
+.vault-footer { margin-top: 1.25rem; }
+.vault-dialog progress { width: 100%; accent-color: var(--ink); }
+.vault-dialog a { color: var(--text); }
+#vault-import-results { max-height: 14rem; overflow-y: auto; padding-left: 1.2rem; overflow-wrap: anywhere; }
+#vault-import-results li { margin: 0.5rem 0; }
+.vault-dialog [hidden] { display: none; }
+.vault-review { min-width: 0; margin: 1rem 0; padding: 0.75rem; border: 1px solid var(--border-2); border-radius: var(--r-btn); }
+.vault-review legend { font-size: var(--fs-sm); }
+.vault-review input[type="search"] { box-sizing: border-box; width: 100%; font: inherit; }
+.vault-candidates { list-style: none; padding: 0; max-height: 18rem; overflow-y: auto; }
+.vault-candidates li { display: flex; flex-direction: row; align-items: center; gap: 0.4rem; border-bottom: 1px solid var(--border); }
+.vault-candidates label { display: flex; flex-direction: row; align-items: center; gap: 0.6rem; flex: 1; min-width: 0; margin: 0; padding: 0.6rem 0; font-size: var(--fs-sm); overflow-wrap: anywhere; cursor: pointer; }
+.vault-candidates input[type="checkbox"] { width: auto; flex: 0 0 auto; accent-color: var(--ink); }
+#vault-import-preview-name { overflow-wrap: anywhere; font-size: var(--fs-sm); }
+#vault-import-preview { border-top: 1px solid var(--border); margin-top: 0.75rem; }
+.vault-preview-label, #vault-import-preview-info { font-size: var(--fs-sm); color: var(--text-2); }
+#vault-import-preview-text { min-height: 8rem; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 0.75rem; color: var(--text); background: var(--bg-2); font-family: var(--font-mono); font-size: var(--fs-sm); border-radius: var(--r-btn); }
+@media (max-width: 560px) {
+  .editor-bar { flex-wrap: wrap; gap: 0.25rem; }
+  .editor-bar-end { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+  .vault-import-trigger { padding-inline: 0.35rem; }
+  .vault-dialog { padding: 1rem; }
+}
 .editor-recovery-actions {
   gap: 0.35rem;
 }

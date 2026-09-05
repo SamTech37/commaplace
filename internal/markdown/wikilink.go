@@ -1,11 +1,15 @@
 // Package markdown contains the goldmark pipeline and the wiki-link
-// extension. The parser logic lives here (no goldmark deps) so it is
-// easy to unit-test and re-use at save time for link extraction.
+// extension. Link payload parsing and renderer-aligned extraction live here
+// so they can be reused when saving notes.
 package markdown
 
 import (
 	"regexp"
 	"strings"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 // WikiLink is the parsed payload of [[...]].
@@ -151,35 +155,36 @@ func ParseLink(body string) (WikiLink, bool) {
 	}, true
 }
 
-// Extract scans body for every [[...]] occurrence and returns each parsable
-// wiki link that references another note, deduplicated by (user, slug).
-// Same-note heading links ([[#Heading]]) are skipped.
+// Extract uses the renderer's Markdown parser so code examples, comments and
+// YAML do not create phantom graph edges. Deduplicate by (user, slug).
 func Extract(body string) []WikiLink {
 	var out []WikiLink
 	seen := map[string]bool{}
-	src := body
-	for {
-		i := strings.Index(src, "[[")
-		if i < 0 {
-			break
+	_, body = SplitFrontmatter(body)
+	src := []byte(stripComments(body))
+	exts := append([]goldmark.Extender{}, staticExts...)
+	exts = append(exts, &wikiExt{}, &embedExt{})
+	doc := goldmark.New(goldmark.WithExtensions(exts...)).Parser().Parse(text.NewReader(src))
+	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
 		}
-		rest := src[i+2:]
-		j := strings.Index(rest, "]]")
-		if j < 0 {
-			break
+		var l WikiLink
+		switch n := node.(type) {
+		case *wikiNode:
+			l = n.Link
+		case *embedNode:
+			l = n.Link
+		default:
+			return ast.WalkContinue, nil
 		}
-		inner := rest[:j]
-		if !strings.ContainsAny(inner, "\n") && !strings.Contains(inner, "[[") {
-			if l, ok := ParseLink(inner); ok && l.Slug != "" {
-				key := l.User + "\x00" + l.Slug
-				if !seen[key] {
-					seen[key] = true
-					out = append(out, l)
-				}
-			}
+		key := l.User + "\x00" + l.Slug
+		if l.Slug != "" && !seen[key] {
+			seen[key] = true
+			out = append(out, l)
 		}
-		src = rest[j+2:]
-	}
+		return ast.WalkContinue, nil
+	})
 	return out
 }
 
@@ -187,13 +192,7 @@ func Extract(body string) []WikiLink {
 // tag names (without leading #), deduplicated, in encounter order.
 // Frontmatter and [[wikilinks]] are skipped. The caller is responsible for normalization.
 func ExtractInlineTags(body string) []string {
-	s := body
-	// skip YAML frontmatter
-	if strings.HasPrefix(s, "---\n") {
-		if idx := strings.Index(s[4:], "\n---"); idx >= 0 {
-			s = s[4+idx+4:]
-		}
-	}
+	_, s := SplitFrontmatter(body)
 	// blank out [[wikilinks]] so #anchors inside them aren't picked up
 	s = StripWikiLinks(s)
 	// blank out URLs so #fragments aren't picked up

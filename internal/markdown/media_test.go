@@ -22,6 +22,9 @@ func TestStripMedia(t *testing.T) {
 		{"hyperlink survives", "[a link](https://example.com) stays", "[a link](https://example.com) stays", 0},
 		{"bare url survives", "https://example.com/pic.png", "https://example.com/pic.png", 0},
 		{"plain text untouched", "just words", "just words", 0},
+		{"nested alt and URL", "a ![alt [nested]](https://x/a(b).png) b", "a  b", 1},
+		{"reference image", "![alt][image]\n\n[image]: https://x/pixel.png\n[link][image]", "\n\n[image]: https://x/pixel.png\n[link][image]", 1},
+		{"shortcut and collapsed reference", "![pic] ![pic][]\n[pic]: https://x/a.png", " \n[pic]: https://x/a.png", 2},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

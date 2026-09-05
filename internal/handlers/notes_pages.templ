@@ -21,6 +21,7 @@ templ writePage(p WriteProps) {
 	<link rel="stylesheet" href={ templ.URL(assetURL("easymde.min.css")) }/>
 	<script src={ assetURL("easymde.min.js") } defer></script>
 	<script src={ assetURL("cmeditor.js") } defer></script>
+	<script src={ assetURL("vault-import.js") } defer></script>
 	<div
 		class="editor-page"
 		data-note-id={ p.NoteID }
@@ -49,6 +50,7 @@ templ writePage(p WriteProps) {
 				</span>
 			</div>
 			<div class="editor-bar-end">
+				<button type="button" id="vault-import-open" class="editor-quiet-btn vault-import-trigger" aria-haspopup="dialog">匯入筆記 <span class="vault-beta">Beta</span></button>
 				<span class="save-state" aria-label="儲存狀態">
 					<span class="save-state-dot" aria-hidden="true"></span>
 					<span id="save-status" class="save-status" aria-live="polite">已儲存</span>
@@ -72,6 +74,7 @@ templ writePage(p WriteProps) {
 				</button>
 			</div>
 		</header>
+		@vaultImportDialog()
 		<div id="editor-recovery" class="editor-recovery" role="status" hidden>
 			<span>這台裝置有一份尚未同步的內容。</span>
 			<div class="editor-recovery-actions">

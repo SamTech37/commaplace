@@ -1,0 +1,49 @@
+package handlers
+
+templ vaultImportDialog() {
+	<dialog id="vault-import-dialog" class="vault-dialog" aria-labelledby="vault-import-title">
+		<div class="vault-dialog-heading">
+			<h2 id="vault-import-title">匯入筆記 <span class="vault-beta">Beta</span></h2>
+			<button type="button" id="vault-import-close" class="editor-quiet-btn" aria-label="關閉匯入">關閉</button>
+		</div>
+		<p class="vault-description">先檢查並勾選要公開的筆記。清單與預覽只在這台裝置讀取，按下發布才會上傳。圖片、影片與音訊會移除。</p>
+		<input type="file" id="vault-import-files" webkitdirectory multiple accept=".md,text/markdown" hidden/>
+		<input type="file" id="vault-import-individual" multiple accept=".md,text/markdown" hidden/>
+		<div class="vault-actions">
+			<button type="button" id="vault-import-pick-files" class="editor-quiet-btn">選取 Markdown 檔案</button>
+			<button type="button" id="vault-import-pick" class="editor-quiet-btn">選取資料夾</button>
+			<span id="vault-import-selection">最多 2,000 篇 · 100 MiB · 每篇 2 MiB</span>
+		</div>
+		<fieldset id="vault-import-review" class="vault-review" hidden>
+			<legend>選擇要公開的筆記</legend>
+			<input type="search" id="vault-import-filter" aria-label="搜尋檔名或路徑" placeholder="搜尋檔名或路徑"/>
+			<div class="vault-actions">
+				<button type="button" id="vault-import-select" class="editor-quiet-btn">勾選搜尋結果</button>
+				<button type="button" id="vault-import-clear" class="editor-quiet-btn">全部取消勾選</button>
+			</div>
+			<ul id="vault-import-candidates" class="vault-candidates"></ul>
+			<div class="vault-actions">
+				<button type="button" id="vault-import-prev" class="editor-quiet-btn">上一頁</button>
+				<span id="vault-import-page"></span>
+				<button type="button" id="vault-import-next" class="editor-quiet-btn">下一頁</button>
+			</div>
+			<section id="vault-import-preview" hidden aria-label="本機原文預覽">
+				<p class="vault-preview-label">Markdown 原文</p>
+				<div class="vault-actions"><strong id="vault-import-preview-name"></strong><button type="button" id="vault-import-preview-close" class="editor-quiet-btn">收起預覽</button></div>
+				<p id="vault-import-preview-info" role="status"></p>
+				<pre id="vault-import-preview-text" tabindex="0"></pre>
+			</section>
+		</fieldset>
+		<p id="vault-import-status" role="status" aria-live="polite">尚未選取檔案</p>
+		<progress id="vault-import-progress" max="100" value="0" aria-label="匯入進度" hidden></progress>
+		<details id="vault-import-details" hidden>
+			<summary>查看結果</summary>
+			<ul id="vault-import-results"></ul>
+		</details>
+		<div class="vault-actions vault-footer">
+			<button type="button" id="vault-import-start" disabled>發布勾選的筆記</button>
+			<button type="button" id="vault-import-download" class="editor-quiet-btn" hidden>下載匯入報告</button>
+			<a id="vault-import-profile" hidden>查看筆記 →</a>
+		</div>
+	</dialog>
+}

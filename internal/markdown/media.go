@@ -77,14 +77,15 @@ func stripMediaEmbeds(md string) (string, int) {
 	return b.String(), n
 }
 
-// stripImageLinks drops ![alt](url) entirely while leaving [text](url) alone.
-// Deliberately the same cheap single-pass shape as StripMDLinks; nested
-// brackets are not handled there either.
-//
-// The alt text is bounded by the first "]" rather than by searching ahead for
-// "](": a surviving note embed ![[a note]] would otherwise match the "](" of
-// an unrelated hyperlink later in the paragraph and delete everything between.
+// stripImageLinks removes inline and reference-style images, with balanced
+// delimiters. Ordinary hyperlinks and Obsidian note embeds remain intact.
 func stripImageLinks(md string) (string, int) {
+	// Reference images also load remote media, even though their URL is on a
+	// separate line. Keep definitions: ordinary hyperlinks may share them.
+	references := map[string]bool{}
+	for _, m := range imageReferenceDefinition.FindAllStringSubmatch(md, -1) {
+		references[imageReferenceKey(m[1])] = true
+	}
 	var b strings.Builder
 	n := 0
 	for {
@@ -100,24 +101,63 @@ func stripImageLinks(md string) (string, int) {
 			md = md[i+3:]
 			continue
 		}
-		rest := md[i+2:]
-		alt := strings.IndexByte(rest, ']')
-		if alt < 0 || alt+1 >= len(rest) || rest[alt+1] != '(' {
-			b.WriteString(md[:i+2])
-			md = rest
-			continue
+		alt := mediaDelimiterEnd(md, i+1, '[', ']')
+		end := -1
+		if alt >= 0 {
+			label := md[i+2 : alt]
+			switch {
+			case alt+1 < len(md) && md[alt+1] == '(':
+				end = mediaDelimiterEnd(md, alt+1, '(', ')')
+			case alt+1 < len(md) && md[alt+1] == '[':
+				if refEnd := mediaDelimiterEnd(md, alt+1, '[', ']'); refEnd >= 0 {
+					ref := md[alt+2 : refEnd]
+					if ref == "" {
+						ref = label
+					}
+					if references[imageReferenceKey(ref)] {
+						end = refEnd
+					}
+				}
+			default:
+				if references[imageReferenceKey(label)] {
+					end = alt
+				}
+			}
 		}
-		paren := strings.IndexByte(rest[alt+1:], ')')
-		if paren < 0 {
+		if end < 0 {
 			b.WriteString(md[:i+2])
-			md = rest
+			md = md[i+2:]
 			continue
 		}
 		b.WriteString(md[:i])
 		n++
-		md = rest[alt+1+paren+1:]
+		md = md[end+1:]
 	}
 	return b.String(), n
+}
+
+var imageReferenceDefinition = regexp.MustCompile(`(?m)^ {0,3}\[([^\]\n]+)\]:`)
+
+func imageReferenceKey(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
+
+func mediaDelimiterEnd(s string, start int, open, close byte) int {
+	depth := 0
+	for i := start; i < len(s); i++ {
+		if s[i] == '\\' {
+			i++
+			continue
+		}
+		if s[i] == open {
+			depth++
+		}
+		if s[i] == close {
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 func isMediaPath(target string) bool {

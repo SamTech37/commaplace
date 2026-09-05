@@ -59,6 +59,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /import", s.GetImport)
 	mux.HandleFunc("POST /import", s.PostImport)
 	mux.HandleFunc("POST /import/save-one", s.PostImportSaveOne)
+	mux.HandleFunc("POST /import/vault", s.PostVaultImport)
 
 	// Feed
 	mux.HandleFunc("GET /feed", s.GetFeed)
@@ -222,6 +223,10 @@ func (g *gzipResponseWriter) Close() error {
 	}
 	return nil
 }
+
+// Preserve ResponseController deadlines/flush through the middleware. NDJSON
+// is not gzip-compressed, so each import progress event can reach the browser.
+func (g *gzipResponseWriter) Unwrap() http.ResponseWriter { return g.ResponseWriter }
 
 // GetCatchAll routes assets and user pages without conflicting mux patterns.
 func (s *Server) GetCatchAll(static http.Handler) http.HandlerFunc {
