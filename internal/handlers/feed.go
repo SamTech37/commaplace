@@ -19,7 +19,6 @@ import (
 
 var pageCfg = config.DefaultPagination()
 
-
 // feedCard powers every note-listing surface (feed/tag/search/profile/saved
 // and the hover-preview endpoint): a meta-rich card with variant selection.
 type feedCard struct {
@@ -32,14 +31,14 @@ type feedCard struct {
 	LikeCount    int
 	LinkCount    int
 	CrossCount   int
-	Variant      string   // "text" | "list" | "quote" | "links"
-	Excerpt      string   // text variant
-	ListItems    []string // list variant
-	Quote        string   // quote variant
-	LinkChips    []string // links variant
-	Tags         []string // shown as #hashtag row on the card
-	ImageURL     string   // first body image, shown as masonry thumbnail
-	IsDraft      bool     // profile's own drafts tab: shows a bulk-delete checkbox
+	Variant      string          // "text" | "list" | "quote" | "links"
+	Excerpt      string          // text variant
+	ListItems    []string        // list variant
+	Quote        string          // quote variant
+	LinkChips    []string        // links variant
+	Tags         []string        // shown as #hashtag row on the card
+	ImageURL     string          // first body image, shown as masonry thumbnail
+	IsDraft      bool            // profile's own drafts tab: shows a bulk-delete checkbox
 	SnippetHTML  templ.Component // search's ts_headline <mark> highlight; overrides Excerpt when set
 }
 
@@ -68,7 +67,7 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		if viewer == nil {
 			cards = nil
 		} else {
-			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, cursor.UpdatedAt, pageCfg.FeedPageSize)
+			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, cursor, pageCfg.FeedPageSize)
 		}
 	} else {
 		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, cursor, pageCfg.FeedPageSize)
@@ -190,7 +189,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cu
 	return scanCards(rows)
 }
 
-func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, tagFilter string, older int64, limit int) ([]feedCard, error) {
+func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, tagFilter string, older feedCursor, limit int) ([]feedCard, error) {
 	args := []any{viewerID}
 	q := strings.Builder{}
 	fmt.Fprintf(&q, `
@@ -203,12 +202,12 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, ta
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
 	}
-	if older > 0 {
-		args = append(args, older)
-		fmt.Fprintf(&q, ` AND n.updated_at < $%d`, len(args))
+	if older.set() {
+		args = append(args, older.UpdatedAt, older.NoteID)
+		fmt.Fprintf(&q, ` AND (n.updated_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
 	}
 	args = append(args, limit)
-	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC LIMIT $%d`, len(args))
+	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC, n.id DESC LIMIT $%d`, len(args))
 	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
 	if err != nil {
 		return nil, err
@@ -336,6 +335,7 @@ func scanCards(rows *sql.Rows) ([]feedCard, error) {
 //   - 3+ wiki links             -> links
 //   - top of body is bullet list (3+ bullets) -> list
 //   - else                      -> text excerpt
+//
 // matchBullet returns (text, true) if ln is "- ...", "* ...", or "12. ...".
 func matchBullet(ln string) (string, bool) {
 	if strings.HasPrefix(ln, "- ") {
@@ -357,6 +357,7 @@ func matchBullet(ln string) (string, bool) {
 }
 
 func analyzeCardBody(body string) (variant, excerpt string, listItems []string, quote string, linkChips []string) {
+	_, body = markdown.SplitFrontmatter(body)
 	s := strings.TrimSpace(body)
 
 	if strings.HasPrefix(s, ">") {

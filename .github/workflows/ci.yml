@@ -36,6 +36,11 @@ jobs:
           git diff --exit-code -- '*_templ.go'
       - name: Build
         run: go build ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Import file selection privacy tests
+        run: node --test scripts/vault-import-ui.test.cjs
       - name: Test
         env:
           TEST_DATABASE_URL: postgres://commaplace:commaplace@localhost:5432/commaplace_test?sslmode=disable

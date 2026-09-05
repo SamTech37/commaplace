@@ -106,10 +106,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
-	var older int64
-	if v := r.URL.Query().Get("older"); v != "" {
-		older, _ = strconv.ParseInt(v, 10, 64)
-	}
+	older := parseFeedCursor(r.URL.Query().Get("older"), r.URL.Query().Get("older_id"))
 
 	args := []any{u.ID}
 	q := strings.Builder{}
@@ -119,12 +116,12 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 		JOIN notes n  ON n.id = sv.note_id
 		JOIN users u2 ON u2.id = n.author_id
 		WHERE sv.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
-	if older > 0 {
-		args = append(args, older)
-		fmt.Fprintf(&q, ` AND sv.created_at < $%d`, len(args))
+	if older.set() {
+		args = append(args, older.UpdatedAt, older.NoteID)
+		fmt.Fprintf(&q, ` AND (sv.created_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
 	}
 	args = append(args, pageCfg.FeedPageSize)
-	fmt.Fprintf(&q, ` ORDER BY sv.created_at DESC LIMIT $%d`, len(args))
+	fmt.Fprintf(&q, ` ORDER BY sv.created_at DESC, n.id DESC LIMIT $%d`, len(args))
 
 	rows, err := s.DB.QueryContext(r.Context(), q.String(), args...)
 	if err != nil {
@@ -163,6 +160,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 	if len(cards) == pageCfg.FeedPageSize {
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(lastSaveCreatedAt, 10))
+		v.Set("older_id", cards[len(cards)-1].NoteID.String())
 		olderURL = "/me/saved?" + v.Encode()
 	}
 

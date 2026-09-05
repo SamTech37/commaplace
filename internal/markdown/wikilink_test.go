@@ -145,6 +145,14 @@ func TestHeadingAnchor(t *testing.T) {
 	}
 }
 
+func TestExtractIgnoresCodeCommentsAndFrontmatter(t *testing.T) {
+	body := "---\nproperty: '[[yaml]]'\n---\n[[real]] ![[embed]]\n`[[inline]]`\n```md\n[[fenced]]\n```\n    [[indented]]\n\n%% [[comment]] %%"
+	got := Extract(body)
+	if len(got) != 2 || got[0].Slug != "real" || got[1].Slug != "embed" {
+		t.Fatalf("phantom links: %+v", got)
+	}
+}
+
 func TestExtractInlineTags(t *testing.T) {
 	cases := []struct {
 		name string

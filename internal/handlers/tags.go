@@ -60,10 +60,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusNotFound, "no such tag")
 		return
 	}
-	var older int64
-	if v := r.URL.Query().Get("older"); v != "" {
-		older, _ = strconv.ParseInt(v, 10, 64)
-	}
+	older := parseFeedCursor(r.URL.Query().Get("older"), r.URL.Query().Get("older_id"))
 	// Match by script variant (Simplified/Traditional) and case, not exact
 	// bytes — note_tags isn't guaranteed lowercase at rest (some seed paths
 	// insert raw casing, e.g. "UX"), and a tag typed in one script should
@@ -83,12 +80,12 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		JOIN users u ON u.id = n.author_id
 		WHERE (%s) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`,
 		noteCardColumns, strings.Join(clauses, " OR "))
-	if older > 0 {
-		args = append(args, older)
-		fmt.Fprintf(&q, ` AND n.updated_at < $%d`, len(args))
+	if older.set() {
+		args = append(args, older.UpdatedAt, older.NoteID)
+		fmt.Fprintf(&q, ` AND (n.updated_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
 	}
 	args = append(args, pageCfg.FeedPageSize)
-	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC LIMIT $%d`, len(args))
+	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC, n.id DESC LIMIT $%d`, len(args))
 	rows, err := s.DB.QueryContext(r.Context(), q.String(), args...)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
@@ -105,6 +102,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
 		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+		v.Set("older_id", last.NoteID.String())
 		olderURL = "/tag/" + tag + "?" + v.Encode()
 	}
 

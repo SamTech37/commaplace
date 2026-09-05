@@ -50,6 +50,7 @@ type EmbedResolver func(WikiLink) (title string, body template.HTML, ok bool)
 // with "wiki-resolved" or "wiki-unresolved" depending on resolver. ![[embed]]
 // blocks are expanded via embed (or rendered as missing if embed is nil).
 func Render(md, currentUser string, resolve Resolver, embed EmbedResolver) (template.HTML, error) {
+	_, md = SplitFrontmatter(md)
 	md = stripComments(md)
 	exts := make([]goldmark.Extender, 0, len(staticExts)+2)
 	exts = append(exts, &wikiExt{currentUser: currentUser, resolve: resolve})
@@ -98,13 +99,7 @@ func stripLeadingMarker(ln string) string {
 // Excerpt strips the most common markdown syntax and returns up to n
 // characters. Used for feed/profile cards. Not perfect; intentionally cheap.
 func Excerpt(md string, n int) string {
-	s := md
-	// strip YAML frontmatter at the very top (--- ... ---)
-	if strings.HasPrefix(s, "---\n") {
-		if idx := strings.Index(s[4:], "\n---"); idx >= 0 {
-			s = strings.TrimLeft(s[4+idx+4:], "\r\n")
-		}
-	}
+	_, s := SplitFrontmatter(md)
 	// drop a leading "# Title" heading: importers take the note title from it
 	// (handlers/import.go extractH1) and leave it in the body, so a preview
 	// that kept it would print the title twice.
