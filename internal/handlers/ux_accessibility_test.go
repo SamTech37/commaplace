@@ -38,6 +38,33 @@ func TestLayoutExposesReachableNavigation(t *testing.T) {
 	}
 }
 
+func TestVisitorSettingsTriggerMatchesNavigationType(t *testing.T) {
+	stylesheet, err := os.ReadFile("static/style.css")
+	if err != nil {
+		t.Fatalf("read stylesheet: %v", err)
+	}
+
+	css := string(stylesheet)
+	const selector = ".prefs-menu > summary.icon-btn {"
+	start := strings.Index(css, selector)
+	if start < 0 {
+		t.Fatalf("stylesheet missing %s", selector)
+	}
+	end := strings.Index(css[start:], "}")
+	if end < 0 {
+		t.Fatalf("unterminated rule for %s", selector)
+	}
+	rule := css[start : start+end]
+	for _, declaration := range []string{
+		"font-family: var(--font-sans)",
+		"font-size: var(--fs-sm)",
+	} {
+		if !strings.Contains(rule, declaration) {
+			t.Errorf("visitor settings trigger rule missing %s", declaration)
+		}
+	}
+}
+
 func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 	var out strings.Builder
 	if err := writePage(WriteProps{NoteID: "note-id", Document: "Title\n\nBody"}).Render(context.Background(), &out); err != nil {

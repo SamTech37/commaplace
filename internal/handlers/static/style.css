@@ -391,6 +391,13 @@ mark {
   color: var(--text);
   background: var(--bg-2);
 }
+/* The signed-out settings trigger is text, not an icon. Match the adjacent
+   navigation labels instead of inheriting the page's serif body face. */
+.prefs-menu > summary.icon-btn {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+}
 .toast {
   position: fixed;
   left: 50%;
