@@ -41,15 +41,10 @@ func (s *Server) PostReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Best-effort email to admin. Skip silently in dev mode.
-	if s.AdminHandle != "" && s.Auth.Mailer != nil {
-		var adminEmail string
-		_ = s.DB.QueryRowContext(r.Context(),
-			`SELECT email FROM users WHERE handle = $1`, s.AdminHandle).Scan(&adminEmail)
-		if adminEmail != "" {
-			_ = s.Auth.Mailer.Send(adminEmail, emailCfg.ReportSubj,
-				fmt.Sprintf("Note id %s reported by @%s.\nReason: %s\n",
-					noteID, u.Handle, reason))
-		}
+	if s.AdminEmail != "" && s.Auth.Mailer != nil {
+		_ = s.Auth.Mailer.Send(s.AdminEmail, emailCfg.ReportSubj,
+			fmt.Sprintf("Note id %s reported by @%s.\nReason: %s\n",
+				noteID, u.Handle, reason))
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

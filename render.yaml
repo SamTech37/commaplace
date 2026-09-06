@@ -67,8 +67,12 @@ services:
         value: 826692770873-gvmbdlsltemcgh0aie4jtra1jhu1f91e.apps.googleusercontent.com
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      # Optional — your handle, lower-case, to unlock /admin/reports.
+      # Optional — your handle (lower-case) AND the email on that account, to
+      # unlock /admin. Both must be set and both must match: a handle alone is
+      # claimable by anyone via /settings/handle, the email never changes.
       - key: ADMIN_HANDLE
+        sync: false
+      - key: ADMIN_EMAIL
         sync: false
       # Shared secret for /_dev/login?as=<handle>&key=<this> — the no-SMTP
       # stopgap login for playtesters. DEBUG stays unset/off on purpose.

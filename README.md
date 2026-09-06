@@ -80,7 +80,7 @@ go build -o bin/commonplace ./cmd/server
 | `SESSION_SECRET` | auto-generated (`.session_secret`) | Hex-encoded HMAC key for session cookies |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | unset | If unset, magic links are printed to stdout (dev mode) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | Enables the "Continue with Google" button on `/login`; redirect URI is `${BASE_URL}/auth/google/callback` |
-| `ADMIN_HANDLE` | unset | Handle granted access to `/admin/*` |
+| `ADMIN_HANDLE` / `ADMIN_EMAIL` | unset | Handle **and** account email granted access to `/admin/*`. Both required — a handle on its own is claimable via `/settings/handle` |
 | `DEBUG` | `0` | Verbose error pages + unlocks `/_dev/login` unconditionally. Leave unset on any deploy reachable outside the team |
 | `PLAYTEST_LOGIN_KEY` | unset | Unlocks `/_dev/login?as=<handle>&key=<this>` without needing `DEBUG` — shared-secret login for playtests when SMTP/OAuth aren't set up |
 | `SEED_DEV` | `0` | Install multi-user fake data (alice/bob/carol/dave) on startup |
