@@ -54,6 +54,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /edit/{id}", s.GetEdit)
 	mux.HandleFunc("POST /delete/{id}", s.PostDeleteNote)
 	mux.HandleFunc("POST /api/notes/bulk-delete", s.PostBulkDeleteDrafts)
+	mux.HandleFunc("POST /api/notes/manage", s.PostManageNotes)
 
 	// Import (single or batch of .md files)
 	mux.HandleFunc("GET /import", s.GetImport)

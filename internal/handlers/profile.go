@@ -52,10 +52,9 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		view       NoteListView
-		tab        string
-		bulkDelete bool
-		calendar   *calendarGridProps
+		view     NoteListView
+		tab      string
+		calendar *calendarGridProps
 	)
 	switch mode {
 	case "calendar":
@@ -71,6 +70,9 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 	default:
 		olderThan := parseFeedCursor(r.URL.Query().Get("older"), r.URL.Query().Get("older_id"))
 		tab = r.URL.Query().Get("tab")
+		if tab != "drafts" && tab != "all" {
+			tab = ""
+		}
 
 		recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, olderThan)
 		if err != nil {
@@ -85,7 +87,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 			Empty:       profileEmpty(tab),
 			GroupByDate: true,
 		}
-		bulkDelete = isSelf && tab == "drafts"
+		view.Manage = isSelf
 		if r.Header.Get("HX-Request") == "true" {
 			s.renderFragment(w, r, notesFragment(view))
 			return
@@ -132,7 +134,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		NoteCount:      noteCount,
 		EstYear:        estYear,
 		Pinned:         pinned,
-		BulkDelete:     bulkDelete,
 	}))
 }
 
@@ -170,7 +171,7 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 		query += ` AND n.published_at IS NOT NULL`
 	} else if tab == "drafts" {
 		query += ` AND n.published_at IS NULL`
-	} else {
+	} else if tab != "all" {
 		query += ` AND n.published_at IS NOT NULL`
 	}
 	if olderThan.set() {
