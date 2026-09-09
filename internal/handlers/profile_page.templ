@@ -21,7 +21,6 @@ type ProfilePageProps struct {
 	NoteCount      int
 	EstYear        int
 	Pinned         *pinnedNote
-	BulkDelete     bool
 }
 
 templ profileNotesList(p ProfilePageProps) {
@@ -99,18 +98,29 @@ templ profilePage(p ProfilePageProps) {
 		<script src={ assetURL("linkpreview.js") } defer></script>
 	} else {
 		if p.IsSelf {
-			<nav class="feed-tabs" style="margin-top: 1em;">
-				<a href={ templ.URL("/" + p.Handle) } class={ "feed-tab", templ.KV("active", p.Tab != "drafts") }>公開</a>
-				<a href={ templ.URL("/" + p.Handle + "?tab=drafts") } class={ "feed-tab", templ.KV("active", p.Tab == "drafts") }>草稿</a>
+			<nav class="feed-tabs profile-manager-tabs" style="margin-top: 1em;">
+				<a href={ templ.URL("/" + p.Handle + "?tab=all") } class={ "feed-tab", templ.KV("active", p.Tab == "all") }>全部</a>
+				<a href={ templ.URL("/" + p.Handle) } class={ "feed-tab", templ.KV("active", p.Tab != "drafts" && p.Tab != "all") }>公開</a>
+				<a href={ templ.URL("/" + p.Handle + "?tab=drafts") } class={ "feed-tab", templ.KV("active", p.Tab == "drafts") }>隱藏・草稿</a>
 			</nav>
 		} else {
 			<div class="profile-notes-heading" style="margin-top:1em">最近的筆記</div>
 		}
-		if p.BulkDelete {
-			<form method="post" action="/api/notes/bulk-delete" id="bulk-delete-drafts-form" onsubmit="return confirm('刪除所選的草稿？');">
+		if p.IsSelf {
+			<form method="post" action="/api/notes/manage" id="note-manager">
+				<input type="hidden" name="tab" value={ p.Tab }/>
+				<div class="note-manager-toolbar">
+					<button type="button" data-select="loaded">全選已載入</button>
+					<button type="button" data-select="none">全部取消勾選</button>
+					<label><input type="checkbox" name="scope" value="all" id="select-all-notes"/> 選取整個篩選結果（含未載入）</label>
+					<span id="note-selection-count" role="status" aria-live="polite">已選 0 篇</span>
+					<button type="submit" name="action" value="publish" data-bulk disabled>設為公開</button>
+					<button type="submit" name="action" value="hide" data-bulk disabled>設為隱藏</button>
+					<button type="submit" name="action" value="delete" data-bulk disabled>刪除所選</button>
+				</div>
 				@profileNotesList(p)
-				<button type="submit" class="bulk-delete-btn" style="margin-top: 1em">刪除所選</button>
 			</form>
+			<script src={ assetURL("note-manager.js") } defer></script>
 		} else {
 			@profileNotesList(p)
 		}

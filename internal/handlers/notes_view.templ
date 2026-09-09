@@ -16,6 +16,7 @@ type NoteListView struct {
 	OlderURL    string // "" = no infinite scroll (end marker shown instead)
 	Empty       templ.Component // shown (inside a <p class="note-meta">) when len(Cards) == 0
 	GroupByDate bool // profile's timeline mode: a date header above each run of same-day cards
+	Manage      bool // owner-only profile controls, including scroll fragments
 }
 
 // cardRenderers maps a layout name to the component that renders one card in
@@ -40,6 +41,9 @@ func renderCards(view NoteListView) templ.Component {
 	render, ok := cardRenderers[view.Layout]
 	if !ok {
 		render = cardRenderers["masonry"]
+	}
+	if view.Manage {
+		render = managedNoteCard
 	}
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		if !view.GroupByDate {
@@ -143,14 +147,27 @@ templ notesFragment(view NoteListView) {
 // surface (tag/search/saved/profile) used before this substrate existed;
 // masonry is feed's alone (and the hover-preview it shares a card with).
 templ listCard(c feedCard) {
-	if c.IsDraft {
-		<div class="note-card-row">
-			<input type="checkbox" name="ids" value={ c.NoteID.String() } aria-label="選取這篇草稿"/>
+	@listCardLink(c)
+}
+
+templ managedNoteCard(c feedCard) {
+	<div class="managed-note" data-note-id={ c.NoteID.String() }>
+		<input type="checkbox" name="ids" value={ c.NoteID.String() } aria-label={ "選取「" + c.Title + "」" }/>
+		<div class="managed-note-content">
 			@listCardLink(c)
+			<div class="managed-note-actions">
+				<a href={ templ.URL("/edit/" + c.NoteID.String()) }>編輯文章</a>
+				if c.IsDraft {
+					<span>隱藏・草稿</span>
+					<button type="submit" name="single" value={ "publish:" + c.NoteID.String() }>設為公開</button>
+				} else {
+					<span>公開</span>
+					<button type="submit" name="single" value={ "hide:" + c.NoteID.String() }>設為隱藏</button>
+				}
+				<button type="submit" name="single" value={ "delete:" + c.NoteID.String() }>刪除</button>
+			</div>
 		</div>
-	} else {
-		@listCardLink(c)
-	}
+	</div>
 }
 
 templ listCardLink(c feedCard) {

@@ -38,7 +38,7 @@ type feedCard struct {
 	LinkChips    []string        // links variant
 	Tags         []string        // shown as #hashtag row on the card
 	ImageURL     string          // first body image, shown as masonry thumbnail
-	IsDraft      bool            // profile's own drafts tab: shows a bulk-delete checkbox
+	IsDraft      bool            // unpublished note; displayed as hidden/draft to its owner
 	SnippetHTML  templ.Component // search's ts_headline <mark> highlight; overrides Excerpt when set
 }
 
