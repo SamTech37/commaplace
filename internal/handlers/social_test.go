@@ -183,6 +183,152 @@ func followListBody(t *testing.T, s *Server, viewer uuid.UUID, handle, rel strin
 	return w.Body.String()
 }
 
+func profileShowcaseJSON(t *testing.T, showcases []profileShowcase) string {
+	t.Helper()
+	b, err := json.Marshal(showcases)
+	if err != nil {
+		t.Fatalf("marshal showcases: %v", err)
+	}
+	return string(b)
+}
+
+func TestProfileHomeSurfacesCustomShowcases(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	alice := mkUser(t, s, "alice")
+
+	entry, err := s.saveNote(ctx, alice, "alice", "entry-note", "Entry Note", "A room about public thinking and handmade navigation.", []string{"systems", "design"})
+	if err != nil {
+		t.Fatalf("save entry: %v", err)
+	}
+	if _, err := s.saveNote(ctx, alice, "alice", "loop-note", "Loop Note", "Back to [[entry-note]].", []string{"systems"}); err != nil {
+		t.Fatalf("save loop: %v", err)
+	}
+	if _, err := s.DB.Exec(`UPDATE users SET pinned_note_id = $1 WHERE id = $2`, entry, alice); err != nil {
+		t.Fatalf("pin entry: %v", err)
+	}
+	showcases := profileShowcaseJSON(t, []profileShowcase{
+		{Type: profileShowcaseNote, Title: "先看這篇", Ref: "entry-note", BodyMD: "門口不是摘要。"},
+		{Type: profileShowcaseTag, Title: "系統房", Ref: "systems", BodyMD: "正在組連線。"},
+		{Type: profileShowcaseText, Title: "訪客便條", BodyMD: "可以先看 [[entry-note]]。"},
+	})
+	if _, err := s.DB.Exec(`UPDATE users SET profile_title = $1, profile_bio = $2, profile_showcases = $3::jsonb WHERE id = $4`,
+		"未完成想法的溫室", "## 先從這裡開始\n先看 [[entry-note]]，再看時間軸。", showcases, alice); err != nil {
+		t.Fatalf("set profile home: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/alice", nil)
+	req.SetPathValue("user", "alice")
+	w := httptest.NewRecorder()
+	s.GetProfile(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetProfile: status %d body=%s", w.Code, w.Body)
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"小屋入口",
+		"未完成想法的溫室",
+		"先從這裡開始",
+		`href="/alice/entry-note"`,
+		"入口筆記",
+		"Entry Note",
+		"手選筆記",
+		"先看這篇",
+		"主題房間",
+		"系統房",
+		"Loop Note",
+		"自由文字",
+		"訪客便條",
+		"門口不是摘要",
+		"正在組連線",
+		"可以先看",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("profile home missing %q in body:\n%s", want, body)
+		}
+	}
+	for _, oldTagRoom := range []string{"#systems", "#design"} {
+		if strings.Contains(body, oldTagRoom) {
+			t.Fatalf("profile home should not render old hashtag room label %q in body:\n%s", oldTagRoom, body)
+		}
+	}
+	for _, unwanted := range []string{"公開筆記", "外連", "共鳴", "常連到的人"} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("profile home should not render stats label %q in body:\n%s", unwanted, body)
+		}
+	}
+}
+
+func TestProfileHomeStaysPublicForVisitors(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	alice := mkUser(t, s, "alice")
+
+	if _, err := s.saveNote(ctx, alice, "alice", "public-entry", "Public Entry", "public", []string{"public"}); err != nil {
+		t.Fatalf("save public entry: %v", err)
+	}
+	draft, err := s.saveNote(ctx, alice, "alice", "private-draft", "Private Draft", "private", []string{"secret"})
+	if err != nil {
+		t.Fatalf("save draft: %v", err)
+	}
+	if _, err := s.DB.Exec(`UPDATE notes SET published_at = NULL WHERE id = $1`, draft); err != nil {
+		t.Fatalf("unpublish draft: %v", err)
+	}
+	if _, err := s.DB.Exec(`UPDATE users SET pinned_note_id = $1 WHERE id = $2`, draft, alice); err != nil {
+		t.Fatalf("pin draft: %v", err)
+	}
+	showcases := profileShowcaseJSON(t, []profileShowcase{
+		{Type: profileShowcaseNote, Title: "Draft Shelf", Ref: "private-draft"},
+		{Type: profileShowcaseTag, Title: "Secret Room", Ref: "secret"},
+		{Type: profileShowcaseTag, Title: "Public Room", Ref: "public"},
+	})
+	if _, err := s.DB.Exec(`UPDATE users SET profile_title = $1, profile_bio = $2, profile_showcases = $3::jsonb WHERE id = $4`,
+		"Public House", "Public porch with [[private-draft]]", showcases, alice); err != nil {
+		t.Fatalf("set profile home: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/alice", nil)
+	req.SetPathValue("user", "alice")
+	w := httptest.NewRecorder()
+	s.GetProfile(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetProfile: status %d body=%s", w.Code, w.Body)
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Public Entry", "1 entries"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("visitor profile missing %q in body:\n%s", want, body)
+		}
+	}
+	for _, leaked := range []string{"Private Draft", "Draft Shelf", "Secret Room", "入口筆記", "待放一篇公開筆記"} {
+		if strings.Contains(body, leaked) {
+			t.Fatalf("visitor profile leaked private signal %q in body:\n%s", leaked, body)
+		}
+	}
+	if strings.Contains(body, `href="/alice/private-draft"`) {
+		t.Fatalf("visitor profile resolved a private note link:\n%s", body)
+	}
+	if !strings.Contains(body, "Public Room") {
+		t.Fatalf("visitor should see the public custom showcase, got:\n%s", body)
+	}
+
+	selfReq := authedRequest(s, alice, http.MethodGet, "/alice", "")
+	selfReq.SetPathValue("user", "alice")
+	selfW := httptest.NewRecorder()
+	s.GetProfile(selfW, selfReq)
+	if selfW.Code != http.StatusOK {
+		t.Fatalf("GetProfile self: status %d body=%s", selfW.Code, selfW.Body)
+	}
+	if !strings.Contains(selfW.Body.String(), "Private Draft") {
+		t.Fatalf("owner should still see their pinned draft, got:\n%s", selfW.Body)
+	}
+	for _, want := range []string{"Draft Shelf", "Secret Room", "待放一篇公開筆記", "尚未公開"} {
+		if !strings.Contains(selfW.Body.String(), want) {
+			t.Fatalf("owner should see their custom showcase state %q, got:\n%s", want, selfW.Body)
+		}
+	}
+}
+
 // TestSearchFindsNote is a regression test for a join-precedence bug: the
 // original query used "FROM notes n, to_tsquery(...) query JOIN users u ON
 // u.id = n.author_id", which makes "n" invisible to the explicit JOIN's ON
@@ -220,8 +366,8 @@ func TestSearchCrossScript(t *testing.T) {
 	}
 
 	for _, tc := range []struct{ query, wantTitle string }{
-		{"数论", "數論"},       // Simplified query → Traditional note
-		{"數論", "數論"},       // same-script still works
+		{"数论", "數論"},     // Simplified query → Traditional note
+		{"數論", "數論"},     // same-script still works
 		{"機器學習", "机器学习"}, // Traditional query → Simplified note
 	} {
 		req := httptest.NewRequest(http.MethodGet, "/search?q="+url.QueryEscape(tc.query), nil)
