@@ -84,6 +84,7 @@ go build -o bin/commonplace ./cmd/server
 | `DEBUG` | `0` | Verbose error pages + unlocks `/_dev/login` unconditionally. Leave unset on any deploy reachable outside the team |
 | `PLAYTEST_LOGIN_KEY` | unset | Unlocks `/_dev/login?as=<handle>&key=<this>` without needing `DEBUG` — shared-secret login for playtests when SMTP/OAuth aren't set up |
 | `SEED_DEV` | `0` | Install multi-user fake data (alice/bob/carol/dave) on startup |
+| `SEED_DEMO` | `0` | Install the shawn_demo account and sample notes on startup |
 | `SEED_TOUR` | `0` | Also install the legacy English onboarding-fork seed |
 
 ## Layout
