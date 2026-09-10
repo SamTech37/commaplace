@@ -21,12 +21,21 @@ type ProfilePageProps struct {
 	NoteCount      int
 	EstYear        int
 	Pinned         *pinnedNote
+	Home           profileHome
 }
 
 templ profileNotesList(p ProfilePageProps) {
 	<div id="notes-list" data-reveal-group>
 		@notesView(p.View)
 	</div>
+}
+
+templ showcaseTypeOption(value string, label string, current string) {
+	if current == value {
+		<option value={ value } selected>{ label }</option>
+	} else {
+		<option value={ value }>{ label }</option>
+	}
 }
 
 templ profilePage(p ProfilePageProps) {
@@ -71,16 +80,121 @@ templ profilePage(p ProfilePageProps) {
 			</details>
 		}
 	</div>
-	if p.IsSelf && p.Pinned != nil {
-		<div class="pinned-card">
-			<div class="pinned-label">📌 Pinned</div>
-			<a href={ templ.URL(p.Pinned.URL) } class="pinned-link">{ p.Pinned.Title }</a>
-		</div>
-	}
 	if p.ViewerLoggedIn && !p.IsSelf {
 		<div class="profile-follow">
 			@followForm(p.ProfileID, p.Following)
 		</div>
+	}
+	if p.IsSelf {
+		<details class="profile-home-editor">
+			<summary>布置小屋</summary>
+			<form method="POST" action="/settings/profile" class="profile-home-form" data-profile-home-form data-profile-handle={ p.Handle }>
+				<label>
+					<span>門牌</span>
+					<input type="text" name="profile_title" value={ p.Home.Title } maxlength="80" placeholder="未完成想法的溫室" data-profile-home-title-input/>
+				</label>
+				<label>
+					<span>小屋導覽</span>
+					<textarea name="profile_bio" maxlength="1200" rows="6" placeholder={ "## 起點\n最近我把念頭放在這幾個房間。" } data-profile-home-body-input>{ p.Home.BodyMD }</textarea>
+				</label>
+				<div class="profile-showcase-editor-list" data-showcase-editor-list>
+					for i, showcase := range profileShowcaseEditorSlots(p.Home.Showcases) {
+						<fieldset class="profile-showcase-edit" data-showcase-row>
+							<legend>{ "展示櫃 " + strconv.Itoa(i+1) }</legend>
+							<div class="profile-showcase-edit-controls">
+								<label>
+									<span>類型</span>
+									<select name="showcase_type" data-showcase-type aria-label={ "展示櫃 " + strconv.Itoa(i+1) + " 類型" }>
+										@showcaseTypeOption("", "不顯示", showcase.Type)
+										@showcaseTypeOption(profileShowcaseNote, "手選筆記", showcase.Type)
+										@showcaseTypeOption(profileShowcaseTag, "主題房間", showcase.Type)
+										@showcaseTypeOption(profileShowcaseText, "自由文字", showcase.Type)
+									</select>
+								</label>
+								<label>
+									<span>標題</span>
+									<input type="text" name="showcase_title" value={ showcase.Title } maxlength="80" placeholder="最近常走的路" data-showcase-title/>
+								</label>
+								<label>
+									<span>引用</span>
+									<input type="text" name="showcase_ref" value={ showcase.Ref } maxlength="120" placeholder="writing-is-thinking" data-showcase-ref/>
+								</label>
+								<div class="profile-showcase-row-actions">
+									<button type="button" aria-label="上移展示櫃" title="上移" data-showcase-up>↑</button>
+									<button type="button" aria-label="下移展示櫃" title="下移" data-showcase-down>↓</button>
+									<button type="button" aria-label="清空展示櫃" title="清空" data-showcase-clear>×</button>
+								</div>
+							</div>
+							<label class="profile-showcase-body-edit">
+								<span>補一句</span>
+								<textarea name="showcase_body" maxlength="700" rows="2" placeholder="這格可以放一段給訪客看的旁白。" data-showcase-body>{ showcase.BodyMD }</textarea>
+							</label>
+						</fieldset>
+					}
+				</div>
+				<button type="submit">儲存布置</button>
+			</form>
+		</details>
+	}
+	if p.IsSelf || p.Pinned != nil || p.Home.HasDisplay() {
+		<section id="profile-home" class="profile-home" data-reveal data-profile-home-preview>
+			<div class="profile-home-head">
+				<div>
+					<div class="profile-home-kicker">小屋入口</div>
+					<h2 data-profile-home-title data-fallback={ "進入 @" + p.Handle + " 的小屋" }>{ profileHomeTitle(p.Home, p.Handle) }</h2>
+				</div>
+				<a class="profile-home-map" href={ templ.URL("/" + p.Handle + "?view=graph") }>圖譜</a>
+			</div>
+			if p.Home.BodyHTML != "" || p.IsSelf {
+				<div class="profile-home-body" data-profile-home-body>
+					if p.Home.BodyHTML != "" {
+						@templ.Raw(string(p.Home.BodyHTML))
+					}
+				</div>
+			}
+			<div class="profile-home-grid" data-profile-home-grid>
+				if p.Pinned != nil {
+					<a class="profile-home-pin" href={ templ.URL(p.Pinned.URL) }>
+						<span>入口筆記</span>
+						<strong>{ p.Pinned.Title }</strong>
+					</a>
+				}
+				if len(p.Home.Showcases) > 0 {
+					<div class="profile-showcases" data-profile-showcases>
+						for _, showcase := range p.Home.Showcases {
+							<article class={ "profile-showcase", templ.KV("is-empty", !showcase.HasNote && showcase.Type != profileShowcaseText) } data-profile-showcase data-showcase-key={ profileShowcaseKey(showcase) }>
+								<div class="profile-showcase-head">
+									<span data-showcase-kind>{ profileShowcaseKindLabel(showcase.Type) }</span>
+									<h3 data-profile-showcase-title>{ profileShowcaseTitle(showcase) }</h3>
+								</div>
+								if showcase.BodyHTML != "" || p.IsSelf {
+									<div class="profile-showcase-body" data-profile-showcase-body>
+										if showcase.BodyHTML != "" {
+											@templ.Raw(string(showcase.BodyHTML))
+										}
+									</div>
+								}
+								if showcase.HasNote {
+									<a class="profile-showcase-note" href={ templ.URL(showcase.NoteURL) }>
+										<strong>{ showcase.NoteTitle }</strong>
+										if showcase.IsDraft && p.IsSelf {
+											<em>尚未公開</em>
+										}
+										if showcase.Excerpt != "" {
+											<span>{ showcase.Excerpt }</span>
+										}
+									</a>
+								} else if showcase.Type != profileShowcaseText && p.IsSelf {
+									<div class="profile-showcase-note is-empty">
+										<strong>{ profileShowcaseEmptyText(showcase) }</strong>
+									</div>
+								}
+							</article>
+						}
+					</div>
+				}
+			</div>
+		</section>
 	}
 	<div class="calendar-view-toggle" style="margin-top: 1.5em;">
 		<a class={ "calendar-view-tab", templ.KV("active", p.Mode != "calendar" && p.Mode != "graph") } href={ templ.URL("/" + p.Handle) }>時間軸</a>
@@ -124,5 +238,8 @@ templ profilePage(p ProfilePageProps) {
 		} else {
 			@profileNotesList(p)
 		}
+	}
+	if p.IsSelf {
+		<script src={ assetURL("profile-home.js") } defer></script>
 	}
 }

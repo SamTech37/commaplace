@@ -89,6 +89,7 @@ func (s *Server) Routes() http.Handler {
 	// Settings
 	mux.HandleFunc("POST /settings/theme", s.PostThemeSetting)
 	mux.HandleFunc("POST /settings/handle", s.PostHandleSetting)
+	mux.HandleFunc("POST /settings/profile", s.PostProfileSetting)
 	mux.HandleFunc("GET /terms", s.GetTerms)
 	mux.HandleFunc("GET /privacy", s.GetPrivacy)
 	mux.HandleFunc("GET /random", s.GetRandom)

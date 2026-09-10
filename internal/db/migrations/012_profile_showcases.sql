@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_showcases JSONB NOT NULL DEFAULT '[]'::jsonb;
