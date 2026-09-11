@@ -1,13 +1,22 @@
 (function () {
   "use strict";
 
+  // Desk panes remain visible while reading, resizing and loading more content.
+  // Their CSS shows reveal elements immediately, so no clipping or page fade runs.
+  if (document.body.classList.contains("desk-embedded")) return;
+  var revealing = new WeakSet();
+
   // Scroll reveal — horizontal clip-path sweep (逐行排版 feel)
-  function makeObserver(stagger) {
+  function makeObserver() {
     return new IntersectionObserver(
-      function (entries) {
+      function (entries, observer) {
         entries.forEach(function (entry) {
           if (entry.isIntersecting) {
             var el = entry.target;
+            // Unobserve the actual observer before clipping changes visibility.
+            observer.unobserve(el);
+            if (revealing.has(el) || el.classList.contains("revealed")) return;
+            revealing.add(el);
             // Apply clip-path start-state inline, force a style flush, then transition.
             // Can't put clip-path in CSS [data-reveal] — it clips element to 0 width which
             // blocks IntersectionObserver. Apply inline, read offsetHeight to flush, then
@@ -26,7 +35,6 @@
                 }
               });
             });
-            makeObserver(false).unobserve(el);
           }
         });
       },
@@ -35,7 +43,7 @@
   }
 
   function initReveal() {
-    var observer = makeObserver(false);
+    var observer = makeObserver();
 
     // Auto-stagger items inside [data-reveal-group]
     document.querySelectorAll("[data-reveal-group]").forEach(function (group) {
@@ -54,7 +62,7 @@
   }
 
   function initRevealNew(root) {
-    var observer = makeObserver(false);
+    var observer = makeObserver();
     root.querySelectorAll("[data-reveal]:not(.revealed)").forEach(function (el) {
       observer.observe(el);
     });

@@ -25,6 +25,16 @@ func (s *Server) Routes() http.Handler {
 
 	// Home
 	mux.HandleFunc("GET /{$}", s.GetHome)
+	// Authenticated multi-pane desk. Cross-origin protection covers its mutations.
+	deskProtection := http.NewCrossOriginProtection()
+	mux.HandleFunc("GET /me/desk", s.GetDesk)
+	mux.HandleFunc("GET /me/desk/pane", s.GetDeskPane)
+	mux.HandleFunc("GET /api/desk/state", s.GetDeskState)
+	mux.Handle("PUT /api/desk/state", deskProtection.Handler(http.HandlerFunc(s.PutDeskState)))
+	mux.HandleFunc("GET /api/desk/resolve", s.GetDeskResolve)
+	mux.HandleFunc("GET /api/desk/notes", s.GetDeskNotes)
+	mux.HandleFunc("GET /api/desk/bookmarks", s.GetDeskBookmarks)
+	mux.Handle("POST /api/desk/drafts", deskProtection.Handler(http.HandlerFunc(s.PostDeskDraft)))
 
 	// Graph view
 	mux.HandleFunc("GET /graph", s.GetGraph)
@@ -272,8 +282,11 @@ func (s *Server) GetCatchAll(static http.Handler) http.HandlerFunc {
 	}
 }
 
-// GetHome sends visitors straight to the feed — the landing page IS the feed,
-// so logged-out visitors land on content instead of a welcome/login prompt.
+// GetHome restores the signed-in workspace; public visitors land on the feed.
 func (s *Server) GetHome(w http.ResponseWriter, r *http.Request) {
+	if u, _ := s.Auth.CurrentUser(r); u != nil {
+		http.Redirect(w, r, "/me/desk", http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, "/feed", http.StatusSeeOther)
 }

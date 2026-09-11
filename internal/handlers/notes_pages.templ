@@ -15,6 +15,7 @@ type WriteProps struct {
 	IsEdit    bool
 	Published bool
 	NoteURL   string
+	Revision  int64
 }
 
 templ writePage(p WriteProps) {
@@ -25,6 +26,7 @@ templ writePage(p WriteProps) {
 	<div
 		class="editor-page"
 		data-note-id={ p.NoteID }
+		data-note-revision={ strconv.FormatInt(p.Revision, 10) }
 		data-allow-upload={ templ.KV("1", !p.Published) }
 	>
 		<header class="editor-bar">

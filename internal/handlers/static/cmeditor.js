@@ -8,6 +8,7 @@
   if (!ta || !page || typeof EasyMDE === "undefined") return;
 
   var noteId = page.dataset.noteId;
+  var noteRevision = Number(page.dataset.noteRevision || 0);
   var statusEl = document.getElementById("save-status");
   var popup = document.getElementById("ac-popup");
   var list = popup ? popup.querySelector("ul") : null;
@@ -50,7 +51,7 @@
 
   var easymde = new EasyMDE({
     element: ta,
-    autofocus: true,
+    autofocus: !document.body.classList.contains("desk-embedded"),
     spellChecker: false,
     status: false,
     autoDownloadFontAwesome: false,
@@ -63,6 +64,9 @@
   });
   window.cmEditor = easymde;
   var cm = easymde.codemirror;
+  if (document.body.classList.contains("desk-embedded")) {
+    parent.postMessage({source:"comma-pane",type:"title",title:cm.getLine(0)},location.origin);
+  }
   cm.setOption("viewportMargin", Infinity);
 
   // EasyMDE exposes tooltips but does not consistently add accessible names.
@@ -191,7 +195,7 @@
   }
 
   // ---------- autosave ----------
-  var timer, inflight = false, again = false, lastError = null;
+  var timer, inflight = false, lastError = null;
   function setStatus(t, state) {
     if (statusEl) statusEl.textContent = t;
     page.dataset.saveState = state || "saved";
@@ -211,35 +215,39 @@
   function save() {
     clearTimeout(timer);
     if (inflight) {
-      again = true;
       return new Promise(function (res, rej) {
         var poll = setInterval(function () {
-          if (!inflight) { clearInterval(poll); if (lastError) rej(lastError); else res(); }
+          if (!inflight) { clearInterval(poll); if (lastError) rej(lastError); else save().then(res, rej); }
         }, 50);
       });
     }
-    inflight = true; again = false; lastError = null;
+    inflight = true; lastError = null;
     var requestValue = easymde.value();
     setStatus("儲存中…", "saving");
     return fetch("/api/notes/" + noteId, {
       method: "PATCH",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "document=" + encodeURIComponent(requestValue),
+      body: "document=" + encodeURIComponent(requestValue) + "&revision=" + noteRevision,
     }).then(function (r) {
-      inflight = false;
       if (!r.ok) {
         return r.text().then(function (t) {
           lastError = userFacingError(t, "儲存失敗，內容已保留在此裝置");
+          inflight = false;
           setStatus(lastError, "error");
           return Promise.reject(lastError);
         });
       }
-      if (easymde.value() === requestValue) clearDraftBackup();
-      if (again) {
-        save().catch(function () {});
-      } else {
-        setStatus("已儲存", "saved");
-      }
+      return r.json().then(function (result) {
+        noteRevision = result.revision;
+        inflight = false;
+        if (easymde.value() === requestValue) clearDraftBackup();
+        if (easymde.value() !== requestValue) {
+          return save();
+        } else {
+          setStatus("已儲存", "saved");
+        }
+        if (document.body.classList.contains("desk-embedded")) parent.postMessage({source:"comma-pane",type:"note-saved"},location.origin);
+      });
     }).catch(function (err) {
       inflight = false;
       lastError = typeof err === "string" ? err : "儲存失敗，內容已保留在此裝置";
@@ -247,9 +255,12 @@
       return Promise.reject(lastError);
     });
   }
+  // Desk closing waits for the latest document, not merely the previous request.
+  window.commaDeskSave = save;
   // The listener is attached after EasyMDE has loaded the textarea, so its first
   // event is a real edit and must never be skipped.
   cm.on("change", function () {
+    if (document.body.classList.contains("desk-embedded")) parent.postMessage({source:"comma-pane",type:"title",title:cm.getLine(0)},location.origin);
     cacheDraft(easymde.value());
     setStatus("尚未儲存", "dirty");
     clearTimeout(timer);
@@ -270,7 +281,15 @@
               return Promise.reject(userFacingError(t, "發布失敗，請再試一次"));
             });
           })
-          .then(function (d) { window.location = d.url; })
+          .then(function (d) {
+            if (document.body.classList.contains("desk-embedded")) {
+              parent.postMessage({source:"comma-pane",type:"published",url:d.url},location.origin);
+              pub.textContent="更新";pub.disabled=false;pub.removeAttribute("aria-busy");
+              page.querySelector('.editor-document-state').textContent = '已發布';
+              var discard = page.querySelector('.editor-bar-start form[action^="/delete/"]');
+              if (discard) discard.remove();
+            } else window.location = d.url;
+          })
           .catch(function (msg) {
             pub.disabled = false;
             pub.removeAttribute("aria-busy");
@@ -468,6 +487,9 @@
     var url = acMode === "tag"
       ? "/api/tags/suggest?q=" + encodeURIComponent(q)
       : "/api/wiki/suggest?q=" + encodeURIComponent(q);
+    if (acMode === "wiki" && document.body.classList.contains("desk-embedded") && !q.startsWith("@")) {
+      url += "&desk=1&notes=" + encodeURIComponent((window.commaDeskMaterials || []).join(","));
+    }
     fetch(url)
       .then(function (r) { return r.text(); })
       .then(function (html) {
@@ -489,7 +511,13 @@
       closePopup();
     } else {
       var partial = insert.endsWith("/"); // "@bob/" — keep searching, don't close
-      cm.replaceRange(insert + (partial ? "" : "]]"), queryStart, cm.getCursor());
+      var end = cm.getCursor();
+      // The toolbar inserts [[]] with the caret inside. Consume its existing
+      // closing pair when completing, while preserving it for @author/ steps.
+      if (!partial && cm.getLine(end.line).slice(end.ch, end.ch + 2) === "]]") {
+        end = { line: end.line, ch: end.ch + 2 };
+      }
+      cm.replaceRange(insert + (partial ? "" : "]]"), queryStart, end);
       if (!partial) closePopup();
     }
     cm.focus();

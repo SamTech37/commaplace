@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -139,11 +140,12 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 
 	var authorID uuid.UUID
 	var title, body, slug string
+	var revision int64
 	var publishedAt sql.NullInt64
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, title, body_md, published_at, slug
-		FROM notes WHERE id = $1`, noteID,
-	).Scan(&authorID, &title, &body, &publishedAt, &slug)
+		SELECT author_id, title, body_md, published_at, slug, edit_version
+		FROM notes WHERE id = $1 AND deleted_at IS NULL AND hidden_at IS NULL`, noteID,
+	).Scan(&authorID, &title, &body, &publishedAt, &slug, &revision)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -183,17 +185,18 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		IsEdit:    true,
 		Published: publishedAt.Valid,
 		NoteURL:   noteURL(u.Handle, slug),
+		Revision:  revision,
 	}))
 }
 
 // ---------- note view ----------
 
 type noteView struct {
-	ID        uuid.UUID
-	Title     string
-	BodyMD    string
-	UpdatedAt int64
-	Slug      string
+	ID          uuid.UUID
+	Title       string
+	BodyMD      string
+	UpdatedAt   int64
+	Slug        string
 	AuthorID    uuid.UUID
 	HiddenAt    sql.NullInt64
 	DeletedAt   sql.NullInt64
@@ -423,7 +426,7 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 	var curSlug string
 	var publishedAt sql.NullInt64
 	err = s.DB.QueryRowContext(r.Context(),
-		`SELECT author_id, slug, published_at FROM notes WHERE id = $1`, noteID,
+		`SELECT author_id, slug, published_at FROM notes WHERE id = $1 AND deleted_at IS NULL AND hidden_at IS NULL`, noteID,
 	).Scan(&authorID, &curSlug, &publishedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -454,7 +457,20 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 	}
 	tags := parseTags(strings.Join(markdown.ExtractInlineTags(body), ","))
 
-	if err := s.autosaveNote(r.Context(), noteID, u.Handle, slug, title, body, tags); err != nil {
+	var versions []int64
+	if raw := r.PostFormValue("revision"); raw != "" {
+		version, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || version < 0 {
+			http.Error(w, "bad revision", 400)
+			return
+		}
+		versions = []int64{version}
+	}
+	if err := s.autosaveNote(r.Context(), noteID, u.Handle, slug, title, body, tags, versions...); err != nil {
+		if errors.Is(err, errEditConflict) {
+			http.Error(w, "另一個編輯器已更新這篇文章。內容已保留在本機，請重新開啟文章後比對復原。", http.StatusConflict)
+			return
+		}
 		if isUniqueViolation(err) {
 			http.Error(w, "A note with this title already exists.", http.StatusConflict)
 			return
@@ -463,18 +479,31 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	fmt.Fprintf(w, `{"savedAt":%d}`, nowUnix())
+	if len(versions) > 0 {
+		fmt.Fprintf(w, `{"savedAt":%d,"revision":%d}`, nowUnix(), versions[0]+1)
+	} else {
+		fmt.Fprintf(w, `{"savedAt":%d}`, nowUnix())
+	}
 }
 
-func (s *Server) autosaveNote(ctx context.Context, noteID uuid.UUID, authorHandle, slug, title, body string, tags []string) error {
+var errEditConflict = errors.New("note edited concurrently")
+
+func (s *Server) autosaveNote(ctx context.Context, noteID uuid.UUID, authorHandle, slug, title, body string, tags []string, versions ...int64) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+	var current int64
+	if err := tx.QueryRowContext(ctx, `SELECT edit_version FROM notes WHERE id=$1 AND deleted_at IS NULL AND hidden_at IS NULL FOR UPDATE`, noteID).Scan(&current); err != nil {
+		return err
+	}
+	if len(versions) > 0 && current != versions[0] {
+		return errEditConflict
+	}
 	now := nowUnix()
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE notes SET title=$1, body_md=$2, slug=$3, slug_ci=$4, updated_at=$5
+		UPDATE notes SET title=$1, body_md=$2, slug=$3, slug_ci=$4, updated_at=$5, edit_version=edit_version+1
 		WHERE id=$6`, title, body, slug, strings.ToLower(slug), now, noteID,
 	); err != nil {
 		return err
@@ -519,7 +548,7 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 	}
 	var slug, title string
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT slug, title FROM notes WHERE id = $1 AND author_id = $2`,
+		SELECT slug, title FROM notes WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL AND hidden_at IS NULL`,
 		noteID, u.ID,
 	).Scan(&slug, &title)
 	if errors.Is(err, sql.ErrNoRows) {

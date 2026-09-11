@@ -945,7 +945,8 @@
         canvas.style.cursor = "grab";
         requestFrame();
         if (tapped && target !== centerNode && e.type !== "pointercancel") {
-          window.location.href = target.url;
+          if (window.commaDeskOpen) window.commaDeskOpen(target.url);
+          else window.location.href = target.url;
         }
         downInfo = null;
         return;

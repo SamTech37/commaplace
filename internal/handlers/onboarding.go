@@ -20,7 +20,7 @@ func (s *Server) GetOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if onb, _ := userOnboarded(r.Context(), s.DB, u.ID); onb {
-		http.Redirect(w, r, "/me", http.StatusSeeOther)
+		http.Redirect(w, r, "/me/desk", http.StatusSeeOther)
 		return
 	}
 	// Photo upload is not offered — every new account must build an avatar
@@ -50,7 +50,7 @@ func (s *Server) PostOnboardingFork(w http.ResponseWriter, r *http.Request) {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		http.Redirect(w, r, "/me", http.StatusSeeOther)
+		http.Redirect(w, r, "/me/desk", http.StatusSeeOther)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (s *Server) PostOnboardingFork(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	http.Redirect(w, r, "/me", http.StatusSeeOther)
+	http.Redirect(w, r, "/me/desk", http.StatusSeeOther)
 }
 
 // forkTour copies every TourHandle-authored note into the new user's vault.

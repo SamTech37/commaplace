@@ -26,6 +26,15 @@ func (s *Server) PostSave(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad note id", http.StatusBadRequest)
 		return
 	}
+	var readable bool
+	if err := s.DB.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM notes WHERE id=$1 AND hidden_at IS NULL AND deleted_at IS NULL AND (author_id=$2 OR published_at IS NOT NULL))`, noteID, u.ID).Scan(&readable); err != nil {
+		http.Error(w, "unable to read note", http.StatusInternalServerError)
+		return
+	}
+	if !readable {
+		http.Error(w, "note not found", http.StatusNotFound)
+		return
+	}
 
 	res, err := s.DB.ExecContext(r.Context(),
 		`INSERT INTO saves(user_id, note_id, created_at) VALUES($1, $2, $3) ON CONFLICT (user_id, note_id) DO NOTHING`,

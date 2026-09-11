@@ -4182,14 +4182,42 @@ button:disabled {
 }
 
 /* Owner's profile note management */
-.note-manager-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; padding: 1rem; margin: 1rem 0; border: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
+.note-manager-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; padding: .5rem 0; margin: 1rem 0; }
 .note-manager-toolbar label { display: flex; flex-direction: row; align-items: center; gap: .4rem; }
 .note-manager-toolbar input[type="checkbox"] { margin: 0; flex: 0 0 auto; }
-.profile-manager-tabs { flex-direction: row; flex-wrap: wrap; }
+.profile-manager-tabs { flex-direction: row; flex-wrap: wrap; align-items: center; }
+#note-manager-toggle { margin-left: auto; }
 .managed-note { display: flex; align-items: flex-start; gap: .75rem; border-bottom: 1px solid var(--border); padding: .75rem 0; }
 .managed-note > input { margin-top: 1rem; width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
 .managed-note-content { flex: 1; min-width: 0; }
 .managed-note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; padding-bottom: .7rem; }
-.managed-note-actions button, .note-manager-toolbar button { padding: .4rem .65rem; min-height: 2.75rem; }
+#note-manager-toggle,
+#note-manager button,
+.managed-note-actions a,
+.managed-note-actions span {
+  font: inherit;
+  color: var(--text);
+}
+#note-manager-toggle,
+#note-manager button {
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: .4rem 0;
+  min-height: 2.75rem;
+  text-decoration: underline;
+  text-underline-offset: .18em;
+  cursor: pointer;
+}
+#note-manager-toggle:hover,
+#note-manager button:hover { background: none; color: var(--text); }
+#note-manager button:disabled { opacity: .4; cursor: default; text-decoration: none; }
+#note-manager-toggle:focus-visible,
+#note-manager button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+#note-manager:not([data-editing="true"]) .note-manager-toolbar,
+#note-manager:not([data-editing="true"]) .managed-note > input,
+#note-manager:not([data-editing="true"]) .managed-note-actions { display: none; }
+#note-manager:not([data-editing="true"]) .managed-note { display: block; padding: 0; border: 0; }
 #note-selection-count { flex-basis: 100%; }
-@media (max-width: 640px) { .note-manager-toolbar { position: static; } }

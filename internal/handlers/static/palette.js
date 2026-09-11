@@ -100,7 +100,8 @@
 
   function go(url) {
     dialog.close();
-    window.location.href = url;
+    if (window.commaDeskOpen) window.commaDeskOpen(url);
+    else window.location.href = url;
   }
 
   function onKey(e) {
