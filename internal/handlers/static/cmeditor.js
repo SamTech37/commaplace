@@ -67,7 +67,7 @@
   if (document.body.classList.contains("desk-embedded")) {
     parent.postMessage({source:"comma-pane",type:"title",title:cm.getLine(0)},location.origin);
   }
-  cm.setOption("viewportMargin", Infinity);
+  cm.setOption("viewportMargin", document.body.classList.contains("desk-embedded") ? 10 : Infinity);
 
   // EasyMDE exposes tooltips but does not consistently add accessible names.
   // Keep every formatting action keyboard-readable and prevent form submits.
@@ -110,14 +110,18 @@
     var value = easymde.value();
     if (wordCountEl) wordCountEl.textContent = countWords(value) + " 字";
     if (characterCountEl) characterCountEl.textContent = value.length + " 個字元";
+  }
+  function updateCursorStatus() {
     var cursor = cm.getCursor();
     if (cursorPositionEl) {
       cursorPositionEl.textContent = "第 " + (cursor.line + 1) + " 行，第 " + (cursor.ch + 1) + " 欄";
     }
   }
   updateDocumentStatus();
-  cm.on("change", updateDocumentStatus);
-  cm.on("cursorActivity", updateDocumentStatus);
+  updateCursorStatus();
+  var documentStatusTimer;
+  cm.on("change", function () { clearTimeout(documentStatusTimer); documentStatusTimer = setTimeout(updateDocumentStatus, 150); });
+  cm.on("cursorActivity", updateCursorStatus);
 
   // ---------- Obsidian-style live preview ----------
   // CodeMirror keeps the Markdown document as the only source of truth. Away

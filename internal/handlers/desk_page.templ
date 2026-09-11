@@ -23,23 +23,22 @@ templ deskPage(userID, handle string) {
 				<nav class="desk-tabs" aria-label="已開啟的內容"></nav>
 				<button type="button" data-desk-scroll="-1" aria-label="桌面向左移動">‹</button>
 				<button type="button" data-desk-scroll="1" aria-label="桌面向右移動">›</button>
-				<button type="button" id="desk-add" aria-haspopup="dialog">＋ 新增</button>
+				<button type="button" id="desk-add" aria-label="新增" title="新增" aria-haspopup="dialog">＋</button>
 			</div>
 			<div class="desk-board"><div class="desk-plane"></div></div>
 			<div class="desk-feedback">
-				<span id="desk-status" role="status" aria-live="polite">正在打開工作桌…</span>
+				<span id="desk-status" role="status" aria-live="polite"></span>
 				<button type="button" id="desk-retry" hidden>重試儲存</button>
 				<button type="button" id="desk-reload" hidden>使用雲端桌面</button>
 				<button type="button" id="desk-overwrite" hidden>保留這張桌面</button>
 			</div>
 		</section>
-		<dialog id="desk-add-dialog" aria-labelledby="desk-add-title">
-			<div class="desk-dialog-heading"><h2 id="desk-add-title">在桌上打開</h2><button type="button" data-desk-dismiss aria-label="關閉新增內容">×</button></div>
+		<dialog id="desk-add-dialog" aria-label="新增">
+			<div class="desk-dialog-heading"><button type="button" data-desk-dismiss aria-label="關閉新增內容">×</button></div>
 			<button type="button" data-desk-url="/feed">探索 Feed</button>
 			<button type="button" data-desk-url="/me/saved">我的收藏</button>
-			<button type="button" data-desk-new>寫一篇新文章</button>
-			<label for="desk-open-search">尋找自己的文章</label>
-			<input id="desk-open-search" type="search" placeholder="文章標題…"/>
+			<button type="button" data-desk-new aria-label="新增文章">＋</button>
+			<input id="desk-open-search" type="search" aria-label="尋找自己的文章"/>
 			<div id="desk-open-results"></div>
 		</dialog>
 		<noscript><p>工作桌需要 JavaScript。你仍可以<a href="/feed">瀏覽 Feed</a>或<a href="/write">編寫文章</a>。</p></noscript>

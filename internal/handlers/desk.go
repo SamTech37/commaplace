@@ -232,7 +232,7 @@ func (s *Server) GetDeskState(w http.ResponseWriter, r *http.Request) {
 	env := deskEnvelope{}
 	err := s.DB.QueryRowContext(r.Context(), `SELECT revision,state FROM desk_states WHERE user_id=$1`, u.ID).Scan(&env.Revision, &raw)
 	if errors.Is(err, sql.ErrNoRows) {
-		env.State.Windows = []deskWindow{newDeskWindow("feed", "", "")}
+		env.State.Windows = []deskWindow{}
 	} else if err != nil {
 		http.Error(w, "無法讀取工作桌", 500)
 		return
@@ -403,7 +403,7 @@ func (s *Server) GetDeskNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "無效頁碼", 400)
 		return
 	}
-	rows, err := s.DB.QueryContext(r.Context(), `SELECT id,title,slug,published_at IS NOT NULL FROM notes WHERE author_id=$1 AND deleted_at IS NULL AND hidden_at IS NULL AND ($2='' OR title ILIKE '%'||$2||'%') ORDER BY updated_at DESC,id DESC LIMIT 51 OFFSET $3`, u.ID, q, offset)
+	rows, err := s.DB.QueryContext(r.Context(), `SELECT id,title,slug,published_at IS NOT NULL FROM notes WHERE author_id=$1 AND published_at IS NOT NULL AND deleted_at IS NULL AND hidden_at IS NULL AND ($2='' OR title ILIKE '%'||$2||'%') ORDER BY updated_at DESC,id DESC LIMIT 51 OFFSET $3`, u.ID, q, offset)
 	if err != nil {
 		http.Error(w, "無法讀取我的空間", 500)
 		return

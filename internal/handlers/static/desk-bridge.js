@@ -5,6 +5,8 @@
   const send = (type, extra) => parent.postMessage({ source: 'comma-pane', type, ...extra }, location.origin);
   let scrollTimer, restoring = false, restored = false, bookmarkTimer, restoreTimer;
   let restoreY = 0, restoreAttempts = 0;
+  const scrollY = () => window.cmEditor ? window.cmEditor.codemirror.getScrollInfo().top : window.scrollY;
+  function reportScroll() { if (restoring) return; clearTimeout(scrollTimer); scrollTimer = setTimeout(() => send('scroll', { scroll: scrollY() }), 200); }
   const localURL = raw => { try { const u = new URL(raw, location.origin); return u.origin === location.origin ? u.pathname + u.search + u.hash : null; } catch (_) { return null; } };
   const open = url => send('open', { url });
   window.commaDeskOpen = open;
@@ -22,13 +24,15 @@
     if (/^\/(login|logout|auth|settings|api\/notes\/[^/]+\/(raw|image)|import|me\/avatar)(\/|\?|$)/.test(path) || /^\/write\?/.test(path) || /[?&](view|tab)=/.test(path) && !path.startsWith('/feed')) { a.target = '_top'; return; }
     e.preventDefault(); const menu = a.closest('details'); if (menu) menu.open = false; open(path);
   });
-  window.addEventListener('scroll', () => { if (restoring) return; clearTimeout(scrollTimer); scrollTimer = setTimeout(() => send('scroll', { scroll: window.scrollY }), 200); }, { passive: true });
+  window.addEventListener('scroll', reportScroll, { passive: true });
   function continueRestore() {
     if (!restoring) return;
     clearTimeout(restoreTimer);
-    window.scrollTo(0, restoreY);
+    if (document.querySelector('.editor-page') && !window.cmEditor) { restoreTimer = setTimeout(continueRestore, 100); return; }
+    if (window.cmEditor) window.cmEditor.codemirror.scrollTo(null, restoreY);
+    else window.scrollTo(0, restoreY);
     // Infinite feeds may need multiple HTMX pages before the old position exists.
-    if (Math.abs(window.scrollY - restoreY) < 2 || ++restoreAttempts >= 60) stopRestore();
+    if (Math.abs(scrollY() - restoreY) < 2 || ++restoreAttempts >= 60) stopRestore();
     else restoreTimer = setTimeout(continueRestore, 500);
   }
   function restoreScroll(y) {
@@ -47,7 +51,7 @@
   const editor = document.querySelector('.editor-page');
   if (editor) {
     new MutationObserver(() => send('dirty', { dirty: editor.dataset.saveState === 'dirty' || editor.dataset.saveState === 'saving' || editor.dataset.saveState === 'error' })).observe(editor, { attributes: true, attributeFilter: ['data-save-state'] });
-    const attachEditor = () => { if (!window.cmEditor) return; const cm = window.cmEditor.codemirror; cm.on('change', () => send('title', { title: cm.getLine(0) })); send('title', { title: cm.getLine(0) }); };
+    const attachEditor = () => { if (!window.cmEditor) return; const cm = window.cmEditor.codemirror; cm.on('scroll', reportScroll); new ResizeObserver(() => cm.refresh()).observe(document.querySelector('.editor-compose')); };
     if (document.readyState === 'complete') attachEditor(); else window.addEventListener('load',attachEditor,{once:true});
     // Note deletion is an explicit content operation. Leave it to the existing page.
     editor.querySelectorAll('form[action^="/delete/"]').forEach(form => form.target = '_top');
