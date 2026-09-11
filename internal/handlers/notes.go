@@ -139,13 +139,14 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var authorID uuid.UUID
-	var title, body, slug string
+	var title, body, slug, distribution string
 	var revision int64
+	var hasDraft bool
 	var publishedAt sql.NullInt64
 	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT author_id, title, body_md, published_at, slug, edit_version
+		SELECT author_id, COALESCE(draft_title,title), COALESCE(draft_body_md,body_md), published_at, slug, edit_version, COALESCE(draft_distribution,distribution), draft_body_md IS NOT NULL
 		FROM notes WHERE id = $1 AND deleted_at IS NULL AND hidden_at IS NULL`, noteID,
-	).Scan(&authorID, &title, &body, &publishedAt, &slug, &revision)
+	).Scan(&authorID, &title, &body, &publishedAt, &slug, &revision, &distribution, &hasDraft)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.renderError(w, r, http.StatusNotFound, "note not found")
 		return
@@ -168,7 +169,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		inline[t] = true
 	}
 	var extra []string
-	if tags, _ := loadTagsForNote(r.Context(), s.DB, noteID); len(tags) > 0 {
+	if tags, _ := loadTagsForNote(r.Context(), s.DB, noteID); !hasDraft && len(tags) > 0 {
 		for _, t := range tags {
 			if !inline[t] {
 				extra = append(extra, "#"+t)
@@ -180,12 +181,13 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.renderPage(w, r, pageTitle("Edit"), "page-editor", nil, writePage(WriteProps{
-		NoteID:    noteID.String(),
-		Document:  doc,
-		IsEdit:    true,
-		Published: publishedAt.Valid,
-		NoteURL:   noteURL(u.Handle, slug),
-		Revision:  revision,
+		NoteID:       noteID.String(),
+		Document:     doc,
+		IsEdit:       true,
+		Published:    publishedAt.Valid,
+		NoteURL:      noteURL(u.Handle, slug),
+		Revision:     revision,
+		Distribution: distribution,
 	}))
 }
 
@@ -320,6 +322,31 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 		OGImage:        s.resolveOGImage(n.ID, hasImage),
 		OGURL:          s.absoluteNoteURL(handle, n.Slug),
 	}
+	if r.URL.Query().Get("space") == handle {
+		space, ok, err := s.loadSpaceReading(r.Context(), n.AuthorID, handle)
+		if err != nil {
+			log.Printf("GetNote space navigation: %v", err)
+		} else if ok {
+			chapters := []readingBlock{}
+			for _, b := range space.Blocks {
+				if b.URL != "" {
+					chapters = append(chapters, b)
+				}
+			}
+			for i, b := range chapters {
+				if b.URL == noteURL(handle, n.Slug)+"?space="+handle {
+					noteProps.SpaceTitle, noteProps.SpaceURL = space.Title, "/"+handle
+					if i > 0 {
+						noteProps.SpacePrevious = chapters[i-1]
+					}
+					if i+1 < len(chapters) {
+						noteProps.SpaceNext = chapters[i+1]
+					}
+					break
+				}
+			}
+		}
+	}
 	s.renderPage(w, r, pageTitle(n.Title+" · @"+handle), "", noteMeta(noteProps), noteContent(noteProps))
 }
 
@@ -376,8 +403,8 @@ func (s *Server) createDraft(ctx context.Context, authorID uuid.UUID) (uuid.UUID
 	slug := "draft-" + uuid.NewString()[:8]
 	var id uuid.UUID
 	err := s.DB.QueryRowContext(ctx, `
-		INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at)
-		VALUES($1, $2, $2, '', '', $3, $3) RETURNING id`,
+		INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at, distribution)
+		VALUES($1, $2, $2, '', '', $3, $3, 'semi') RETURNING id`,
 		authorID, slug, now,
 	).Scan(&id)
 	return id, err
@@ -466,7 +493,12 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 		}
 		versions = []int64{version}
 	}
-	if err := s.autosaveNote(r.Context(), noteID, u.Handle, slug, title, body, tags, versions...); err != nil {
+	distribution := r.PostFormValue("distribution")
+	if distribution != "" && !validDistribution(distribution) {
+		http.Error(w, "無效的公開設定", http.StatusBadRequest)
+		return
+	}
+	if err := s.autosaveNoteDocument(r.Context(), noteID, u.Handle, slug, title, body, tags, distribution, versions...); err != nil {
 		if errors.Is(err, errEditConflict) {
 			http.Error(w, "另一個編輯器已更新這篇文章。內容已保留在本機，請重新開啟文章後比對復原。", http.StatusConflict)
 			return
@@ -489,22 +521,35 @@ func (s *Server) PatchNote(w http.ResponseWriter, r *http.Request) {
 var errEditConflict = errors.New("note edited concurrently")
 
 func (s *Server) autosaveNote(ctx context.Context, noteID uuid.UUID, authorHandle, slug, title, body string, tags []string, versions ...int64) error {
+	return s.autosaveNoteDocument(ctx, noteID, authorHandle, slug, title, body, tags, "", versions...)
+}
+
+func (s *Server) autosaveNoteDocument(ctx context.Context, noteID uuid.UUID, authorHandle, slug, title, body string, tags []string, distribution string, versions ...int64) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	var current int64
-	if err := tx.QueryRowContext(ctx, `SELECT edit_version FROM notes WHERE id=$1 AND deleted_at IS NULL AND hidden_at IS NULL FOR UPDATE`, noteID).Scan(&current); err != nil {
+	var published sql.NullInt64
+	if err := tx.QueryRowContext(ctx, `SELECT edit_version,published_at FROM notes WHERE id=$1 AND deleted_at IS NULL AND hidden_at IS NULL FOR UPDATE`, noteID).Scan(&current, &published); err != nil {
 		return err
 	}
 	if len(versions) > 0 && current != versions[0] {
 		return errEditConflict
 	}
+	if published.Valid {
+		_, err = tx.ExecContext(ctx, `UPDATE notes SET draft_title=$2,draft_body_md=$3,draft_distribution=COALESCE(NULLIF($4,''),draft_distribution),edit_version=edit_version+1 WHERE id=$1`, noteID, title, body, distribution)
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
 	now := nowUnix()
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE notes SET title=$1, body_md=$2, slug=$3, slug_ci=$4, updated_at=$5, edit_version=edit_version+1
-		WHERE id=$6`, title, body, slug, strings.ToLower(slug), now, noteID,
+		UPDATE notes SET title=$1, body_md=$2, draft_title=NULL, draft_body_md=NULL, slug=$3, slug_ci=$4, updated_at=$5, edit_version=edit_version+1,
+		  draft_distribution=COALESCE(NULLIF($7,''),draft_distribution)
+		WHERE id=$6`, title, body, slug, strings.ToLower(slug), now, noteID, distribution,
 	); err != nil {
 		return err
 	}
@@ -535,7 +580,7 @@ func (s *Server) autosaveNote(ctx context.Context, noteID uuid.UUID, authorHandl
 	return tx.Commit()
 }
 
-// PublishNote marks a note published (idempotent) and returns its URL.
+// PublishNote promotes the saved draft and returns its URL and new revision.
 func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 	u := s.requireUser(w, r)
 	if u == nil {
@@ -546,11 +591,38 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad id", http.StatusNotFound)
 		return
 	}
-	var slug, title string
-	err = s.DB.QueryRowContext(r.Context(), `
-		SELECT slug, title FROM notes WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL AND hidden_at IS NULL`,
-		noteID, u.ID,
-	).Scan(&slug, &title)
+	tx, err := s.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, "無法發布", 500)
+		return
+	}
+	defer tx.Rollback()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", 400)
+		return
+	}
+	if value := r.PostFormValue("revision"); value != "" {
+		expected, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			http.Error(w, "bad revision", 400)
+			return
+		}
+		var current int64
+		err = tx.QueryRowContext(r.Context(), `SELECT edit_version FROM notes WHERE id=$1 AND author_id=$2 AND deleted_at IS NULL AND hidden_at IS NULL FOR UPDATE`, noteID, u.ID).Scan(&current)
+		if err != nil {
+			http.Error(w, "not found", 404)
+			return
+		}
+		if current != expected {
+			http.Error(w, "另一個編輯器已更新，請重新載入後比對內容。", 409)
+			return
+		}
+	}
+	slug, err := publishDocument(r.Context(), tx, noteID, u.ID, u.Handle)
+	if errors.Is(err, errPublishTitle) {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
@@ -559,25 +631,54 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if strings.TrimSpace(title) == "" {
-		http.Error(w, "Title is required before publishing.", http.StatusUnprocessableEntity)
+	var revision int64
+	if err = tx.QueryRowContext(r.Context(), `SELECT edit_version FROM notes WHERE id=$1`, noteID).Scan(&revision); err != nil {
+		http.Error(w, "無法發布", 500)
 		return
 	}
-	if strings.HasPrefix(slug, "draft-") {
-		http.Error(w, "Save a title before publishing.", http.StatusUnprocessableEntity)
-		return
-	}
-	_, err = s.DB.ExecContext(r.Context(), `
-		UPDATE notes SET published_at = COALESCE(published_at, $1)
-		WHERE id = $2 AND author_id = $3`,
-		nowUnix(), noteID, u.ID,
-	)
+	err = tx.Commit()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	fmt.Fprintf(w, `{"url":%q}`, noteURL(u.Handle, slug))
+	fmt.Fprintf(w, `{"url":%q,"revision":%d}`, noteURL(u.Handle, slug), revision)
+}
+
+var errPublishTitle = errors.New("請先儲存標題再發布")
+
+func validDistribution(value string) bool { return value == "public" || value == "semi" }
+
+// publishDocument promotes a complete draft atomically; readers and indexes
+// continue using notes.title/body_md until this transaction commits.
+func publishDocument(ctx context.Context, tx *sql.Tx, id, author uuid.UUID, handle string) (string, error) {
+	var slug, title, body string
+	err := tx.QueryRowContext(ctx, `SELECT slug,COALESCE(draft_title,title),COALESCE(draft_body_md,body_md) FROM notes WHERE id=$1 AND author_id=$2 AND hidden_at IS NULL AND deleted_at IS NULL FOR UPDATE`, id, author).Scan(&slug, &title, &body)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(title) == "" {
+		return "", errPublishTitle
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE notes SET title=$2,body_md=$3,draft_title=NULL,draft_body_md=NULL,distribution=COALESCE(draft_distribution,distribution),draft_distribution=NULL,published_at=COALESCE(published_at,$4),updated_at=$4,edit_version=edit_version+1 WHERE id=$1`, id, title, body, nowUnix())
+	if err != nil {
+		return "", err
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id=$1`, id); err != nil {
+		return "", err
+	}
+	for _, tag := range parseTags(strings.Join(markdown.ExtractInlineTags(body), ",")) {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO note_tags(note_id,tag,created_at) VALUES($1,$2,$3)`, id, tag, nowUnix()); err != nil {
+			return "", err
+		}
+	}
+	if err = recomputeLinks(ctx, tx, id, handle, body); err != nil {
+		return "", err
+	}
+	if err = backfillStubLinks(ctx, tx, id, author, slug); err != nil {
+		return "", err
+	}
+	return slug, nil
 }
 
 // ---------- helpers ----------

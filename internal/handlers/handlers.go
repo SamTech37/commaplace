@@ -33,6 +33,9 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("PUT /api/desk/state", deskProtection.Handler(http.HandlerFunc(s.PutDeskState)))
 	mux.HandleFunc("GET /api/desk/resolve", s.GetDeskResolve)
 	mux.HandleFunc("GET /api/desk/notes", s.GetDeskNotes)
+	mux.HandleFunc("GET /api/space", s.GetSpace)
+	mux.Handle("PUT /api/space", deskProtection.Handler(http.HandlerFunc(s.PutSpace)))
+	mux.Handle("POST /api/space/publish", deskProtection.Handler(http.HandlerFunc(s.PublishSpace)))
 	mux.HandleFunc("GET /api/desk/bookmarks", s.GetDeskBookmarks)
 	mux.Handle("POST /api/desk/drafts", deskProtection.Handler(http.HandlerFunc(s.PostDeskDraft)))
 
@@ -57,8 +60,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /preview", s.PostPreview)
 
 	// Editor autosave + publish (draft model)
-	mux.HandleFunc("PATCH /api/notes/{id}", s.PatchNote)
-	mux.HandleFunc("POST /api/notes/{id}/publish", s.PublishNote)
+	mux.Handle("PATCH /api/notes/{id}", deskProtection.Handler(http.HandlerFunc(s.PatchNote)))
+	mux.Handle("POST /api/notes/{id}/publish", deskProtection.Handler(http.HandlerFunc(s.PublishNote)))
 
 	// Edit + delete
 	mux.HandleFunc("GET /edit/{id}", s.GetEdit)
@@ -282,11 +285,7 @@ func (s *Server) GetCatchAll(static http.Handler) http.HandlerFunc {
 	}
 }
 
-// GetHome restores the signed-in workspace; public visitors land on the feed.
+// GetHome opens public reading for both visitors and signed-in users.
 func (s *Server) GetHome(w http.ResponseWriter, r *http.Request) {
-	if u, _ := s.Auth.CurrentUser(r); u != nil {
-		http.Redirect(w, r, "/me/desk", http.StatusSeeOther)
-		return
-	}
 	http.Redirect(w, r, "/feed", http.StatusSeeOther)
 }

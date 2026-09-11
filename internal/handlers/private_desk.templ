@@ -1,0 +1,63 @@
+package handlers
+
+templ privateDeskShell(handle string, contents templ.Component) {
+	<script src={ assetURL("private-desk.js") } defer></script>
+	<div id="private-desk" data-handle={ handle }>
+		<aside class="private-sidebar" aria-label="工作桌導覽">
+			<a class="private-write" href="/write">＋ 書寫</a>
+			<div class="private-space-heading"><span>我的空間</span><a href={ templ.URL("/"+handle) } aria-label="閱覽我的空間">↗</a></div>
+			<a class="private-space-link" href="/me/desk?space=1">我的空間</a>
+			<input type="search" id="private-search" aria-label="尋找自己的文章" placeholder="尋找文章"/>
+			<div class="private-filters" aria-label="文章篩選">
+				<button type="button" data-note-filter="all" aria-pressed="true">全部</button>
+				<button type="button" data-note-filter="public" aria-pressed="false">公開</button>
+				<button type="button" data-note-filter="semi" aria-pressed="false">半公開</button>
+				<button type="button" data-note-filter="draft" aria-pressed="false">隱藏・草稿</button>
+			</div>
+			<div id="private-notes"></div>
+			<button type="button" id="private-more" hidden>載入更多</button>
+			<div class="private-sidebar-bottom"><a href="/me/saved">我的收藏</a><a href={ templ.URL("/"+handle+"?tab=all") }>編輯文章列</a><a href="/import">匯入筆記</a></div>
+			<span id="private-status" role="status" aria-live="polite"></span>
+		</aside>
+		<div class="private-columns">
+			<section class="private-editor" aria-label="編輯">@contents</section>
+			<aside id="private-reference" aria-label="並排參照" hidden><button type="button" data-close-reference aria-label="收起參照">×</button><iframe title="並排參照文章"></iframe></aside>
+		</div>
+	</div>
+}
+
+templ spaceEditor() {
+	<script src={ assetURL("space-editor.js") } defer></script>
+	<section id="space-editor" aria-busy="true">
+		<header class="editor-bar"><span>我的空間</span><div class="editor-bar-end"><span id="space-save-state" role="status" aria-live="polite">讀取中…</span><a id="space-public-link" aria-label="閱覽已發布版本">↗</a><button type="button" id="space-publish" class="publish-btn" disabled>更新</button></div></header>
+		<input id="space-title" aria-label="標題" placeholder="標題" maxlength="500" disabled/>
+		<textarea id="space-body" aria-label="筆記內容" placeholder="先寫標題，按 Enter 開始正文…" disabled></textarea>
+		<div id="space-blocks"></div>
+		<div class="space-add"><button type="button" id="space-link" disabled>連結</button><button type="button" id="space-text" aria-label="新增段落" disabled>＋</button></div>
+		<dialog id="space-picker" aria-label="連結"><div class="space-dialog-top"><span>連結</span><button type="button" data-close-space-dialog aria-label="關閉">×</button></div><input type="search" id="space-picker-query" aria-label="尋找文章" placeholder="尋找文章"/><div id="space-picker-notes"></div></dialog>
+		<dialog id="space-publish-dialog" aria-label="發布"><div class="space-dialog-top"><span>發布</span><button type="button" data-close-space-dialog aria-label="關閉">×</button></div><div id="space-publish-notes"></div><button type="button" id="space-confirm-publish" class="publish-btn">更新</button></dialog>
+	</section>
+}
+
+templ spaceReading(p SpaceReadingProps) {
+	<article class="space-reading">
+		<header class="space-reading-heading"><a href={ templ.URL("/"+p.Handle) }>{ "@"+p.Handle }</a><div>
+			if p.IsSelf {
+				<a href="/me/desk?space=1">編輯</a>
+			} else if p.LoggedIn {
+				@followForm(p.AuthorID, p.Following)
+			}
+			<button type="button" class="action-btn share-btn" data-title={ p.Title }>分享</button>
+		</div></header>
+		<h1>{ p.Title }</h1>
+		<div class="note-body">@templ.Raw(string(p.Body))</div>
+		for _, b := range p.Blocks {
+			if b.URL != "" {
+				<a class="space-chapter" href={ templ.URL(b.URL) }><span>{ b.Title }</span><span aria-hidden="true">↗</span></a>
+			} else {
+				<div class="note-body space-paragraph">@templ.Raw(string(b.HTML))</div>
+			}
+		}
+		<a class="space-all" href={ templ.URL("/"+p.Handle+"?all=1") }>全部</a>
+	</article>
+}

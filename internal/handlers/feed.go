@@ -164,7 +164,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cu
 		         ROW_NUMBER() OVER (PARTITION BY n.author_id
 		                            ORDER BY n.updated_at DESC, n.id DESC) AS rn
 		  FROM notes n
-		  WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+		  WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL AND n.distribution = 'public'`)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))

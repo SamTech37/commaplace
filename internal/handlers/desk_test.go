@@ -179,8 +179,8 @@ func TestDeskDraftPaneAndHome(t *testing.T) {
 		t.Fatal("new desk note published automatically")
 	}
 	home := deskRequest(t, s, a, "GET", "/", nil)
-	if home.Header().Get("Location") != "/me/desk" {
-		t.Fatal("signed in home not desk")
+	if home.Header().Get("Location") != "/feed" {
+		t.Fatal("signed in home must open public reading")
 	}
 	out := httptest.NewRecorder()
 	s.Routes().ServeHTTP(out, httptest.NewRequest("GET", "/", nil))
@@ -188,10 +188,10 @@ func TestDeskDraftPaneAndHome(t *testing.T) {
 		t.Fatal("public home changed")
 	}
 	page := deskRequest(t, s, a, "GET", "/me/desk", nil)
-	if page.Code != 200 || !strings.Contains(page.Body.String(), `id="comma-desk"`) {
+	if page.Code != 200 || !strings.Contains(page.Body.String(), `id="private-desk"`) || strings.Contains(page.Body.String(), `class="desk-tabs"`) {
 		t.Fatalf("desk page: %d", page.Code)
 	}
-	for _, unnecessary := range []string{"mermaid.min.js", "katex.min.js", "d3-force.min.js", "正在打開工作桌", "在桌上打開"} {
+	for _, unnecessary := range []string{"正在打開工作桌", "在桌上打開", `src="/assets/desk.js`} {
 		if strings.Contains(page.Body.String(), unnecessary) {
 			t.Errorf("empty shell includes %q", unnecessary)
 		}
@@ -277,7 +277,7 @@ func TestDeskStartsEmptyWithoutCreatingNotes(t *testing.T) {
 	}
 }
 
-func TestDeskLibraryContainsOnlyOwnPublishedNotes(t *testing.T) {
+func TestDeskLibraryIncludesOwnDraftsAndFilters(t *testing.T) {
 	s := newTestServer(t)
 	a := mkUser(t, s, "alice")
 	b := mkUser(t, s, "bob")
@@ -307,7 +307,7 @@ func TestDeskLibraryContainsOnlyOwnPublishedNotes(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, query := range []string{"", "?q=Published", "?q=Draft"} {
+	for _, query := range []string{"", "?q=Published", "?q=Draft", "?filter=public"} {
 		r := deskRequest(t, s, a, "GET", "/api/desk/notes"+query, nil)
 		var result struct {
 			Notes []struct {
@@ -320,13 +320,13 @@ func TestDeskLibraryContainsOnlyOwnPublishedNotes(t *testing.T) {
 			t.Fatalf("library: %d %s", r.Code, r.Body)
 		}
 		want := 1
-		if query == "?q=Draft" {
-			want = 0
+		if query == "" {
+			want = 3
 		}
 		if len(result.Notes) != want || result.More {
 			t.Fatalf("unexpected library: %s", r.Body)
 		}
-		if want == 1 && (result.Notes[0].ID != pub.String() || !result.Notes[0].Published) {
+		if (query == "?q=Published" || query == "?filter=public") && (result.Notes[0].ID != pub.String() || !result.Notes[0].Published) {
 			t.Fatalf("wrong note: %s", r.Body)
 		}
 	}

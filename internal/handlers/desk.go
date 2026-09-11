@@ -220,7 +220,7 @@ func (s *Server) GetDesk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	s.renderPage(w, r, pageTitle("工作桌"), "page-desk", nil, deskPage(u.ID.String(), u.Handle))
+	s.renderPage(w, r, pageTitle("工作桌"), "page-workspace", nil, privateDeskShell(u.Handle, spaceEditor()))
 }
 
 func (s *Server) GetDeskState(w http.ResponseWriter, r *http.Request) {
@@ -403,23 +403,25 @@ func (s *Server) GetDeskNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "無效頁碼", 400)
 		return
 	}
-	rows, err := s.DB.QueryContext(r.Context(), `SELECT id,title,slug,published_at IS NOT NULL FROM notes WHERE author_id=$1 AND published_at IS NOT NULL AND deleted_at IS NULL AND hidden_at IS NULL AND ($2='' OR title ILIKE '%'||$2||'%') ORDER BY updated_at DESC,id DESC LIMIT 51 OFFSET $3`, u.ID, q, offset)
+	filter := r.URL.Query().Get("filter")
+	rows, err := s.DB.QueryContext(r.Context(), `SELECT id,COALESCE(draft_title,title),slug,published_at IS NOT NULL,CASE WHEN published_at IS NULL THEN COALESCE(draft_distribution,distribution) ELSE distribution END FROM notes WHERE author_id=$1 AND deleted_at IS NULL AND hidden_at IS NULL AND ($2='' OR COALESCE(draft_title,title) ILIKE '%'||$2||'%') AND ($4='' OR $4='all' OR ($4='draft' AND published_at IS NULL) OR ($4 IN ('public','semi') AND published_at IS NOT NULL AND distribution=$4)) ORDER BY updated_at DESC,id DESC LIMIT 51 OFFSET $3`, u.ID, q, offset, filter)
 	if err != nil {
 		http.Error(w, "無法讀取我的空間", 500)
 		return
 	}
 	defer rows.Close()
 	type item struct {
-		ID        string `json:"id"`
-		Title     string `json:"title"`
-		URL       string `json:"url"`
-		Published bool   `json:"published"`
+		ID           string `json:"id"`
+		Title        string `json:"title"`
+		URL          string `json:"url"`
+		Published    bool   `json:"published"`
+		Distribution string `json:"distribution"`
 	}
 	items := []item{}
 	for rows.Next() {
 		var n item
 		var slug string
-		if err := rows.Scan(&n.ID, &n.Title, &slug, &n.Published); err != nil {
+		if err := rows.Scan(&n.ID, &n.Title, &slug, &n.Published, &n.Distribution); err != nil {
 			http.Error(w, "無法讀取我的空間", 500)
 			return
 		}

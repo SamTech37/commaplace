@@ -13,6 +13,7 @@ type ChromeProps struct {
 	Theme       string
 	SearchQuery string
 	DeskPane    bool
+	Private     bool
 }
 
 func pageClassAttr(extra string) string {
@@ -93,6 +94,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 			<link rel="icon" type="image/svg+xml" href="/assets/comma_mascot_logo.svg"/>
 			<link rel="stylesheet" href={ templ.URL(assetURL("fonts/tc/result.css")) }/>
 			<link rel="stylesheet" href={ templ.URL(assetURL("style.css")) }/>
+			<link rel="stylesheet" href={ templ.URL(assetURL("private-desk.css")) }/>
 			if c.DeskPane || pageClass == "page-desk" {
 				<link rel="stylesheet" href={ templ.URL(assetURL("desk.css")) }/>
 			}
@@ -195,18 +197,9 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 						</button>
 					</form>
 					<nav class="nav" aria-label="主要導覽">
-						<div class="nav-links">
-							if c.User != nil {
-								<a href="/me/desk" title="回到工作桌">工作桌</a>
-								<a href="/write" title="寫一篇新筆記">{ c.Nav.Write }</a>
-								<a href="/feed" title="看大家的最新筆記">{ c.Nav.Feed }</a>
-								<a href="/graph" title="筆記之間的關係圖譜">{ c.Nav.Graph }</a>
-								<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
-							} else {
-								<a href="/feed" title="看大家的最新筆記">{ c.Nav.Feed }</a>
-								<a href="/graph" title="筆記之間的關係圖譜">{ c.Nav.Graph }</a>
-								<a href="/random" title="隨機跳到一篇筆記">漫遊</a>
-							}
+						<div class="nav-links dual-nav">
+							<a href="/feed" class={ templ.KV("dual-active",!c.Private) }>閱覽</a>
+							<a href="/me/desk" class={ templ.KV("dual-active",c.Private) }>工作桌</a>
 						</div>
 						if c.User != nil {
 							<details class="action-menu user-menu">
@@ -222,9 +215,10 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 									<span class="avatar-initial">{ avatarInitial(c.User.Handle) }</span>
 								</summary>
 								<div class="action-menu-list prefs-panel">
-									@prefRows()
-									<div class="action-menu-sep"></div>
+									<div class="account-identity">{ "@"+c.User.Handle }</div>
 									<a href={ templ.URL("/" + c.User.Handle) } title="你的個人頁">個人頁</a>
+									<div class="action-menu-sep"></div>
+									@prefRows()
 									<form method="POST" action="/logout" class="inline-form">
 										<button type="submit" class="action-menu-danger" title="登出目前帳號">
 											{ c.Nav.Logout }

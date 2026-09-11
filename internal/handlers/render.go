@@ -84,13 +84,19 @@ func (s *Server) chrome(r *http.Request) ChromeProps {
 		theme = u.Theme
 	}
 	embedded, _ := r.Context().Value(deskPaneContext{}).(bool)
-	return ChromeProps{User: u, Site: siteCfg, Nav: navCfg, Theme: theme, DeskPane: embedded}
+	private := strings.HasPrefix(r.URL.Path, "/me/desk") || strings.HasPrefix(r.URL.Path, "/edit/") || r.URL.Path == "/write" || strings.HasPrefix(r.URL.Path, "/import")
+	return ChromeProps{User: u, Site: siteCfg, Nav: navCfg, Theme: theme, DeskPane: embedded, Private: private}
 }
 
 // renderPage writes a full HTML page (Layout + chrome + body) for a templ
 // component. meta may be nil (Layout falls back to the default og: tags).
 func (s *Server) renderPage(w http.ResponseWriter, r *http.Request, title, pageClass string, meta, body templ.Component) {
 	c := s.chrome(r)
+	if pageClass == "page-editor" && !c.DeskPane && c.User != nil {
+		body = privateDeskShell(c.User.Handle, body)
+		pageClass = "page-workspace"
+		w.Header().Set("Cache-Control", "private, no-store")
+	}
 	var buf bytes.Buffer
 	if err := Layout(c, title, pageClass, meta, body).Render(r.Context(), &buf); err != nil {
 		log.Printf("render page %q: %v", title, err)

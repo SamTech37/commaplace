@@ -67,9 +67,10 @@ templ feedPage(p FeedPageProps) {
 				<a href={ templ.URL(feedTabURL("recommended", p.TagFilter)) } class={ "feed-tab", templ.KV("active", p.Tab == "recommended") }>推薦</a>
 				<a href={ templ.URL(feedTabURL("following", p.TagFilter)) } class={ "feed-tab", templ.KV("active", p.Tab == "following") }>追蹤中</a>
 				if p.UserHandle != "" {
-					<a href={ templ.URL("/" + p.UserHandle) } class="feed-tab">我的</a>
+					<a href="/me/saved" class="feed-tab">我的收藏</a>
 				}
 			</nav>
+			<a href="/random" class="feed-tab">漫遊</a>
 			if len(p.TagChips) > 0 {
 				@feedTagChips(p.TagChips, p.Tab, p.TagFilter)
 			}

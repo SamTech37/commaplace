@@ -1,0 +1,74 @@
+/* Public reading and private writing share the existing Comma palette. */
+.nav-links.dual-nav { display:flex; gap:3px; border:1px solid var(--border-2); border-radius:30px; padding:4px; background:var(--bg-3); }
+.dual-nav a { border-radius:25px; padding:9px 17px; white-space:nowrap; }
+.dual-nav a.dual-active { background:var(--bg-2); color:var(--text); }
+.account-identity { padding:12px; color:var(--text-2); }
+.nav .mobile-menu,.mobile-dock { display:none; }
+.page.page-workspace { max-width:1440px; padding:0 20px 30px; }
+.page-workspace>.topbar { max-width:none; }
+.page-workspace>.content { max-width:none; padding:0; animation:none; }
+#private-desk { display:grid; grid-template-columns:210px minmax(0,1fr); border:1px solid var(--border-2); min-height:700px; background:var(--bg-2); }
+#private-desk * { box-sizing:border-box; }
+.private-sidebar { background:var(--bg); border-right:1px solid var(--border); padding:22px 14px; min-width:0; }
+.private-sidebar a { color:inherit; text-decoration:none; }
+.private-write { display:block; background:var(--ink); color:var(--paper)!important; border-radius:6px; padding:10px; text-align:center; margin-bottom:24px; }
+.private-space-heading { display:flex; justify-content:space-between; color:var(--text-2); padding:0 8px 7px; font-size:var(--fs-sm); }
+.private-space-link { display:block; padding:10px; border-radius:5px; overflow-wrap:anywhere; }
+.is-current { background:var(--bg-3); }
+.private-sidebar input { width:100%; margin-top:20px; background:transparent; border:0; border-bottom:1px solid var(--border-2); border-radius:0; padding:8px 3px; }
+.private-filters { display:flex; flex-wrap:wrap; gap:2px; margin:16px 0 10px; }
+.private-filters button,.private-note button,.private-sidebar-bottom a,#private-more { background:transparent; border:0; color:inherit; font:inherit; font-size:var(--fs-xs); padding:8px 5px; cursor:pointer; border-radius:4px; }
+.private-filters button[aria-pressed=true] { background:var(--bg-3); }
+.private-note { display:flex; align-items:center; border-radius:5px; margin:3px 0; gap:3px; }
+.private-note a { flex:1; min-width:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; padding:10px 6px; font-size:var(--fs-sm); }
+.private-note button { min-width:32px; font-size:var(--fs-md); }
+.private-sidebar-bottom { border-top:1px solid var(--border); margin-top:24px; padding-top:12px; display:grid; }
+.private-sidebar-bottom a { font-size:var(--fs-sm); }
+#private-status { font-size:var(--fs-xs); color:var(--danger); }
+.private-columns { display:flex; min-width:0; align-items:stretch; }
+.private-editor { min-width:0; flex:1; padding:20px 30px; }
+.private-editor .editor-page { max-width:none; padding:0; margin:0; }
+.private-editor .editor-bar { flex-wrap:wrap; gap:12px; }
+.private-editor .editor-bar-end { flex-wrap:wrap; gap:10px; }
+.private-editor .editor-workspace { border:0; background:transparent; }
+.private-editor .CodeMirror,.private-editor .CodeMirror-scroll { min-height:440px; }
+#private-reference { width:32%; min-width:250px; border-left:1px solid var(--border); background:var(--bg); position:relative; padding-top:35px; }
+#private-reference[hidden] { display:none; }
+#private-reference>button { position:absolute; right:10px; top:5px; background:transparent; border:0; color:inherit; font-size:22px; cursor:pointer; }
+#private-reference iframe { display:block; width:100%; height:650px; border:0; }
+#space-editor { min-width:0; }
+#space-title { width:100%; font:inherit; font-size:var(--fs-2xl); background:transparent; border:0; border-radius:0; padding:14px 0; margin-top:14px; }
+#space-body { width:100%; min-height:145px; resize:vertical; font:inherit; font-size:var(--fs-md); line-height:2; background:transparent; border:0; border-radius:0; padding:8px 0 20px; }
+.space-edit-block { display:flex; align-items:center; gap:12px; padding:18px 0; border-top:1px solid var(--border-2); }
+.space-grip { color:var(--text-3); cursor:grab; font-size:22px; }
+.space-block-content { flex:1; min-width:0; }
+.space-block-content>a { color:inherit; text-decoration:none; font-size:var(--fs-lg); overflow-wrap:anywhere; }
+.space-block-content textarea { border:0; width:100%; resize:vertical; min-height:95px; font:inherit; line-height:2; background:transparent; color:inherit; }
+.space-draft { display:inline-block; font-size:var(--fs-xs); margin-left:8px; color:var(--text-2); }
+.space-distribution,#note-distribution { background:var(--bg); color:var(--text); border:1px solid var(--border-2); padding:8px 6px; font:inherit; font-size:var(--fs-sm); border-radius:5px; max-width:100%; }
+.space-block-controls { display:flex; flex-wrap:wrap; width:65px; justify-content:flex-end; }
+.space-block-controls button,.space-add button,.space-dialog-top button { background:transparent; border:0; color:inherit; font:inherit; cursor:pointer; padding:7px 10px; }
+.space-block-controls button:disabled { opacity:.3; cursor:default; }
+.space-add { display:flex; gap:8px; border-top:1px solid var(--border); padding-top:15px; }
+.space-dialog-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
+#space-editor dialog { color:var(--text); background:var(--bg-2); border:1px solid var(--border-2); border-radius:10px; width:min(550px,calc(100% - 30px)); padding:22px; max-height:85dvh; }
+#space-editor dialog::backdrop { background:rgb(0 0 0 / .35); }
+#space-picker-query { width:100%; }
+#space-picker-notes>button { display:block; width:100%; text-align:left; border:0; border-bottom:1px solid var(--border); padding:15px 3px; background:transparent; font:inherit; color:inherit; cursor:pointer; }
+.space-review-row { display:flex; flex-wrap:wrap; justify-content:space-between; gap:15px; padding:14px 0; border-bottom:1px solid var(--border); }
+.space-review-row label { display:flex; align-items:center; gap:9px; }
+#space-confirm-publish { float:right; margin-top:20px; }
+.space-reading { max-width:740px; margin:20px auto 40px; }
+.space-reading-heading { display:flex; align-items:center; justify-content:space-between; padding-bottom:18px; border-bottom:2px solid var(--ink); }
+.space-reading-heading>div { display:flex; align-items:center; gap:15px; }
+.space-reading h1 { margin:35px 0 24px; font-weight:400; }
+.space-reading .note-body { line-height:2.1; font-size:var(--fs-md); }
+.space-chapter { display:flex; justify-content:space-between; gap:20px; padding:23px 0; border-top:1px solid var(--border-2); font-size:var(--fs-lg); color:inherit; text-decoration:none; }
+.space-paragraph { padding:24px 0; }
+.space-all { display:block; text-align:right; margin-top:22px; }
+@media(max-width:1000px) { #private-reference { min-width:220px; } .private-editor{padding:18px;} #private-desk{grid-template-columns:175px minmax(0,1fr);} }
+@media(max-width:780px) { .private-columns{display:block;} #private-reference{width:100%;border-left:0;border-top:1px solid var(--border);} .page-workspace .topbar{flex-wrap:wrap;} .private-editor .editor-bar-end{width:100%;justify-content:flex-end;} }
+@media(max-width:600px) { .page.page-workspace{padding:0 10px 20px;} #private-desk{display:block;} .private-sidebar{border-right:0;border-bottom:1px solid var(--border);padding:14px;} .private-write{float:right;margin:0 0 10px 10px;} #private-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));} .private-sidebar-bottom{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;} .private-sidebar input{margin-top:10px;} .private-filters{margin:8px 0;} .nav-links.dual-nav a{padding:8px 12px;} .space-edit-block{flex-wrap:wrap;gap:8px;} .space-block-content{min-width:50%;} .space-distribution{margin-left:25px;} .space-block-controls{margin-left:auto;} .space-reading{padding:0 8px;} }
+@media(pointer:coarse) { #private-desk button,.private-sidebar a,.space-distribution{min-height:44px;} }
+.space-return { display: inline-block; margin: 0 0 2rem; color: var(--text-2); } .space-pagination { display:flex; gap:2rem; border-top:1px solid var(--border); margin:3rem 0; padding-top:1.5rem; } .space-next { margin-left:auto; text-align:right; }
+@media(max-width:800px) { body { padding-bottom:env(safe-area-inset-bottom); } }

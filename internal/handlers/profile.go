@@ -45,6 +45,20 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		viewerID = viewer.ID
 	}
 	isSelf := viewer != nil && viewer.ID == profile.ID
+	if r.URL.Query().Get("all") == "" && r.URL.Query().Get("tab") == "" && r.URL.Query().Get("view") == "" && r.URL.Query().Get("older") == "" {
+		space, ok, err := s.loadSpaceReading(r.Context(), profile.ID, profile.Handle)
+		if err != nil {
+			s.renderError(w, r, 500, "無法讀取我的空間")
+			return
+		}
+		if ok {
+			space.IsSelf = isSelf
+			space.AuthorID, space.LoggedIn = profile.ID, viewer != nil
+			space.Following, _ = userFollows(r.Context(), s.DB, viewerID, profile.ID)
+			s.renderPage(w, r, pageTitle(space.Title), "", nil, spaceReading(space))
+			return
+		}
+	}
 
 	mode := r.URL.Query().Get("view")
 	if mode != "calendar" && mode != "graph" {

@@ -21,14 +21,13 @@ func renderChrome(t *testing.T, u *auth.User) string {
 	return sb.String()
 }
 
-// navLinks returns the .nav-links group — the run of links that collapses into
-// the ≡ menu on narrow screens.
+// navLinks returns the two primary product destinations.
 func navLinks(t *testing.T, html string) string {
 	t.Helper()
-	const open = `<div class="nav-links">`
+	const open = `<div class="nav-links dual-nav">`
 	i := strings.Index(html, open)
 	if i < 0 {
-		t.Fatal(`no <div class="nav-links"> in rendered chrome`)
+		t.Fatal(`no dual navigation in rendered chrome`)
 	}
 	rest := html[i+len(open):]
 	j := strings.Index(rest, "</div>")
@@ -45,7 +44,7 @@ func navLinks(t *testing.T, html string) string {
 func TestNavLinksAreNavigationOnly(t *testing.T) {
 	nav := navLinks(t, renderChrome(t, &auth.User{Handle: "alice", Theme: "auto"}))
 
-	for _, want := range []string{navCfg.Write, navCfg.Feed, navCfg.Graph, "漫遊"} {
+	for _, want := range []string{`href="/feed"`, `href="/me/desk"`, "閱覽", "工作桌"} {
 		if !strings.Contains(nav, want) {
 			t.Errorf("navigation link %q missing from nav-links", want)
 		}
