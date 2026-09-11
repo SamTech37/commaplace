@@ -13,6 +13,7 @@ func (s *Server) GetRandom(w http.ResponseWriter, r *http.Request) {
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
 		WHERE n.published_at IS NOT NULL
+		  AND n.distribution = 'public'
 		  AND n.hidden_at IS NULL
 		  AND n.deleted_at IS NULL
 		ORDER BY random()

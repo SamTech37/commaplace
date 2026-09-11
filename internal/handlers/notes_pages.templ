@@ -16,6 +16,7 @@ type WriteProps struct {
 	Published bool
 	NoteURL   string
 	Revision  int64
+	Distribution string
 }
 
 templ writePage(p WriteProps) {
@@ -52,6 +53,10 @@ templ writePage(p WriteProps) {
 				</span>
 			</div>
 			<div class="editor-bar-end">
+				<select id="note-distribution" aria-label="公開或半公開">
+					<option value="public" selected={ p.Distribution=="public" }>公開</option>
+					<option value="semi" selected={ p.Distribution!="public" }>半公開</option>
+				</select>
 				<button type="button" id="vault-import-open" class="editor-quiet-btn vault-import-trigger" aria-haspopup="dialog">匯入筆記 <span class="vault-beta">Beta</span></button>
 				<span class="save-state" aria-label="儲存狀態">
 					<span class="save-state-dot" aria-hidden="true"></span>
@@ -141,6 +146,8 @@ type NoteViewProps struct {
 	OGDescription  string
 	OGImage        string
 	OGURL          string
+	SpaceTitle, SpaceURL string
+	SpacePrevious, SpaceNext readingBlock
 }
 
 templ noteMeta(p NoteViewProps) {
@@ -184,6 +191,9 @@ templ backlinksList(items []backlink, icon string) {
 }
 
 templ noteContent(p NoteViewProps) {
+	if p.SpaceURL != "" {
+		<a class="space-return" href={ templ.URL(p.SpaceURL) }>{ "← " + p.SpaceTitle }</a>
+	}
 	if p.IsHidden {
 		<p class="error">這篇筆記已被管理員隱藏，只有作者本人和管理員看得到。</p>
 	}
@@ -201,6 +211,9 @@ templ noteContent(p NoteViewProps) {
 		</div>
 		if p.ViewerLoggedIn && !p.IsAuthor {
 			@followForm(p.AuthorID, p.ViewerFollows)
+		}
+		if p.IsAuthor {
+			<a href={ templ.URL("/edit/"+p.Note.ID.String()) } class="action-btn">編輯</a>
 		}
 	</div>
 	<article class="article" data-reveal data-reveal-delay="2">
@@ -281,7 +294,6 @@ templ noteContent(p NoteViewProps) {
 						}
 						if p.IsAuthor {
 							<div class="action-menu-sep"></div>
-							<a href={ templ.URL("/edit/" + p.Note.ID.String()) }>✎ 編輯</a>
 							<form class="inline-form" method="post" action={ templ.URL("/delete/" + p.Note.ID.String()) } onsubmit="return confirm('確定刪除這篇筆記？');">
 								<button type="submit" class="action-menu-danger">🗑 刪除</button>
 							</form>
@@ -316,6 +328,16 @@ templ noteContent(p NoteViewProps) {
 		<div class="article-body">@templ.Raw(string(p.BodyHTML))</div>
 		<script src={ assetURL("linkpreview.js") } defer></script>
 	</article>
+	if p.SpaceURL != "" {
+		<nav class="space-pagination" aria-label="文章導覽">
+			if p.SpacePrevious.URL != "" {
+				<a href={ templ.URL(p.SpacePrevious.URL) }>{ "← " + p.SpacePrevious.Title }</a>
+			}
+			if p.SpaceNext.URL != "" {
+				<a class="space-next" href={ templ.URL(p.SpaceNext.URL) }>{ p.SpaceNext.Title + " →" }</a>
+			}
+		</nav>
+	}
 	if len(p.OutgoingSame) > 0 || len(p.OutgoingCross) > 0 {
 		<section class="connected-section" data-reveal data-reveal-delay="3">
 			<div class="section-header">

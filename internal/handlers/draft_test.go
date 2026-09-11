@@ -58,7 +58,7 @@ func TestDraftLifecycle(t *testing.T) {
 	// Autosave content into the draft.
 	w := httptest.NewRecorder()
 	req := authedRequest(s, alice, http.MethodPatch, "/api/notes/"+draftID.String(),
-		"document="+urlenc("My Draft\n\nsome body #topic"))
+		"document="+urlenc("My Draft\n\nsome body #topic")+"&distribution=public")
 	req.SetPathValue("id", draftID.String())
 	s.PatchNote(w, req)
 	if w.Code != http.StatusOK {

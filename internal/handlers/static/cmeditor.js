@@ -200,6 +200,8 @@
 
   // ---------- autosave ----------
   var timer, inflight = false, lastError = null;
+  var distribution = document.getElementById("note-distribution");
+  if (distribution) distribution.addEventListener("change", function () { save().catch(function () {}); });
   function setStatus(t, state) {
     if (statusEl) statusEl.textContent = t;
     page.dataset.saveState = state || "saved";
@@ -227,11 +229,12 @@
     }
     inflight = true; lastError = null;
     var requestValue = easymde.value();
+    var requestDistribution = distribution ? distribution.value : "";
     setStatus("儲存中…", "saving");
     return fetch("/api/notes/" + noteId, {
       method: "PATCH",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "document=" + encodeURIComponent(requestValue) + "&revision=" + noteRevision,
+      body: "document=" + encodeURIComponent(requestValue) + "&revision=" + noteRevision + "&distribution=" + encodeURIComponent(requestDistribution),
     }).then(function (r) {
       if (!r.ok) {
         return r.text().then(function (t) {
@@ -245,12 +248,13 @@
         noteRevision = result.revision;
         inflight = false;
         if (easymde.value() === requestValue) clearDraftBackup();
-        if (easymde.value() !== requestValue) {
+        if (easymde.value() !== requestValue || (distribution && distribution.value !== requestDistribution)) {
           return save();
         } else {
           setStatus("已儲存", "saved");
         }
         if (document.body.classList.contains("desk-embedded")) parent.postMessage({source:"comma-pane",type:"note-saved"},location.origin);
+        document.dispatchEvent(new CustomEvent("comma:note-saved"));
       });
     }).catch(function (err) {
       inflight = false;
@@ -277,8 +281,11 @@
     pub.addEventListener("click", function () {
       pub.disabled = true;
       pub.setAttribute("aria-busy", "true");
+      cm.setOption("readOnly", true);
+      if (distribution) distribution.disabled = true;
+      function unlock() { cm.setOption("readOnly", false); if (distribution) distribution.disabled = false; }
       save().then(function () {
-        fetch("/api/notes/" + noteId + "/publish", { method: "POST" })
+        fetch("/api/notes/" + noteId + "/publish", { method: "POST", headers: {"Content-Type":"application/x-www-form-urlencoded"}, body: "revision=" + noteRevision })
           .then(function (r) {
             if (r.ok) return r.json();
             return r.text().then(function (t) {
@@ -286,7 +293,9 @@
             });
           })
           .then(function (d) {
+            noteRevision = d.revision;
             if (document.body.classList.contains("desk-embedded")) {
+              unlock();
               parent.postMessage({source:"comma-pane",type:"published",url:d.url},location.origin);
               pub.textContent="更新";pub.disabled=false;pub.removeAttribute("aria-busy");
               page.querySelector('.editor-document-state').textContent = '已發布';
@@ -295,11 +304,13 @@
             } else window.location = d.url;
           })
           .catch(function (msg) {
+            unlock();
             pub.disabled = false;
             pub.removeAttribute("aria-busy");
             setStatus(typeof msg === "string" ? msg : "發布失敗", "error");
           });
       }).catch(function () {
+        unlock();
         pub.disabled = false;
         pub.removeAttribute("aria-busy");
         // save() already surfaced the error via setStatus.
