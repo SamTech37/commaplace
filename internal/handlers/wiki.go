@@ -37,6 +37,10 @@ func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, _ := s.Auth.CurrentUser(r)
+	if user != nil && r.URL.Query().Get("desk") == "1" {
+		s.suggestDeskNotes(w, r, user.ID, user.Handle, q)
+		return
+	}
 	var (
 		myID     uuid.UUID
 		myHandle string
@@ -194,4 +198,37 @@ func buildWikiInsert(s wikiSuggestion, myHandle string) string {
 		return s.Slug
 	}
 	return "@" + s.Handle + "/" + s.Slug
+}
+
+// One bounded query: visible desk materials, then saved articles, own notes,
+// followed authors, and other public notes. Private notes never leak across vaults.
+func (s *Server) suggestDeskNotes(w http.ResponseWriter, r *http.Request, userID uuid.UUID, handle, q string) {
+	if len(q) > 300 {
+		http.Error(w, "查詢過長", 400)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
+	ids := []string{}
+	for _, raw := range strings.Split(r.URL.Query().Get("notes"), ",") {
+		if len(ids) >= 64 {
+			break
+		}
+		if id, err := uuid.Parse(raw); err == nil {
+			ids = append(ids, id.String())
+		}
+	}
+	clause, args := likeAnyVariant("n.title", q, 3)
+	rows, err := s.DB.QueryContext(r.Context(), `SELECT n.id,n.title,n.slug,u.handle FROM notes n JOIN users u ON u.id=n.author_id WHERE n.deleted_at IS NULL AND n.hidden_at IS NULL AND (n.author_id=$1 OR n.published_at IS NOT NULL) AND `+clause+` ORDER BY (n.id=ANY($2::uuid[])) DESC, EXISTS(SELECT 1 FROM saves WHERE user_id=$1 AND note_id=n.id) DESC,(n.author_id=$1) DESC,EXISTS(SELECT 1 FROM follows WHERE follower_id=$1 AND followed_id=n.author_id) DESC,n.updated_at DESC,n.id DESC LIMIT 10`, append([]any{userID, ids}, args...)...)
+	if err != nil {
+		http.Error(w, "無法取得 Wiki 建議", 500)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sg wikiSuggestion
+		if err := rows.Scan(&sg.NoteID, &sg.Title, &sg.Slug, &sg.Handle); err != nil {
+			return
+		}
+		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`, htmlpkg.EscapeString(buildWikiInsert(sg, handle)), htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString("@"+sg.Handle))
+	}
 }

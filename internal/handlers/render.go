@@ -83,7 +83,8 @@ func (s *Server) chrome(r *http.Request) ChromeProps {
 	if u != nil && (u.Theme == "light" || u.Theme == "dark") {
 		theme = u.Theme
 	}
-	return ChromeProps{User: u, Site: siteCfg, Nav: navCfg, Theme: theme}
+	embedded, _ := r.Context().Value(deskPaneContext{}).(bool)
+	return ChromeProps{User: u, Site: siteCfg, Nav: navCfg, Theme: theme, DeskPane: embedded}
 }
 
 // renderPage writes a full HTML page (Layout + chrome + body) for a templ

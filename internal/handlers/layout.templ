@@ -12,6 +12,7 @@ type ChromeProps struct {
 	Nav         config.Nav
 	Theme       string
 	SearchQuery string
+	DeskPane    bool
 }
 
 func pageClassAttr(extra string) string {
@@ -92,6 +93,13 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 			<link rel="icon" type="image/svg+xml" href="/assets/comma_mascot_logo.svg"/>
 			<link rel="stylesheet" href={ templ.URL(assetURL("fonts/tc/result.css")) }/>
 			<link rel="stylesheet" href={ templ.URL(assetURL("style.css")) }/>
+			if c.DeskPane || pageClass == "page-desk" {
+				<link rel="stylesheet" href={ templ.URL(assetURL("desk.css")) }/>
+			}
+			if c.DeskPane {
+				<meta name="robots" content="noindex"/>
+				<script src={ assetURL("desk-bridge.js") } defer></script>
+			}
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"/>
 			<script src={ assetURL("htmx.min.js") } defer></script>
 			<script src={ assetURL("copy.js") } defer></script>
@@ -138,7 +146,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
       });
     </script>
 		</head>
-		<body>
+		<body class={ templ.KV("desk-embedded", c.DeskPane) }>
 			<a class="skip-link" href="#main-content">跳到主要內容</a>
 			<div class={ pageClassAttr(pageClass) }>
 				<header class="topbar">
@@ -179,6 +187,7 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 					<nav class="nav" aria-label="主要導覽">
 						<div class="nav-links">
 							if c.User != nil {
+								<a href="/me/desk" title="回到工作桌">工作桌</a>
 								<a href="/write" title="寫一篇新筆記">{ c.Nav.Write }</a>
 								<a href="/feed" title="看大家的最新筆記">{ c.Nav.Feed }</a>
 								<a href="/graph" title="筆記之間的關係圖譜">{ c.Nav.Graph }</a>

@@ -66,7 +66,7 @@ func (s *Server) GetAuthCallback(w http.ResponseWriter, r *http.Request) {
 		if onb, _ := userOnboarded(r.Context(), s.DB, u.ID); !onb {
 			next = "/onboarding"
 		} else {
-			next = "/me"
+			next = "/me/desk"
 		}
 	}
 	http.Redirect(w, r, next, http.StatusSeeOther)
@@ -103,7 +103,7 @@ func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
 	s.Auth.SetSession(w, userID)
 	next := r.URL.Query().Get("next")
 	if next == "" || !strings.HasPrefix(next, "/") {
-		next = "/me"
+		next = "/me/desk"
 	}
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
@@ -131,7 +131,7 @@ func (s *Server) GetOAuthGoogleCallback(w http.ResponseWriter, r *http.Request) 
 	if onb, _ := userOnboarded(r.Context(), s.DB, u.ID); !onb {
 		http.Redirect(w, r, "/onboarding", http.StatusSeeOther)
 	} else {
-		http.Redirect(w, r, "/me", http.StatusSeeOther)
+		http.Redirect(w, r, "/me/desk", http.StatusSeeOther)
 	}
 }
 
@@ -153,4 +153,3 @@ func (s *Server) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
-

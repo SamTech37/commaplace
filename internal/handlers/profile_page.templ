@@ -102,6 +102,7 @@ templ profilePage(p ProfilePageProps) {
 				<a href={ templ.URL("/" + p.Handle + "?tab=all") } class={ "feed-tab", templ.KV("active", p.Tab == "all") }>全部</a>
 				<a href={ templ.URL("/" + p.Handle) } class={ "feed-tab", templ.KV("active", p.Tab != "drafts" && p.Tab != "all") }>公開</a>
 				<a href={ templ.URL("/" + p.Handle + "?tab=drafts") } class={ "feed-tab", templ.KV("active", p.Tab == "drafts") }>隱藏・草稿</a>
+				<button type="button" id="note-manager-toggle" aria-expanded="false" aria-controls="note-manager">編輯文章列</button>
 			</nav>
 		} else {
 			<div class="profile-notes-heading" style="margin-top:1em">最近的筆記</div>

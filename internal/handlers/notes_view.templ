@@ -171,7 +171,7 @@ templ managedNoteCard(c feedCard) {
 }
 
 templ listCardLink(c feedCard) {
-	<a class="note-card" href={ templ.URL(c.URL) } data-reveal>
+	<a class="note-card" href={ templ.URL(c.URL) } data-note-id={ c.NoteID.String() } data-reveal>
 		<div class="note-title">{ c.Title }</div>
 		if c.SnippetHTML != nil {
 			<div class="note-excerpt">@c.SnippetHTML</div>
@@ -193,7 +193,7 @@ templ masonryCard(c feedCard) {
 }
 
 templ masonryCardLink(c feedCard) {
-	<a class={ "masonry-card", "variant-" + c.Variant } href={ templ.URL(c.URL) } data-reveal>
+	<a class={ "masonry-card", "variant-" + c.Variant } href={ templ.URL(c.URL) } data-note-id={ c.NoteID.String() } data-reveal>
 		<div class="card-title">{ c.Title }</div>
 		if c.ImageURL != "" {
 			<img class="card-image" src={ c.ImageURL } alt="" loading="lazy"/>
