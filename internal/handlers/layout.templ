@@ -38,7 +38,7 @@ templ defaultMeta(c ChromeProps) {
 // (falls back to defaultMeta); contents is the page body rendered inside
 // <main class="content">.
 templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Component) {
-	<!doctype html>
+	<!DOCTYPE html>
 	<html
 		lang="zh-Hant"
 		if c.Theme != "" {
@@ -100,21 +100,30 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
 				<meta name="robots" content="noindex"/>
 				<script src={ assetURL("desk-bridge.js") } defer></script>
 			}
-			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"/>
 			<script src={ assetURL("htmx.min.js") } defer></script>
-			<script src={ assetURL("copy.js") } defer></script>
-			<script src={ assetURL("share.js") } defer></script>
-			<script src={ assetURL("d3-force.min.js") } defer></script>
-			<script src={ assetURL("graph.js") } defer></script>
-			<script src={ assetURL("reveal.js") } defer></script>
-			<script src={ assetURL("reader.js") } defer></script>
-			<script src={ assetURL("rsvp.js") } defer></script>
-			<script src={ assetURL("palette.js") } defer></script>
+			if pageClass != "page-desk" {
+				<script src={ assetURL("copy.js") } defer></script>
+				<script src={ assetURL("share.js") } defer></script>
+				if !c.DeskPane {
+					<script src={ assetURL("d3-force.min.js") } defer></script>
+					<script src={ assetURL("graph.js") } defer></script>
+					<script src={ assetURL("reveal.js") } defer></script>
+				}
+				<script src={ assetURL("reader.js") } defer></script>
+				<script src={ assetURL("rsvp.js") } defer></script>
+			}
+			if !c.DeskPane {
+				<script src={ assetURL("palette.js") } defer></script>
+			}
 			<script src={ assetURL("opencc-toggle.js") } defer></script>
 			<script src={ assetURL("prefs.js") } defer></script>
-			<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" defer></script>
-			<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
-			<script>
+			if c.DeskPane {
+				<script src={ assetURL("desk-rich-content.js") } data-force-src={ assetURL("d3-force.min.js") } data-graph-src={ assetURL("graph.js") } defer></script>
+			} else if pageClass != "page-desk" {
+				<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"/>
+				<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" defer></script>
+				<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" defer></script>
+				<script>
       document.addEventListener("DOMContentLoaded", function () {
         if (window.katex) {
           document.querySelectorAll(".math-inline").forEach(function (el) {
@@ -145,8 +154,9 @@ templ Layout(c ChromeProps, title, pageClass string, meta, contents templ.Compon
         }
       });
     </script>
+			}
 		</head>
-		<body class={ templ.KV("desk-embedded", c.DeskPane) }>
+		<body class={ templ.KV("desk-embedded", c.DeskPane), templ.KV("desk-shell", pageClass == "page-desk") }>
 			<a class="skip-link" href="#main-content">跳到主要內容</a>
 			<div class={ pageClassAttr(pageClass) }>
 				<header class="topbar">

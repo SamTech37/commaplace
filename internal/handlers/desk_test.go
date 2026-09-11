@@ -48,9 +48,10 @@ func TestDeskStateIsolationConflictAndNoCollection(t *testing.T) {
 		t.Fatal(err)
 	}
 	initial := readDesk(t, s, a)
-	if initial.Revision != 0 || len(initial.State.Windows) != 1 {
+	if initial.Revision != 0 || len(initial.State.Windows) != 0 || initial.State.Active != "" {
 		t.Fatalf("initial: %+v", initial)
 	}
+	initial.State.Windows = append(initial.State.Windows, newDeskWindow("feed", "", ""))
 	note := newDeskWindow("note", id.String(), "")
 	note.Scroll = 123
 	note.Width = 512
@@ -68,7 +69,7 @@ func TestDeskStateIsolationConflictAndNoCollection(t *testing.T) {
 	if r := deskRequest(t, s, a, "PUT", "/api/desk/state", initial); r.Code != 409 {
 		t.Fatalf("stale initial update: %d", r.Code)
 	}
-	if got := readDesk(t, s, b); len(got.State.Windows) != 1 {
+	if got := readDesk(t, s, b); len(got.State.Windows) != 0 {
 		t.Fatalf("other user leaked: %+v", got)
 	}
 	if savedCount(t, s, a) != 0 {
@@ -138,6 +139,7 @@ func TestDeskResolveAndValidation(t *testing.T) {
 		}
 	}
 	env := readDesk(t, s, a)
+	env.State.Windows = []deskWindow{newDeskWindow("feed", "", "")}
 	env.State.Windows[0].Width = 10
 	if r := deskRequest(t, s, a, "PUT", "/api/desk/state", env); r.Code != 400 {
 		t.Errorf("invalid width: %d", r.Code)
@@ -188,6 +190,14 @@ func TestDeskDraftPaneAndHome(t *testing.T) {
 	page := deskRequest(t, s, a, "GET", "/me/desk", nil)
 	if page.Code != 200 || !strings.Contains(page.Body.String(), `id="comma-desk"`) {
 		t.Fatalf("desk page: %d", page.Code)
+	}
+	for _, unnecessary := range []string{"mermaid.min.js", "katex.min.js", "d3-force.min.js", "正在打開工作桌", "在桌上打開"} {
+		if strings.Contains(page.Body.String(), unnecessary) {
+			t.Errorf("empty shell includes %q", unnecessary)
+		}
+	}
+	if !strings.Contains(view.Body.String(), "desk-rich-content.js") || strings.Contains(view.Body.String(), "mermaid.min.js") {
+		t.Fatal("editor pane must defer rich-content dependencies")
 	}
 }
 
@@ -242,5 +252,86 @@ func TestEditorRejectsConcurrentDeskSave(t *testing.T) {
 	}
 	if r := save("Title\nnext save", "1"); r.Code != 200 {
 		t.Fatalf("next: %d %s", r.Code, r.Body)
+	}
+}
+
+func TestDeskStartsEmptyWithoutCreatingNotes(t *testing.T) {
+	s := newTestServer(t)
+	a := mkUser(t, s, "alice")
+	for range 3 {
+		env := readDesk(t, s, a)
+		if env.State.Windows == nil || len(env.State.Windows) != 0 || env.State.Active != "" {
+			t.Fatalf("new desk must be an empty array: %+v", env)
+		}
+	}
+	var count int
+	if err := s.DB.QueryRow(`SELECT count(*) FROM notes WHERE author_id=$1`, a).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("visiting desk created notes: count=%d err=%v", count, err)
+	}
+	env := deskEnvelope{State: deskState{Windows: []deskWindow{}}}
+	if r := deskRequest(t, s, a, "PUT", "/api/desk/state", env); r.Code != 200 {
+		t.Fatalf("save empty: %d %s", r.Code, r.Body)
+	}
+	if got := readDesk(t, s, a); len(got.State.Windows) != 0 || got.State.Active != "" || got.Revision != 1 {
+		t.Fatalf("closing everything must stay empty after reload: %+v", got)
+	}
+}
+
+func TestDeskLibraryContainsOnlyOwnPublishedNotes(t *testing.T) {
+	s := newTestServer(t)
+	a := mkUser(t, s, "alice")
+	b := mkUser(t, s, "bob")
+	pub, err := s.saveNote(context.Background(), a, "alice", "published", "Published", "body", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.createDraft(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	draft, err := s.createDraft(context.Background(), a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.autosaveNote(context.Background(), draft, "alice", "draft", "Named Draft", "private", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.saveNote(context.Background(), b, "bob", "other", "Other", "body", nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"hidden_at", "deleted_at"} {
+		id, err := s.saveNote(context.Background(), a, "alice", field, field, "body", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.DB.Exec(`UPDATE notes SET `+field+`=1 WHERE id=$1`, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, query := range []string{"", "?q=Published", "?q=Draft"} {
+		r := deskRequest(t, s, a, "GET", "/api/desk/notes"+query, nil)
+		var result struct {
+			Notes []struct {
+				ID        string
+				Published bool
+			}
+			More bool
+		}
+		if r.Code != 200 || json.Unmarshal(r.Body.Bytes(), &result) != nil {
+			t.Fatalf("library: %d %s", r.Code, r.Body)
+		}
+		want := 1
+		if query == "?q=Draft" {
+			want = 0
+		}
+		if len(result.Notes) != want || result.More {
+			t.Fatalf("unexpected library: %s", r.Body)
+		}
+		if want == 1 && (result.Notes[0].ID != pub.String() || !result.Notes[0].Published) {
+			t.Fatalf("wrong note: %s", r.Body)
+		}
+	}
+	// Filtering the library must never discard existing drafts or editor access.
+	if r := deskRequest(t, s, a, "GET", "/me/desk/pane?kind=edit&ref="+draft.String(), nil); r.Code != 200 {
+		t.Fatalf("draft no longer editable: %d", r.Code)
 	}
 }
