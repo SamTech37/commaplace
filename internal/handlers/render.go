@@ -63,6 +63,14 @@ type tagChipCache struct {
 	until time.Time
 }
 
+// expire forces the next read to refill, for writes that remove notes from
+// view; waiting out the TTL would leave chips pointing at empty pages.
+func (c *tagChipCache) expire() {
+	c.mu.Lock()
+	c.until = time.Time{}
+	c.mu.Unlock()
+}
+
 type Server struct {
 	DB          *sql.DB
 	Auth        *auth.Auth

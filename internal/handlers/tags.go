@@ -78,7 +78,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		JOIN users u ON u.id = n.author_id
-		WHERE (%s) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`,
+		WHERE (%s) AND `+readableNote,
 		noteCardColumns, strings.Join(clauses, " OR "))
 	if older.set() {
 		args = append(args, older.UpdatedAt, older.NoteID)
@@ -156,7 +156,7 @@ func (s *Server) relatedTags(ctx context.Context, variants []string, args []any)
 		JOIN notes n ON n.id = nt1.note_id
 		JOIN note_tags nt2 ON nt2.note_id = nt1.note_id
 		WHERE (`+strings.Join(inc, " OR ")+`) AND `+strings.Join(exc, " AND ")+`
-		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+		  AND `+readableNote+`
 		GROUP BY nt2.tag
 		ORDER BY c DESC, nt2.tag
 		LIMIT 40`, args...)
@@ -211,12 +211,13 @@ func (s *Server) GetTagSuggest(w http.ResponseWriter, r *http.Request) {
 	for i, v := range variants {
 		// lower(tag), not tag: note_tags isn't guaranteed lowercase at rest
 		// (some seed paths insert raw casing), and q is already lowercased.
-		clauses[i] = fmt.Sprintf("lower(tag) LIKE $%d", i+1)
+		clauses[i] = fmt.Sprintf("lower(nt.tag) LIKE $%d", i+1)
 		args[i] = v + "%"
 	}
 	rows, err := s.DB.QueryContext(r.Context(),
-		`SELECT tag, COUNT(*) AS uses FROM note_tags WHERE (`+strings.Join(clauses, " OR ")+`)
-		 GROUP BY tag ORDER BY uses DESC, tag LIMIT 20`,
+		`SELECT nt.tag, COUNT(*) AS uses FROM note_tags nt JOIN notes n ON n.id = nt.note_id
+		 WHERE (`+strings.Join(clauses, " OR ")+`) AND `+readableNote+`
+		 GROUP BY nt.tag ORDER BY uses DESC, nt.tag LIMIT 20`,
 		args...)
 	if err != nil {
 		return

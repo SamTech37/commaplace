@@ -34,6 +34,41 @@ func TestGetTagPageListsTaggedNote(t *testing.T) {
 	}
 }
 
+// A deleted or hidden note must not keep a tag alive: chips and suggestions
+// advertised a count, and clicking through showed nothing.
+func TestTagCountsSkipUnreadableNotes(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	aliceID := mkUser(t, s, "alice")
+	for _, slug := range []string{"kept", "deleted", "hidden"} {
+		if _, err := s.saveNote(ctx, aliceID, "alice", slug, slug, "body", []string{"ghost"}); err != nil {
+			t.Fatalf("saveNote %s: %v", slug, err)
+		}
+	}
+	for _, q := range []string{
+		`UPDATE notes SET deleted_at = 1 WHERE slug = 'deleted'`,
+		`UPDATE notes SET hidden_at = 1 WHERE slug = 'hidden'`,
+	} {
+		if _, err := s.DB.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	chips, err := loadTopTagChips(ctx, s.DB, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chips) != 1 || chips[0].Count != 1 {
+		t.Errorf("chips = %+v, want one #ghost with count 1", chips)
+	}
+
+	w := httptest.NewRecorder()
+	s.GetTagSuggest(w, httptest.NewRequest("GET", "/api/tags/suggest?q=gho", nil))
+	if !strings.Contains(w.Body.String(), `<span class="ac-secondary">1</span>`) {
+		t.Errorf("suggest count, want 1: %s", w.Body.String())
+	}
+}
+
 func TestGetTagSuggestPrefixMatch(t *testing.T) {
 	s := newTestServer(t)
 	aliceID := mkUser(t, s, "alice")

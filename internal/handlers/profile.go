@@ -414,7 +414,7 @@ func loadProfileShowcaseTag(ctx context.Context, db *sql.DB, authorID uuid.UUID,
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
 		WHERE n.author_id = $1 AND lower(nt.tag) = $2
-		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+		  AND `+readableNote+`
 		ORDER BY n.updated_at DESC, n.id DESC
 		LIMIT 1`, authorID, item.Ref).Scan(&title, &slug, &body)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -494,7 +494,7 @@ func (s *Server) buildProfileHomeResolver(ctx context.Context, vaultHandle strin
 			SELECT u.handle, n.slug, n.title FROM notes n
 			JOIN users u ON u.id = n.author_id
 			WHERE u.handle_ci = lower($1) AND n.slug = $2
-			  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`,
+			  AND `+readableNote,
 			h, l.Slug,
 		).Scan(&rt.Handle, &rt.Slug, &rt.Title)
 		if err == nil {

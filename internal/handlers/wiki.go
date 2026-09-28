@@ -171,7 +171,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 			FROM notes n
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
-			WHERE f.follower_id = $1 AND `+clause2+` AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			WHERE f.follower_id = $1 AND `+clause2+` AND `+readableNote+`
 			ORDER BY n.updated_at DESC LIMIT 6`,
 			append([]any{myID}, vargs2...)...)
 	}
@@ -181,7 +181,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		WHERE `+clause3+` AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+		WHERE `+clause3+` AND `+readableNote+`
 		ORDER BY n.updated_at DESC LIMIT 6`,
 		vargs3...)
 

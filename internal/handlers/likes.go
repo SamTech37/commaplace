@@ -115,7 +115,7 @@ func (s *Server) GetSaved(w http.ResponseWriter, r *http.Request) {
 		FROM saves sv
 		JOIN notes n  ON n.id = sv.note_id
 		JOIN users u2 ON u2.id = n.author_id
-		WHERE sv.user_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`)
+		WHERE sv.user_id = $1 AND ` + readableNote)
 	if older.set() {
 		args = append(args, older.UpdatedAt, older.NoteID)
 		fmt.Fprintf(&q, ` AND (sv.created_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))

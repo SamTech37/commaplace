@@ -114,6 +114,7 @@ func (s *Server) PostManageNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "操作失敗，請重試。", 500)
 		return
 	}
+	s.tagChips.expire()
 	location := "/" + u.Handle
 	if tab != "" {
 		location += "?tab=" + tab

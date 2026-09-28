@@ -164,7 +164,7 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cu
 		         ROW_NUMBER() OVER (PARTITION BY n.author_id
 		                            ORDER BY n.updated_at DESC, n.id DESC) AS rn
 		  FROM notes n
-		  WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL AND n.distribution = 'public'`)
+		  WHERE ` + recommendableNote)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
@@ -197,7 +197,7 @@ func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, ta
 		FROM notes n
 		JOIN users u   ON u.id = n.author_id
 		JOIN follows f ON f.followed_id = n.author_id
-		WHERE f.follower_id = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`, noteCardColumns)
+		WHERE f.follower_id = $1 AND `+readableNote, noteCardColumns)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
@@ -256,6 +256,15 @@ const noteCardColumns = `n.id, n.title, n.slug, n.body_md, n.updated_at, u.handl
 	(SELECT COUNT(*) FROM likes WHERE note_id = n.id),
 	(SELECT COUNT(*) FROM links WHERE source_note_id = n.id),
 	(SELECT COUNT(*) FROM links WHERE source_note_id = n.id AND target_user_id IS DISTINCT FROM u.id)`
+
+// readableNote is the one definition of "any reader may open note n"; every
+// public list, count and suggestion filters on it, so a count can't advertise
+// notes its link then refuses to show. recommendableNote narrows it to what
+// the recommended feed (and its tag chips) may surface. Requires alias n.
+const (
+	readableNote      = `n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`
+	recommendableNote = readableNote + ` AND n.distribution = 'public'`
+)
 
 // noteRow is the plain data one noteCardColumns row carries — no UI shaping.
 // toCard is the one place that turns it into the feedCard the templ layer
@@ -477,7 +486,7 @@ func loadTopTagChips(ctx context.Context, db *sql.DB, limit int) ([]tagChip, err
 		SELECT nt.tag, COUNT(*) c
 		FROM note_tags nt
 		JOIN notes n ON n.id = nt.note_id
-		WHERE n.updated_at > $1 AND n.published_at IS NOT NULL
+		WHERE n.updated_at > $1 AND `+recommendableNote+`
 		GROUP BY nt.tag
 		ORDER BY c DESC, nt.tag
 		LIMIT $2`, cutoff, limit)

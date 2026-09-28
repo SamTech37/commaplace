@@ -28,7 +28,7 @@ func (s *Server) loadBacklinksSplit(ctx context.Context, noteID uuid.UUID, vault
 		JOIN notes n ON n.id = l.source_note_id
 		JOIN users u ON u.id = n.author_id
 		WHERE l.resolved_target_id = $1
-		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+		  AND `+readableNote+`
 		ORDER BY n.updated_at DESC`, noteID)
 	if err != nil {
 		return nil, nil, err
@@ -70,7 +70,7 @@ func (s *Server) loadOutgoingSplit(ctx context.Context, noteID uuid.UUID, vaultH
 		JOIN notes n ON n.id = l.resolved_target_id
 		JOIN users u ON u.id = n.author_id
 		WHERE l.source_note_id = $1 AND l.resolved_target_id IS NOT NULL
-		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`, noteID)
+		  AND `+readableNote, noteID)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -724,6 +724,7 @@ func (s *Server) PostDeleteNote(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusForbidden, "not your note")
 		return
 	}
+	s.tagChips.expire()
 	http.Redirect(w, r, "/"+u.Handle, http.StatusSeeOther)
 }
 

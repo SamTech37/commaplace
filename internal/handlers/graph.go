@@ -65,7 +65,7 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 		rows, err = s.DB.QueryContext(ctx, `
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n JOIN users u ON u.id = n.author_id
-			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			WHERE `+readableNote+`
 			  AND u.handle = $1
 			ORDER BY n.id`, user)
 	case tag != "":
@@ -73,7 +73,7 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 			SELECT DISTINCT n.id, n.title, n.slug, u.handle
 			FROM notes n JOIN users u ON u.id = n.author_id
 			JOIN note_tags t ON t.note_id = n.id
-			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			WHERE `+readableNote+`
 			  AND t.tag = $1
 			ORDER BY n.id`, tag)
 	default:
@@ -81,7 +81,7 @@ func (s *Server) GetGraphData(w http.ResponseWriter, r *http.Request) {
 			SELECT n.id, n.title, n.slug, u.handle
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
-			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL
+			WHERE `+readableNote+`
 			ORDER BY n.id`)
 	}
 	if err != nil {
@@ -172,7 +172,7 @@ func (s *Server) GetGraphLocal(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT n.id, n.title, n.slug, u.handle
 		FROM notes n JOIN users u ON u.id = n.author_id
-		WHERE n.id IN (`+inPlaceholders(len(idList))+`) AND n.hidden_at IS NULL AND n.deleted_at IS NULL AND n.published_at IS NOT NULL`,
+		WHERE n.id IN (`+inPlaceholders(len(idList))+`) AND `+readableNote,
 		toAnySlice(idList)...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
