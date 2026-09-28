@@ -132,8 +132,9 @@ func userOnboarded(ctx context.Context, db *sql.DB, userID uuid.UUID) (bool, err
 	return t.Valid, nil
 }
 
-// pinnedNoteForUser fetches the user's pinned welcome note (or nil).
-func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID uuid.UUID) (*pinnedNote, error) {
+// pinnedNoteForUser fetches the user's pinned note (or nil). Visitors only see
+// pinned notes that are part of the public vault.
+func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID uuid.UUID, includePrivate bool) (*pinnedNote, error) {
 	var pinnedID *uuid.UUID
 	if err := db.QueryRowContext(ctx,
 		`SELECT pinned_note_id FROM users WHERE id = $1`, userID,
@@ -143,10 +144,14 @@ func pinnedNoteForUser(ctx context.Context, db *sql.DB, userID uuid.UUID) (*pinn
 	var (
 		title, slug string
 	)
-	err := db.QueryRowContext(ctx, `
+	query := `
 		SELECT n.title, n.slug
 		FROM notes n
-		WHERE n.id = $1 AND n.author_id = $2`,
+		WHERE n.id = $1 AND n.author_id = $2 AND n.deleted_at IS NULL`
+	if !includePrivate {
+		query += ` AND n.hidden_at IS NULL AND n.published_at IS NOT NULL`
+	}
+	err := db.QueryRowContext(ctx, query,
 		*pinnedID, userID,
 	).Scan(&title, &slug)
 	if err != nil {

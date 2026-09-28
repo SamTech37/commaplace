@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"commonplace/internal/auth"
 )
@@ -56,6 +59,110 @@ func (s *Server) PostHandleSetting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/"+next, http.StatusSeeOther)
+}
+
+const (
+	profileTitleMax        = 80
+	profileHomeMax         = 1200
+	profileShowcaseBodyMax = 700
+	profileShowcaseRefMax  = 120
+)
+
+// PostProfileSetting lets a user arrange their public profile as a doorway:
+// a title, a short Markdown note, and ordered showcase slots.
+func (s *Server) PostProfileSetting(w http.ResponseWriter, r *http.Request) {
+	u := s.requireUser(w, r)
+	if u == nil {
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "無法讀取布置。", http.StatusBadRequest)
+		return
+	}
+	title := strings.TrimSpace(r.PostFormValue("profile_title"))
+	bodyMD := strings.TrimSpace(r.PostFormValue("profile_bio"))
+	if utf8.RuneCountInString(title) > profileTitleMax {
+		s.renderError(w, r, http.StatusBadRequest, "門牌太長了。")
+		return
+	}
+	if utf8.RuneCountInString(bodyMD) > profileHomeMax {
+		s.renderError(w, r, http.StatusBadRequest, "小屋導覽太長了。")
+		return
+	}
+	showcases, err := profileShowcasesFromForm(r)
+	if err != nil {
+		s.renderError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	showcaseJSON, err := json.Marshal(showcases)
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	topicInput := strings.Join(profileTopicTags(r.PostFormValue("profile_topics")), ",")
+	if topicInput == "" {
+		topicInput = strings.Join(profileShowcaseTags(showcases), ",")
+	}
+
+	if _, err := s.DB.ExecContext(r.Context(),
+		`UPDATE users SET profile_title = $1, profile_bio = $2, profile_topic_tags = $3, profile_showcases = $4 WHERE id = $5`,
+		title, bodyMD, topicInput, string(showcaseJSON), u.ID,
+	); err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	http.Redirect(w, r, "/"+u.Handle+"#profile-home", http.StatusSeeOther)
+}
+
+func profileShowcasesFromForm(r *http.Request) ([]profileShowcase, error) {
+	types := r.PostForm["showcase_type"]
+	titles := r.PostForm["showcase_title"]
+	refs := r.PostForm["showcase_ref"]
+	bodies := r.PostForm["showcase_body"]
+	raw := make([]profileShowcase, 0, min(len(types), profileShowcaseLimit))
+	for i := 0; i < len(types) && len(raw) < profileShowcaseLimit; i++ {
+		item := profileShowcase{
+			Type:   formValueAt(types, i),
+			Title:  formValueAt(titles, i),
+			Ref:    formValueAt(refs, i),
+			BodyMD: formValueAt(bodies, i),
+		}
+		raw = append(raw, item)
+	}
+	showcases := normalizeProfileShowcases(raw)
+	for _, item := range showcases {
+		if utf8.RuneCountInString(item.Title) > profileTitleMax {
+			return nil, errors.New("展示櫃標題太長了。")
+		}
+		if utf8.RuneCountInString(item.Ref) > profileShowcaseRefMax {
+			return nil, errors.New("展示櫃引用太長了。")
+		}
+		if utf8.RuneCountInString(item.BodyMD) > profileShowcaseBodyMax {
+			return nil, errors.New("展示櫃補充文字太長了。")
+		}
+	}
+	return showcases, nil
+}
+
+func formValueAt(values []string, index int) string {
+	if index < 0 || index >= len(values) {
+		return ""
+	}
+	return values[index]
+}
+
+func profileShowcaseTags(showcases []profileShowcase) []string {
+	tags := make([]string, 0, len(showcases))
+	seen := map[string]bool{}
+	for _, item := range showcases {
+		if item.Type != profileShowcaseTag || item.Ref == "" || seen[item.Ref] {
+			continue
+		}
+		seen[item.Ref] = true
+		tags = append(tags, item.Ref)
+	}
+	return tags
 }
 
 // PostThemeSetting persists a logged-in user's theme preference. Visitors
