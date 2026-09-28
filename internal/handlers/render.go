@@ -95,7 +95,7 @@ func (s *Server) renderPage(w http.ResponseWriter, r *http.Request, title, pageC
 	c := s.chrome(r)
 	if pageClass == "page-editor" && !c.DeskPane && c.User != nil {
 		body = privateDeskShell(c.User.Handle, body)
-		pageClass = "page-workspace"
+		pageClass = "page-wide page-workspace"
 		w.Header().Set("Cache-Control", "private, no-store")
 	}
 	var buf bytes.Buffer

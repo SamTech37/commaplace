@@ -220,7 +220,7 @@ func (s *Server) GetDesk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	s.renderPage(w, r, pageTitle("工作桌"), "page-workspace", nil, privateDeskShell(u.Handle, spaceEditor()))
+	s.renderPage(w, r, pageTitle("工作桌"), "page-wide page-workspace", nil, privateDeskShell(u.Handle, spaceEditor()))
 }
 
 func (s *Server) GetDeskState(w http.ResponseWriter, r *http.Request) {
