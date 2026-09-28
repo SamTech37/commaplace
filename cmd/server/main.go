@@ -73,6 +73,7 @@ func main() {
 		Debug:       cfg.Debug,
 		PlaytestKey: cfg.PlaytestKey,
 		AdminHandle: cfg.AdminHandle,
+		AdminEmail:  cfg.AdminEmail,
 		OAuthCfg:    cfg.googleOAuthConfig(),
 		BaseURL:     cfg.BaseURL,
 	}
@@ -158,6 +159,7 @@ type config struct {
 	SMTPPass           string
 	SMTPFrom           string
 	AdminHandle        string
+	AdminEmail         string
 	Debug              bool
 	PlaytestKey        string
 	GoogleClientID     string
@@ -189,6 +191,7 @@ func loadConfig() config {
 		SMTPPass:      os.Getenv("SMTP_PASS"),
 		SMTPFrom:      envOr("SMTP_FROM", "Comma, <noreply@example.com>"),
 		AdminHandle:        strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
+		AdminEmail:         strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
 		Debug:              os.Getenv("DEBUG") == "1",
 		PlaytestKey:        os.Getenv("PLAYTEST_LOGIN_KEY"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),

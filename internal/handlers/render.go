@@ -68,7 +68,8 @@ type Server struct {
 	Auth        *auth.Auth
 	Debug       bool
 	PlaytestKey string            // non-empty enables /_dev/login?key=... outside Debug mode
-	AdminHandle string            // empty disables admin entirely
+	AdminHandle string            // with AdminEmail, identifies the admin; either empty disables admin entirely
+	AdminEmail  string            // must match too, since a handle can be renamed into by anyone
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
 	BaseURL     string            // e.g. "http://localhost:8080"; for absolute OG/canonical URLs
 	tagChips    tagChipCache      // memoized top-tag chips; see tagChipCache

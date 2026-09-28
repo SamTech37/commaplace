@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,13 +13,17 @@ import (
 	"commonplace/internal/auth"
 )
 
-// IsAdmin returns true when u.Handle matches the configured AdminHandle.
-// AdminHandle="" disables admin entirely (useful for early dev).
+// IsAdmin returns true when u matches BOTH the configured AdminHandle and
+// AdminEmail. Either one empty disables admin entirely (useful for early dev).
+//
+// The email half is what actually secures this: any logged-in user can rename
+// themselves to a free handle (PostHandleSetting), so a handle alone is
+// claimable. Email is set by the magic-link/OAuth flow and never editable.
 func (s *Server) IsAdmin(u *auth.User) bool {
-	if u == nil || s.AdminHandle == "" {
+	if u == nil || s.AdminHandle == "" || s.AdminEmail == "" {
 		return false
 	}
-	return u.Handle == s.AdminHandle
+	return u.Handle == s.AdminHandle && strings.EqualFold(u.Email, s.AdminEmail)
 }
 
 func (s *Server) requireAdmin(w http.ResponseWriter, r *http.Request) *auth.User {
