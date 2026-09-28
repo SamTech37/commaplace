@@ -56,31 +56,10 @@ func Migrate(d *sql.DB) error {
 	}
 	rows.Close()
 
-	entries, err := fs.ReadDir(migrationsFS, "migrations")
+	migs, err := listMigrations(migrationsFS)
 	if err != nil {
 		return err
 	}
-	type mig struct {
-		version int
-		name    string
-	}
-	var migs []mig
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
-			continue
-		}
-		idx := strings.IndexAny(e.Name(), "_-.")
-		if idx <= 0 {
-			return fmt.Errorf("migration %q: cannot parse version", e.Name())
-		}
-		v, err := strconv.Atoi(e.Name()[:idx])
-		if err != nil {
-			return fmt.Errorf("migration %q: %w", e.Name(), err)
-		}
-		migs = append(migs, mig{version: v, name: e.Name()})
-	}
-	sort.Slice(migs, func(i, j int) bool { return migs[i].version < migs[j].version })
-
 	for _, m := range migs {
 		if applied[m.version] {
 			continue
@@ -107,4 +86,41 @@ func Migrate(d *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+type migration struct {
+	version int
+	name    string
+}
+
+// listMigrations returns the .sql files under migrations/ sorted by version.
+// Two files sharing a version is an error: schema_migrations records only the
+// number, so the second would be skipped forever as "already applied".
+func listMigrations(fsys fs.FS) ([]migration, error) {
+	entries, err := fs.ReadDir(fsys, "migrations")
+	if err != nil {
+		return nil, err
+	}
+	var migs []migration
+	seen := map[int]string{}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
+			continue
+		}
+		idx := strings.IndexAny(e.Name(), "_-.")
+		if idx <= 0 {
+			return nil, fmt.Errorf("migration %q: cannot parse version", e.Name())
+		}
+		v, err := strconv.Atoi(e.Name()[:idx])
+		if err != nil {
+			return nil, fmt.Errorf("migration %q: %w", e.Name(), err)
+		}
+		if prev, ok := seen[v]; ok {
+			return nil, fmt.Errorf("migrations %q and %q share version %d; renumber one", prev, e.Name(), v)
+		}
+		seen[v] = e.Name()
+		migs = append(migs, migration{version: v, name: e.Name()})
+	}
+	sort.Slice(migs, func(i, j int) bool { return migs[i].version < migs[j].version })
+	return migs, nil
 }
