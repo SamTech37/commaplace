@@ -12,7 +12,7 @@ import (
 // of sync with the page's original markup (English label, a second copy of the
 // count) — see .claude/specs/follow-feed-import-spec.md.
 templ followForm(targetID uuid.UUID, following bool) {
-	<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML">
+	<form class="inline-form follow-form" hx-post="/api/follow" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button">
 		<input type="hidden" name="user_id" value={ targetID.String() }/>
 		<button type="submit" class={ "follow-btn", templ.KV("following", following) } aria-pressed={ strconv.FormatBool(following) }>
 			if following {
