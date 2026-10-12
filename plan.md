@@ -14,7 +14,7 @@
 
 - [ ] **SMTP** — 申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式早就寫完，純設定。目前靠 `PLAYTEST_LOGIN_KEY` + `/_dev/login?as=<handle>&key=<key>` 頂著
 - [ ] **magic link 實測** — 連同「同一支 gmail 走 magic link 與 Google OAuth 要歸戶給同一個人」。程式寫了，沒測過
-- [ ] 登入時提醒使用者他當初是用哪個管道註冊的（用 email 認人）
+- [x] 登入時提醒使用者他當初是用哪個管道註冊的（用 email 認人）— `/login` 在這台瀏覽器上次用的管道旁標「上次使用」（`last_login` cookie）。刻意不做「輸入 email 查註冊管道」：那會讓任何人查出哪些信箱註冊過、用什麼註冊。換裝置就沒有提示
 - [ ] **`ADMIN_HANDLE`** 後台設成 `admin`，但 prod 沒有這個 user，等於沒人進得去 `/admin`。改成自己的 handle
 - [ ] **`BASE_URL` 改成 apex** `https://commaplace.app`，Console 補 `https://commaplace.app/auth/google/callback`
 
