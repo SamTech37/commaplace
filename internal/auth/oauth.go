@@ -13,6 +13,12 @@ import (
 
 const oauthStateCookie = "oauth_state"
 
+// Vars, not literals, so tests can point the flow at a fake Google.
+var (
+	googleEndpoint    = google.Endpoint
+	googleUserinfoURL = "https://openidconnect.googleapis.com/v1/userinfo"
+)
+
 // OAuthConfig holds Google OAuth credentials. Nil means OAuth is disabled.
 type OAuthConfig struct {
 	ClientID     string
@@ -26,7 +32,7 @@ func (a *Auth) googleOAuthConfig(cfg OAuthConfig) *oauth2.Config {
 		ClientSecret: cfg.ClientSecret,
 		RedirectURL:  cfg.RedirectURL,
 		Scopes:       []string{"openid", "email"},
-		Endpoint:     google.Endpoint,
+		Endpoint:     googleEndpoint,
 	}
 }
 
@@ -79,7 +85,7 @@ func (a *Auth) HandleGoogleCallback(w http.ResponseWriter, r *http.Request, cfg 
 
 func fetchGoogleEmail(ctx context.Context, token *oauth2.Token) (string, error) {
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
-	resp, err := client.Get("https://openidconnect.googleapis.com/v1/userinfo")
+	resp, err := client.Get(googleUserinfoURL)
 	if err != nil {
 		return "", err
 	}
