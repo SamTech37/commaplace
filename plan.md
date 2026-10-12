@@ -152,10 +152,14 @@
 - [ ] DDoS prevention
 - [ ] 並發：寫入佇列？讀取？
 
-- [ ] **Tag chips 的修法（等它真的痛再做，40 ms 現在無所謂）**：它變得很慢，所以快取（Render Key Value 或 in-process TTL map），或乾脆移出 feed 的同步渲染路徑
-- [ ] **並發沒測過** — 單查詢 SQL ≠ 並發負載。要用 k6 / vegeta 打真的 binary，看連線池飽和與寫入爭用
+- [x] **Tag chips 的修法** — 已有 5 分鐘 in-process cache（`feed.go` `topTagChips`），2026-10-12 壓測沒出現在熱點
+- [x] **並發測過了（2026-10-12，100K 筆記）** — 寫入不是問題（autosave 100/s、同一篇按讚 300/s 都 p50 < 10 ms、零錯誤），不需要寫入佇列。讀取在混合流量 20→40 req/s 之間飽和，原因是三個 O(全表) 查詢，不是連線池大小：
+  - [ ] `/feed` recommended 177 ms — per-author 上限的 `ROW_NUMBER()` 每次排序全部公開筆記
+  - [ ] `/search` 293 ms — `ts_headline` 在 `LIMIT` 之前對所有命中做
+  - [ ] `/api/wiki/suggest` 154 ms — `lower(title) LIKE '%…%'` 沒有 trigram index，每打一個字一次
+  - [ ] 熱門標籤頁 280 ms（相關標籤雲 + 卡片）、`/api/graph` 全域圖 19 MB 沒上限
 
-原始數字：`docs/BENCHMARK-2026-06-20.md`（已過期，未對照 007-009 之後的 schema 重測）。
+原始數字：`docs/BENCHMARK-2026-10-12.md`（取代 06-20 那份；重跑：`scripts/bench-seed.sql`）。
 
 ## Some Concerns
 
