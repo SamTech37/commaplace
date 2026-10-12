@@ -2119,6 +2119,14 @@ html[data-theme="dark"] .link-preview-card {
   font-size: var(--fs-sm);
   font-family: var(--font-mono);
 }
+.ac-item + .ac-new {
+  margin-top: 0.4em;
+  border-top: 1px solid var(--border);
+}
+.ac-new .ac-primary {
+  font-weight: 400;
+  color: var(--text-2);
+}
 
 /* ── Note page — Author bar ─────────────────────────────────────────────── */
 .author-bar {

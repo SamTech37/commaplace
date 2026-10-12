@@ -509,12 +509,36 @@
       .then(function (r) { return r.text(); })
       .then(function (html) {
         list.innerHTML = html;
+        if (acMode === "tag") appendNewTag(q);
         if (!list.children.length) { closePopup(); return; }
         popup.hidden = false;
         positionPopup();
-        setActive(0);
+        // A new tag is never the default: Enter after "#foo" with nothing
+        // existing to pick must not mint one. Reaching it takes a deliberate
+        // ArrowDown or click.
+        activeIdx = -1;
+        if (!list.children[0].hasAttribute("data-new")) setActive(0);
       })
       .catch(closePopup);
+  }
+
+  // Existing tags first; creating one is a visually separate last row, only
+  // when q isn't already an existing tag.
+  function appendNewTag(q) {
+    var lower = q.toLowerCase();
+    var exists = Array.prototype.some.call(list.children, function (li) {
+      return (li.getAttribute("data-insert") || "").toLowerCase() === lower;
+    });
+    if (!q || exists) return;
+    var li = document.createElement("li");
+    li.className = "ac-item ac-new";
+    li.setAttribute("data-insert", q);
+    li.setAttribute("data-new", "");
+    var label = document.createElement("span");
+    label.className = "ac-primary";
+    label.textContent = "新標籤 #" + q;
+    li.appendChild(label);
+    list.appendChild(li);
   }
 
   function insertActive() {
@@ -554,9 +578,11 @@
   // Tab extends the query to the longest common prefix (e.g. "@b" -> "@bob/"),
   // re-fetching as it grows; only a full match inserts + closes.
   function tabComplete() {
-    var items = list.children;
+    var items = Array.prototype.filter.call(list.children, function (el) {
+      return !el.hasAttribute("data-new"); // Tab completes, it doesn't create
+    });
     if (!items.length || !queryStart) { closePopup(); return; }
-    var inserts = Array.prototype.map.call(items, function (el) {
+    var inserts = items.map(function (el) {
       return el.getAttribute("data-insert") || "";
     });
     var prefix = lcp(inserts);
@@ -593,7 +619,11 @@
     if (popup.hidden) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setActive(activeIdx + 1); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive(activeIdx - 1); }
-    else if (e.key === "Enter") { e.preventDefault(); insertActive(); }
+    else if (e.key === "Enter") {
+      // Nothing picked (only the new-tag row is on offer): let Enter be Enter.
+      if (activeIdx < 0) { closePopup(); return; }
+      e.preventDefault(); insertActive();
+    }
     else if (e.key === "Tab") { e.preventDefault(); tabComplete(); }
     else if (e.key === "Escape") { closePopup(); }
   });
