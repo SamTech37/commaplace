@@ -114,7 +114,7 @@
 - **Server**：Go `net/http` + `templ`（`html/template` 已於 2026-08-31 全部換掉，見下）+ `go:embed`，單一靜態 binary，不加 build 步驟。Postgres via `pgx/v5`，FTS 用 `tsvector`+GIN
 - **GraphQL / GraphDB：不用，問題不成立。** GraphQL 解的是「JSON client 過度或不足抓取」，我們的 handler 回的是 HTML fragment，沒有那個 client。GraphDB 解的是深度不定的遍歷，我們的圖查詢是有界的（一跳，之後兩跳），`links` 表加索引就夠——benchmark 裡 backlinks 走 bitmap scan 本來就快。真的要無界遍歷再回來看，別為了名字裡有 graph 就換資料庫
 - **htmx**：vendored + 手寫 `hx-*`。已用原生 `HX-Request` header（不是 `?partial=1`）。OOB swap、`HX-Trigger`、`hx-indicator`、`hx-boost` 有需要再逐個接，別預先鋪
-- **Alpine.js**：要接，vendored 無 build。先接 feed 版型記憶，再接 wiki autocomplete 的 popup 狀態（`cmeditor.js` 那個手刻狀態機最爛）。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
+- **Alpine.js**：vendored 無 build（`static/alpine.min.js` 3.14.9，只在編輯頁載入）。[x] wiki／tag autocomplete 的 popup 狀態已改成 `Alpine.store("ac")`。[ ] feed 版型記憶還沒接。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
 - [x] ~~**templ**：跟 Meta-App view substrate 重構**一起**做~~ — 2026-08-31 做完了，見最上面「Meta-App view substrate + templ — 已完成」
 
 ### 待還的技術債

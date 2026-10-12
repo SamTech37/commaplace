@@ -11,7 +11,6 @@
   var noteRevision = Number(page.dataset.noteRevision || 0);
   var statusEl = document.getElementById("save-status");
   var popup = document.getElementById("ac-popup");
-  var list = popup ? popup.querySelector("ul") : null;
   var recoveryEl = document.getElementById("editor-recovery");
   var wordCountEl = document.getElementById("word-count");
   var characterCountEl = document.getElementById("character-count");
@@ -403,22 +402,48 @@
     syncKeyboardState();
   }
 
-  // ---------- [[ wiki-link autocomplete ----------
-  if (!popup || !list) return;
+  // ---------- [[ wiki-link / # tag autocomplete ----------
+  // Alpine owns what the popup shows (open, items, active) and renders it from
+  // the markup in notes_pages.templ. This file keeps the CodeMirror side:
+  // where the query starts, what to fetch, what to insert.
+  if (!popup) return;
   // The popup is position:fixed, but .content keeps a persistent transform from
   // its page-fade animation, which would make .content (not the viewport) the
   // containing block and throw the popup off toward the page corner. Reparent to
   // <body> so fixed coordinates resolve against the viewport as intended.
   document.body.appendChild(popup);
-  var activeIdx = -1, queryStart = null, fetchTimer;
+  var ac = null; // Alpine.store("ac") once Alpine starts; alpine.min.js loads after this file
+  document.addEventListener("alpine:init", function () {
+    Alpine.store("ac", { open: false, items: [], active: -1 });
+    ac = Alpine.store("ac");
+  });
+  var queryStart = null, fetchTimer;
   var acMode = "wiki"; // "wiki" | "tag"
 
   function closePopup() {
     clearTimeout(fetchTimer);
-    popup.hidden = true;
-    activeIdx = -1;
     queryStart = null;
-    list.innerHTML = "";
+    if (!ac) return;
+    ac.open = false;
+    ac.items = [];
+    ac.active = -1;
+  }
+
+  // The suggest endpoints answer with <li> fragments (shared with
+  // tagsearch.js); read them into plain items for Alpine to render.
+  function parseItems(html) {
+    var tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    return Array.prototype.map.call(tpl.content.querySelectorAll(".ac-item"), function (li) {
+      var primary = li.querySelector(".ac-primary");
+      var secondary = li.querySelector(".ac-secondary");
+      return {
+        insert: li.getAttribute("data-insert") || "",
+        primary: primary ? primary.textContent : "",
+        secondary: secondary ? secondary.textContent : "",
+        isNew: false,
+      };
+    });
   }
 
   // Find an unclosed "[[" on the current line before the cursor; returns the
@@ -451,13 +476,13 @@
   }
 
   function setActive(i) {
-    var items = list.children;
-    if (!items.length) return;
-    activeIdx = (i + items.length) % items.length;
-    for (var k = 0; k < items.length; k++) {
-      items[k].classList.toggle("active", k === activeIdx);
-    }
-    items[activeIdx].scrollIntoView({ block: "nearest" });
+    var n = ac.items.length;
+    if (!n) return;
+    ac.active = (i + n) % n;
+    Alpine.nextTick(function () {
+      var el = popup.querySelector(".ac-item.active");
+      if (el) el.scrollIntoView({ block: "nearest" });
+    });
   }
 
   function positionPopup() {
@@ -499,6 +524,7 @@
   }
 
   function fetchSuggest(q) {
+    if (!ac) return;
     var url = acMode === "tag"
       ? "/api/tags/suggest?q=" + encodeURIComponent(q)
       : "/api/wiki/suggest?q=" + encodeURIComponent(q);
@@ -508,43 +534,33 @@
     fetch(url)
       .then(function (r) { return r.text(); })
       .then(function (html) {
-        list.innerHTML = html;
-        if (acMode === "tag") appendNewTag(q);
-        if (!list.children.length) { closePopup(); return; }
-        popup.hidden = false;
-        positionPopup();
+        var items = parseItems(html);
+        if (acMode === "tag") appendNewTag(items, q);
+        if (!items.length) { closePopup(); return; }
+        ac.items = items;
         // A new tag is never the default: Enter after "#foo" with nothing
         // existing to pick must not mint one. Reaching it takes a deliberate
         // ArrowDown or click.
-        activeIdx = -1;
-        if (!list.children[0].hasAttribute("data-new")) setActive(0);
+        ac.active = items[0].isNew ? -1 : 0;
+        ac.open = true;
+        Alpine.nextTick(positionPopup); // measures the rendered list
       })
       .catch(closePopup);
   }
 
   // Existing tags first; creating one is a visually separate last row, only
   // when q isn't already an existing tag.
-  function appendNewTag(q) {
+  function appendNewTag(items, q) {
     var lower = q.toLowerCase();
-    var exists = Array.prototype.some.call(list.children, function (li) {
-      return (li.getAttribute("data-insert") || "").toLowerCase() === lower;
-    });
+    var exists = items.some(function (it) { return it.insert.toLowerCase() === lower; });
     if (!q || exists) return;
-    var li = document.createElement("li");
-    li.className = "ac-item ac-new";
-    li.setAttribute("data-insert", q);
-    li.setAttribute("data-new", "");
-    var label = document.createElement("span");
-    label.className = "ac-primary";
-    label.textContent = "新標籤 #" + q;
-    li.appendChild(label);
-    list.appendChild(li);
+    items.push({ insert: q, primary: "新標籤 #" + q, secondary: "", isNew: true });
   }
 
   function insertActive() {
-    var items = list.children;
-    if (!items.length || activeIdx < 0 || !queryStart) { closePopup(); return; }
-    var insert = items[activeIdx].getAttribute("data-insert") || "";
+    var item = ac.items[ac.active];
+    if (!item || !queryStart) { closePopup(); return; }
+    var insert = item.insert;
     if (acMode === "tag") {
       cm.replaceRange(insert, queryStart, cm.getCursor());
       closePopup();
@@ -578,13 +594,10 @@
   // Tab extends the query to the longest common prefix (e.g. "@b" -> "@bob/"),
   // re-fetching as it grows; only a full match inserts + closes.
   function tabComplete() {
-    var items = Array.prototype.filter.call(list.children, function (el) {
-      return !el.hasAttribute("data-new"); // Tab completes, it doesn't create
-    });
-    if (!items.length || !queryStart) { closePopup(); return; }
-    var inserts = items.map(function (el) {
-      return el.getAttribute("data-insert") || "";
-    });
+    var inserts = ac.items.filter(function (it) {
+      return !it.isNew; // Tab completes, it doesn't create
+    }).map(function (it) { return it.insert; });
+    if (!inserts.length || !queryStart) { closePopup(); return; }
     var prefix = lcp(inserts);
     var curQuery = cm.getRange(queryStart, cm.getCursor());
     if (prefix.length > curQuery.length) {
@@ -592,7 +605,7 @@
       cm.replaceRange(prefix, queryStart, cm.getCursor());
       cm.focus();
     } else {
-      if (activeIdx < 0) setActive(0);
+      if (ac.active < 0) setActive(0);
       insertActive();
     }
   }
@@ -616,23 +629,21 @@
   });
 
   cm.on("keydown", function (_cm, e) {
-    if (popup.hidden) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive(activeIdx + 1); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(activeIdx - 1); }
+    if (!ac || !ac.open) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive(ac.active + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(ac.active - 1); }
     else if (e.key === "Enter") {
       // Nothing picked (only the new-tag row is on offer): let Enter be Enter.
-      if (activeIdx < 0) { closePopup(); return; }
+      if (ac.active < 0) { closePopup(); return; }
       e.preventDefault(); insertActive();
     }
     else if (e.key === "Tab") { e.preventDefault(); tabComplete(); }
     else if (e.key === "Escape") { closePopup(); }
   });
 
-  list.addEventListener("mousedown", function (e) {
-    var li = e.target.closest(".ac-item");
-    if (!li) return;
-    e.preventDefault();
-    activeIdx = Array.prototype.indexOf.call(list.children, li);
+  // Called from the popup's @mousedown (notes_pages.templ).
+  window.commaAcPick = function (i) {
+    ac.active = i;
     insertActive();
-  });
+  };
 })();
