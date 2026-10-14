@@ -1,5 +1,7 @@
 # Query benchmark — 2026-06-20
 
+Superseded by `BENCHMARK-2026-10-12.md` (current schema, concurrent load).
+
 Local `benchmark` DB, 100 users × 1000 notes = 100K notes / 300K note_tags /
 100K resolved links. Single query, no concurrency — relative cost, not
 absolute latency. Referenced by `docs/DECISIONS.md`'s GraphQL/GraphDB
