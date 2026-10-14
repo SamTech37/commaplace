@@ -154,14 +154,16 @@
 - [ ] DDoS prevention
 - [ ] 並發：寫入佇列？讀取？
 
-- [x] **Tag chips 的修法** — 已有 5 分鐘 in-process cache（`feed.go` `topTagChips`），2026-10-12 壓測沒出現在熱點
-- [x] **並發測過了（2026-10-12，100K 筆記）** — 寫入不是問題（autosave 100/s、同一篇按讚 300/s 都 p50 < 10 ms、零錯誤），不需要寫入佇列。讀取在混合流量 20→40 req/s 之間飽和，原因是三個 O(全表) 查詢，不是連線池大小：
-  - [ ] `/feed` recommended 177 ms — per-author 上限的 `ROW_NUMBER()` 每次排序全部公開筆記
-  - [ ] `/search` 293 ms — `ts_headline` 在 `LIMIT` 之前對所有命中做
-  - [ ] `/api/wiki/suggest` 154 ms — `lower(title) LIKE '%…%'` 沒有 trigram index，每打一個字一次
-  - [ ] 熱門標籤頁 280 ms（相關標籤雲 + 卡片）、`/api/graph` 全域圖 19 MB 沒上限
+- [x] **Tag chips 的修法** — 已有 5 分鐘 in-process cache（`feed.go` `topTagChips`）；100K 筆記時沒快取的聚合 36–49 ms，每 5 分鐘最多跑一次
+- [x] **並發測過了（2026-10-14，100K 筆記）** — 寫入不是問題（autosave 100/s p99 13 ms、同一篇按讚 300/s p99 16 ms、全部 200），不需要寫入佇列。讀取在混合流量 20→40 req/s 之間到頂，瓶頸是 4 核 CPU（97%），不是連線池大小：
+  - [ ] `SetMaxIdleConns` 沒設（預設 2）→ 每波流量都重連 Postgres。實驗設 25：便宜頁 200/s p50 147 → 7 ms、混合 40/s p50 109 → 17 ms。`internal/db/db.go` 一行
+  - [ ] `/feed` recommended ~200 ms — per-author 上限的 `ROW_NUMBER()` 每次排序全部 85K 篇公開筆記
+  - [ ] `/search` ~280 ms — `search_tsv @@ query OR u.handle ILIKE` 的 OR 讓 GIN index 用不上，掃 94K 筆；只留 FTS 條件 13–23 ms。handle 分開查（或 UNION）
+  - [ ] 熱門標籤頁 135–270 ms — 相關標籤雲 join 該標籤的全部筆記（冷門標籤 2–3 ms）
+  - [ ] `/api/wiki/suggest` 77–151 ms — `lower(title) LIKE '%…%'` 全表掃，沒有 trigram index，每打一個字一次
+  - [ ] `/api/graph` 全域圖 19 MB 沒上限
 
-原始數字：`docs/BENCHMARK-2026-10-12.md`（取代 06-20 那份；重跑：`scripts/bench-seed.sql`）。
+原始數字：`docs/BENCHMARK-2026-10-12.md`（取代 06-20 那份；重跑：`scripts/bench-seed.sql` + `scripts/bench-load.sh`）。
 
 ## Some Concerns
 
