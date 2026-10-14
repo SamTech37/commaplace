@@ -508,6 +508,9 @@
     fetch(url)
       .then(function (r) { return r.text(); })
       .then(function (html) {
+        // Drop a response the query has moved past: typed on, Enter'd away,
+        // or an older request landing after a newer one.
+        if (!queryStart || cm.getRange(queryStart, cm.getCursor()) !== q) return;
         list.innerHTML = html;
         if (acMode === "tag") appendNewTag(q);
         if (!list.children.length) { closePopup(); return; }
