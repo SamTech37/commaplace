@@ -198,20 +198,20 @@ func notesSentinelOOB(olderURL string) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if olderURL != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div id=\"notes-sentinel\" hx-swap-oob=\"outerHTML\" class=\"feed-sentinel\" hx-get=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div id=\"notes-sentinel\" hx-swap-oob=\"outerHTML\" class=\"feed-sentinel\" aria-label=\"載入中\" hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(olderURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 104, Col: 90}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 104, Col: 113}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" hx-trigger=\"revealed\" hx-target=\".notes-items\" hx-swap=\"beforeend\">載入更多…</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" hx-trigger=\"revealed\" hx-target=\".notes-items\" hx-swap=\"beforeend\"><span></span><span></span><span></span></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -412,7 +412,7 @@ func managedNoteCard(c feedCard) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.NoteID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 154, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 156, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
@@ -425,7 +425,7 @@ func managedNoteCard(c feedCard) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.NoteID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 155, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 157, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 		if templ_7745c5c3_Err != nil {
@@ -438,7 +438,7 @@ func managedNoteCard(c feedCard) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue("選取「" + c.Title + "」")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 155, Col: 106}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 157, Col: 106}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 		if templ_7745c5c3_Err != nil {
@@ -459,7 +459,7 @@ func managedNoteCard(c feedCard) templ.Component {
 		var templ_7745c5c3_Var16 templ.SafeURL
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/edit/" + c.NoteID.String()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 159, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 161, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -477,7 +477,7 @@ func managedNoteCard(c feedCard) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue("publish:" + c.NoteID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 162, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 164, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 			if templ_7745c5c3_Err != nil {
@@ -495,7 +495,7 @@ func managedNoteCard(c feedCard) templ.Component {
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue("hide:" + c.NoteID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 165, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 167, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 			if templ_7745c5c3_Err != nil {
@@ -513,7 +513,7 @@ func managedNoteCard(c feedCard) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue("delete:" + c.NoteID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 167, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 169, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -555,7 +555,7 @@ func listCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var21 templ.SafeURL
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(c.URL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 174, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 176, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -568,7 +568,7 @@ func listCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.NoteID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 174, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 176, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 		if templ_7745c5c3_Err != nil {
@@ -581,7 +581,7 @@ func listCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(c.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 175, Col: 35}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 177, Col: 35}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -612,7 +612,7 @@ func listCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(c.Excerpt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 179, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 181, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -635,7 +635,7 @@ func listCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs("@" + c.AuthorHandle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 183, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 185, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -648,7 +648,7 @@ func listCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(c.UpdatedRel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 183, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 185, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -658,7 +658,7 @@ func listCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(c.UpdatedRel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 185, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 187, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -748,7 +748,7 @@ func masonryCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var32 templ.SafeURL
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(c.URL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 196, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 198, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
@@ -761,7 +761,7 @@ func masonryCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.NoteID.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 196, Col: 111}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 198, Col: 111}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
 		if templ_7745c5c3_Err != nil {
@@ -774,7 +774,7 @@ func masonryCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var34 string
 		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(c.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 197, Col: 35}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 199, Col: 35}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 		if templ_7745c5c3_Err != nil {
@@ -792,7 +792,7 @@ func masonryCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.ImageURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 199, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 201, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var35)
 			if templ_7745c5c3_Err != nil {
@@ -816,7 +816,7 @@ func masonryCardLink(c feedCard) templ.Component {
 				var templ_7745c5c3_Var36 string
 				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(item)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 204, Col: 15}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 206, Col: 15}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 				if templ_7745c5c3_Err != nil {
@@ -839,7 +839,7 @@ func masonryCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(c.Quote)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 208, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 210, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -863,7 +863,7 @@ func masonryCardLink(c feedCard) templ.Component {
 					var templ_7745c5c3_Var38 string
 					templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(chip)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 213, Col: 40}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 215, Col: 40}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 					if templ_7745c5c3_Err != nil {
@@ -883,7 +883,7 @@ func masonryCardLink(c feedCard) templ.Component {
 				var templ_7745c5c3_Var39 string
 				templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(c.LinkChips) - 2))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 217, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 219, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 				if templ_7745c5c3_Err != nil {
@@ -920,7 +920,7 @@ func masonryCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(c.Excerpt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 224, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 226, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
@@ -944,7 +944,7 @@ func masonryCardLink(c feedCard) templ.Component {
 				var templ_7745c5c3_Var41 string
 				templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(t)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 229, Col: 32}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 231, Col: 32}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 				if templ_7745c5c3_Err != nil {
@@ -967,7 +967,7 @@ func masonryCardLink(c feedCard) templ.Component {
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs("@" + c.AuthorHandle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 234, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 236, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -985,7 +985,7 @@ func masonryCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(c.LikeCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 237, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 239, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {
@@ -1004,7 +1004,7 @@ func masonryCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(c.LinkCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 240, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 242, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -1023,7 +1023,7 @@ func masonryCardLink(c feedCard) templ.Component {
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(c.CrossCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 243, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_view.templ`, Line: 245, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {

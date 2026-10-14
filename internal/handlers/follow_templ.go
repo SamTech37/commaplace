@@ -40,7 +40,7 @@ func followForm(targetID uuid.UUID, following bool) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form class=\"inline-form follow-form\" hx-post=\"/api/follow\" hx-target=\"this\" hx-swap=\"outerHTML\"><input type=\"hidden\" name=\"user_id\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form class=\"inline-form follow-form\" hx-post=\"/api/follow\" hx-target=\"this\" hx-swap=\"outerHTML\" hx-disabled-elt=\"find button\"><input type=\"hidden\" name=\"user_id\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

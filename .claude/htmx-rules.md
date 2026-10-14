@@ -38,8 +38,11 @@ Distilled from htmx.org/docs (htmx **2.0.4**, vendored) + an audit of this repo
 8. **`allowNestedOobSwaps` defaults `true` in 2.x.** OOB elements nested inside the
    swap target ARE processed (that's how the feed sentinel works). Don't flip it off.
 
-9. **Loading feedback:** htmx adds class `htmx-request` to the triggering element
-   during a request; style a sibling `.htmx-indicator` spinner. (Not wired yet.)
+9. **Loading feedback:** self-replacing forms (like / save / follow / report) carry
+   `hx-disabled-elt="find button"` — the global `button:disabled` style is the
+   indicator, and it blocks double-submits. Handler-written fragments must carry
+   it too (rule 5). The feed sentinel is its own indicator (blinking dots), in
+   both the first render and the OOB replacement.
 
 10. **Plain `<a>` for nav / tabs / layout toggle is correct.** htmx where it isn't
     needed is itself the anti-pattern — the layout toggle deliberately uses links

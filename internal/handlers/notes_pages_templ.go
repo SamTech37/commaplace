@@ -985,7 +985,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if p.ViewerLoggedIn {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "<form class=\"inline-form\" hx-post=\"/api/like\" hx-target=\"this\" hx-swap=\"outerHTML\"><input type=\"hidden\" name=\"note_id\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "<form class=\"inline-form\" hx-post=\"/api/like\" hx-target=\"this\" hx-swap=\"outerHTML\" hx-disabled-elt=\"find button\"><input type=\"hidden\" name=\"note_id\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1085,7 +1085,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			}
 		}
 		if p.ViewerLoggedIn {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<form class=\"inline-form\" hx-post=\"/api/save\" hx-target=\"this\" hx-swap=\"outerHTML\"><input type=\"hidden\" name=\"note_id\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<form class=\"inline-form\" hx-post=\"/api/save\" hx-target=\"this\" hx-swap=\"outerHTML\" hx-disabled-elt=\"find button\"><input type=\"hidden\" name=\"note_id\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1258,7 +1258,7 @@ func noteContent(p NoteViewProps) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if p.ViewerLoggedIn && !p.IsAuthor {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 107, "<div class=\"action-menu-sep\"></div><button type=\"button\" onclick=\"this.closest('.action-menu-list').querySelector('.report-form').hidden = false; this.hidden = true;\">⚑ 檢舉</button><form class=\"inline-form report-form\" hx-post=\"/api/report\" hx-target=\"this\" hx-swap=\"outerHTML\" hidden style=\"padding: 0.45em 0.85em; gap: 0.4em\"><input type=\"hidden\" name=\"note_id\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 107, "<div class=\"action-menu-sep\"></div><button type=\"button\" onclick=\"this.closest('.action-menu-list').querySelector('.report-form').hidden = false; this.hidden = true;\">⚑ 檢舉</button><form class=\"inline-form report-form\" hx-post=\"/api/report\" hx-target=\"this\" hx-swap=\"outerHTML\" hx-disabled-elt=\"find button\" hidden style=\"padding: 0.45em 0.85em; gap: 0.4em\"><input type=\"hidden\" name=\"note_id\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

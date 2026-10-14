@@ -9,6 +9,7 @@ type loginProps struct {
 	Email        string
 	Next         string
 	OAuthEnabled bool
+	LastLogin    string // "google" | "email" | "" — marked only when there's a choice
 }
 
 func loginGoogleHref(next string) gotempl.SafeURL {
@@ -49,13 +50,21 @@ templ loginPage(props loginProps) {
 						<path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58Z" fill="#EA4335"></path>
 					</svg>
 					Continue with Google
+					if props.LastLogin == "google" {
+						<span class="login-last">上次使用</span>
+					}
 				</a>
 				<p class="login-divider">或</p>
 			}
 			<form method="POST" action="/login">
 				<label style="gap: 0.4rem;">
-					<span style="font-size: 0.8rem; color: var(--text-3); font-family: var(--font-sans); font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;">信箱</span>
-					<input type="email" name="email" required autofocus value={ props.Email } placeholder="you@example.com" style="font-size: 1rem; padding: 0.75em 1em; border-radius: var(--r-btn);"/>
+					<span style="font-size: 0.8rem; color: var(--text-3); font-family: var(--font-sans); font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;">
+						<span id="login-email-label">信箱</span>
+						if props.OAuthEnabled && props.LastLogin == "email" {
+							<span class="login-last">上次使用</span>
+						}
+					</span>
+					<input type="email" name="email" aria-labelledby="login-email-label" required autofocus value={ props.Email } placeholder="you@example.com" style="font-size: 1rem; padding: 0.75em 1em; border-radius: var(--r-btn);"/>
 				</label>
 				if props.Next != "" {
 					<input type="hidden" name="next" value={ props.Next }/>
