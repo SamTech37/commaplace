@@ -418,6 +418,7 @@
     ac = Alpine.store("ac");
   });
   var queryStart = null, fetchTimer;
+  var pickedAt = null; // cursor right after a picked tag: don't reopen there
   var acMode = "wiki"; // "wiki" | "tag"
 
   function closePopup() {
@@ -441,6 +442,7 @@
         insert: li.getAttribute("data-insert") || "",
         primary: primary ? primary.textContent : "",
         secondary: secondary ? secondary.textContent : "",
+        exact: li.hasAttribute("data-exact"),
         isNew: false,
       };
     });
@@ -534,6 +536,9 @@
     fetch(url)
       .then(function (r) { return r.text(); })
       .then(function (html) {
+        // Drop a response the query has moved past: typed on, Enter'd away,
+        // or an older request landing after a newer one.
+        if (!queryStart || cm.getRange(queryStart, cm.getCursor()) !== q) return;
         var items = parseItems(html);
         if (acMode === "tag") appendNewTag(items, q);
         if (!items.length) { closePopup(); return; }
@@ -549,10 +554,9 @@
   }
 
   // Existing tags first; creating one is a visually separate last row, only
-  // when q isn't already an existing tag.
+  // when q isn't already an existing tag (the server marks that data-exact).
   function appendNewTag(items, q) {
-    var lower = q.toLowerCase();
-    var exists = items.some(function (it) { return it.insert.toLowerCase() === lower; });
+    var exists = items.some(function (it) { return it.exact; });
     if (!q || exists) return;
     items.push({ insert: q, primary: "新標籤 #" + q, secondary: "", isNew: true });
   }
@@ -564,6 +568,7 @@
     if (acMode === "tag") {
       cm.replaceRange(insert, queryStart, cm.getCursor());
       closePopup();
+      pickedAt = cm.getCursor();
     } else {
       var partial = insert.endsWith("/"); // "@bob/" — keep searching, don't close
       var end = cm.getCursor();
@@ -611,6 +616,10 @@
   }
 
   cm.on("cursorActivity", function () {
+    // Still right after a picked tag: the pick is done, so Enter can be Enter.
+    var cur = cm.getCursor();
+    if (pickedAt && pickedAt.line === cur.line && pickedAt.ch === cur.ch) return;
+    pickedAt = null;
     var start = triggerStart();
     acMode = "wiki";
     if (!start) { start = triggerTagStart(); acMode = "tag"; }

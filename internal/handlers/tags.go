@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -229,7 +230,13 @@ func (s *Server) GetTagSuggest(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&tag, &uses); err != nil {
 			return
 		}
-		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">#%s</span><span class="ac-secondary">%d</span></li>`,
-			tag, htmlpkg.EscapeString(tag), uses)
+		// data-exact: q already names this tag once saved (normalization and
+		// script variants included), so the editor offers no "new tag" row.
+		exact := ""
+		if slices.Contains(variants, strings.ToLower(tag)) {
+			exact = " data-exact"
+		}
+		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q%s><span class="ac-primary">#%s</span><span class="ac-secondary">%d</span></li>`,
+			tag, exact, htmlpkg.EscapeString(tag), uses)
 	}
 }
