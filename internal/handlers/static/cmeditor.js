@@ -411,6 +411,7 @@
   // <body> so fixed coordinates resolve against the viewport as intended.
   document.body.appendChild(popup);
   var activeIdx = -1, queryStart = null, fetchTimer;
+  var pickedAt = null; // cursor right after a picked tag: don't reopen there
   var acMode = "wiki"; // "wiki" | "tag"
 
   function closePopup() {
@@ -547,6 +548,7 @@
     if (acMode === "tag") {
       cm.replaceRange(insert, queryStart, cm.getCursor());
       closePopup();
+      pickedAt = cm.getCursor();
     } else {
       var partial = insert.endsWith("/"); // "@bob/" — keep searching, don't close
       var end = cm.getCursor();
@@ -597,6 +599,10 @@
   }
 
   cm.on("cursorActivity", function () {
+    // Still right after a picked tag: the pick is done, so Enter can be Enter.
+    var cur = cm.getCursor();
+    if (pickedAt && pickedAt.line === cur.line && pickedAt.ch === cur.ch) return;
+    pickedAt = null;
     var start = triggerStart();
     acMode = "wiki";
     if (!start) { start = triggerTagStart(); acMode = "tag"; }
