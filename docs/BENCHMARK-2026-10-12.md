@@ -71,9 +71,13 @@ requests that arrive while the cache is stale each run it.
 | 20/s | 26 ms | 287 ms | 429 ms | 19.7/s | 5 / 6 | 87 | 53% |
 | **40/s** | **109 ms** | **1.4 s** | **2.1 s** | **38.6/s** | **23 / 23** | **234** | **97%** |
 
-A second full run had the same shape (40/s: p50 106 ms, p99 2.1 s, 24 active
-of 25 open, CPU 97%). The knee is between 20 and 40 req/s, and it is the CPU:
-at 40/s the 4 cores are 97% busy and throughput falls behind the arrival rate.
+40/s sits right at this box's limit and is not stable run to run. A second
+full run matched the table (p50 106 ms, p99 2.1 s, 24 of 25 active, CPU 97%),
+but the verification review's five repeats of the 40/s step alone gave p50
+31 / 127 / 35 / 30 ms and p99 0.54 / 2.8 / 0.76 / 0.45 s: only one tipped into
+the 23-active, 97%-CPU, falling-behind state; the others ran at 88–93% CPU
+with 7–8 active connections. So the ceiling is the CPU, reached somewhere
+around 40 req/s of this mix, not a clean knee between 20 and 40.
 The pool does fill, but with CPU-bound queries queueing in it, not as the
 limit — in the single-endpoint runs below all 25 connections are active and
 the box is already at 97–98%. The p90 at low rates is the three slow
@@ -117,7 +121,7 @@ with CPU at 90%.
 | cheap 200/s (2 runs) | 7 ms | 17–22 ms | 0–3 | 49–50% |
 | cheap 400/s (2 runs) | 20–37 ms | 224–236 ms | 0–19 | 80–82% |
 | mixed 20/s | 15 ms | 400 ms | 0 | 48% |
-| mixed 40/s | 17 ms | 636 ms | 0 | 90% |
+| mixed 40/s (5 runs incl. review) | 17–18 ms | 0.46–0.96 s | 0 | 90% |
 
 At 400/s the baseline opened only 57 sessions yet stayed slow (p50 286 ms with
 at most 4 connections active); these runs do not isolate why, only that keeping
@@ -139,14 +143,15 @@ the problem; no write queue needed at this scale.
 
 ## Conclusions
 
-1. **The read path tops out on CPU, between 20 and 40 mixed req/s on 4 cores.**
+1. **The read path tops out on CPU, around 40 mixed req/s on 4 cores.**
    The pool fills at 40/s only because CPU-bound queries queue in it; with all
    25 connections active the box is already at 97%, so a bigger pool would
    only move the queue into Postgres.
 2. **The pool's idle setting is the cheapest win.** `MaxIdleConns` is unset
    (default 2), so bursts reconnect to Postgres. Setting it to the open cap
-   took cheap pages at 200/s from p50 147 ms to 7 ms, and mixed 40/s from
-   p50 109 ms / p99 2.1 s to 17 ms / 636 ms. One line in `internal/db/db.go`.
+   took cheap pages at 200/s from p50 147 ms to 7 ms, and mixed 40/s from a
+   baseline p50 of 30–127 ms (unstable, see §2) to a steady 17–18 ms.
+   One line in `internal/db/db.go`.
 3. Three reads are O(table), and each saturates the box alone below 20 req/s:
    - `/feed` recommended (the front door): the per-author cap ranks all 84,607
      public notes on every load. Untested direction: rank only the newest
