@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -82,5 +83,31 @@ func TestGetTagSuggestPrefixMatch(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), `data-insert="project-x"`) {
 		t.Fatalf("expected project-x suggestion, got %s", w.Body.String())
+	}
+}
+
+// data-exact marks the item q already names once normalized (or in the other
+// script), so the editor doesn't offer to create a tag that exists.
+func TestGetTagSuggestMarksExact(t *testing.T) {
+	s := newTestServer(t)
+	aliceID := mkUser(t, s, "alice")
+	if _, err := s.saveNote(context.Background(), aliceID, "alice", "n1", "N1", "body", []string{"sports-science", "sports", "历史"}); err != nil {
+		t.Fatalf("saveNote: %v", err)
+	}
+	for _, tc := range []struct{ q, exact, notExact string }{
+		{"sports_science", `data-insert="sports-science" data-exact`, ""},
+		{"Sports", `data-insert="sports" data-exact`, `data-insert="sports-science" data-exact`},
+		{"歷史", `data-insert="历史" data-exact`, ""},
+		{"sports-sci", "", "data-exact"},
+	} {
+		w := httptest.NewRecorder()
+		s.GetTagSuggest(w, httptest.NewRequest("GET", "/api/tags/suggest?q="+url.QueryEscape(tc.q), nil))
+		body := w.Body.String()
+		if tc.exact != "" && !strings.Contains(body, tc.exact) {
+			t.Errorf("q=%q: want %s in %s", tc.q, tc.exact, body)
+		}
+		if tc.notExact != "" && strings.Contains(body, tc.notExact) {
+			t.Errorf("q=%q: unexpected %s in %s", tc.q, tc.notExact, body)
+		}
 	}
 }

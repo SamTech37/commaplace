@@ -14,7 +14,8 @@
 
 - [ ] **SMTP** — 申請 Resend / Brevo / Postmark free tier，填 `SMTP_HOST/PORT/USER/PASS/FROM`。magic link 程式早就寫完，純設定。目前靠 `PLAYTEST_LOGIN_KEY` + `/_dev/login?as=<handle>&key=<key>` 頂著
 - [ ] **magic link 實測** — 連同「同一支 gmail 走 magic link 與 Google OAuth 要歸戶給同一個人」。程式寫了，沒測過
-- [ ] 登入時提醒使用者他當初是用哪個管道註冊的（用 email 認人）
+  - [x] 歸戶邏輯有自動測試了（`internal/auth/linking_test.go`，假 Google server，兩種順序）。抓到一個真 bug：Google 回大小寫不同的 email 會開第二個帳號，已改成比對 `lower(email)`。真寄信、真 Google 還是要上線實測
+- [x] 登入時提醒使用者他當初是用哪個管道註冊的（用 email 認人）— `/login` 在這台瀏覽器上次用的管道旁標「上次使用」（`last_login` cookie）。刻意不做「輸入 email 查註冊管道」：那會讓任何人查出哪些信箱註冊過、用什麼註冊。換裝置就沒有提示
 - [ ] **`ADMIN_HANDLE`** 後台設成 `admin`，但 prod 沒有這個 user，等於沒人進得去 `/admin`。改成自己的 handle
 - [ ] **`BASE_URL` 改成 apex** `https://commaplace.app`，Console 補 `https://commaplace.app/auth/google/callback`
 
@@ -89,6 +90,7 @@
 - [ ] 字體 — 思源宋體已上（見下方 CJK 交付）；黑體待選：[genyo-font](https://github.com/ButTaiwan/genyo-font)、思源或源流黑體
 - [ ] **tag picker 剩下的**：選現成標籤要是阻力最小的路，開新標籤必須是刻意、視覺上分開的最後一步，不能是在自由輸入框按 Enter。目標是擋掉 X/FB 那種把標籤當強調色用的濫用，但不禁止開新標籤。**還沒做**——現在 Enter 就能塞任意自由文字，完全沒有「現有 vs 新建」的區別
   - [x] 依使用次數排序並顯示計數（編輯器 `#` popup 與 feed 標籤搜尋共用 `GetTagSuggest`）
+  - [x] 編輯器 `#` popup：現成標籤排前面，「新標籤 #foo」是分隔線下的最後一列，Enter／Tab 都不會選它，要方向鍵或點擊。只剩新標籤可選時，Enter 就是換行。打 `#foo` 加空白照樣是標籤（行內 markdown，刻意不擋）
 - [ ] 一鍵鏡像 — 已經在經營 blog 的人怎麼同步過來？普通 blog 與密集連結的 hypertext blog 又是兩種做法
   - 抄 [obsidian-clipper](https://github.com/obsidianmd/obsidian-clipper)：開源，抓網頁轉乾淨 markdown 的部分正是「從既有 blog 匯入」缺的那塊，不用自己寫爬蟲跟正文抽取
 - [ ] 維持個人 vault 內部結構之外，為什麼該跟 Comma 上的人互動？

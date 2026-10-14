@@ -65,7 +65,7 @@ func writeSaveFragment(w http.ResponseWriter, noteID uuid.UUID, saved bool) {
 		cls += " saved"
 		label, icon = "已收藏", "✓"
 	}
-	fmt.Fprintf(w, `<form class="inline-form" hx-post="/api/save" hx-target="this" hx-swap="outerHTML">
+	fmt.Fprintf(w, `<form class="inline-form" hx-post="/api/save" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button">
   <input type="hidden" name="note_id" value="%s">
   <button type="submit" class="%s" aria-pressed="%t">%s %s</button>
 </form>`, noteID, cls, saved, icon, label)

@@ -939,6 +939,20 @@ button.secondary:hover {
   text-decoration: none;
 }
 
+.login-last {
+  margin-left: 0.5em;
+  padding: 0.1em 0.6em;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .login-divider {
   text-align: center;
   color: var(--text-3);
@@ -2118,6 +2132,14 @@ html[data-theme="dark"] .link-preview-card {
   color: var(--text-3);
   font-size: var(--fs-sm);
   font-family: var(--font-mono);
+}
+.ac-item + .ac-new {
+  margin-top: 0.4em;
+  border-top: 1px solid var(--border);
+}
+.ac-new .ac-primary {
+  font-weight: 400;
+  color: var(--text-2);
 }
 
 /* ── Note page — Author bar ─────────────────────────────────────────────── */
@@ -3840,6 +3862,14 @@ html {
 button:disabled {
   cursor: wait;
   opacity: 0.58;
+}
+/* like/save/follow/report disable their button while the request is in
+   flight (hx-disabled-elt). Most answer in a few ms; hold the dimming back
+   so a fast click doesn't flicker. Restating opacity outranks hover rules
+   like .follow-btn:hover, which would otherwise hide the dimming. */
+.inline-form button:disabled {
+  opacity: 0.58;
+  transition: opacity 0s 0.15s;
 }
 
 .topbar {
