@@ -90,6 +90,7 @@
 - [ ] 字體 — 思源宋體已上（見下方 CJK 交付）；黑體待選：[genyo-font](https://github.com/ButTaiwan/genyo-font)、思源或源流黑體
 - [ ] **tag picker 剩下的**：選現成標籤要是阻力最小的路，開新標籤必須是刻意、視覺上分開的最後一步，不能是在自由輸入框按 Enter。目標是擋掉 X/FB 那種把標籤當強調色用的濫用，但不禁止開新標籤。**還沒做**——現在 Enter 就能塞任意自由文字，完全沒有「現有 vs 新建」的區別
   - [x] 依使用次數排序並顯示計數（編輯器 `#` popup 與 feed 標籤搜尋共用 `GetTagSuggest`）
+  - [x] 編輯器 `#` popup：現成標籤排前面，「新標籤 #foo」是分隔線下的最後一列，Enter／Tab 都不會選它，要方向鍵或點擊。只剩新標籤可選時，Enter 就是換行。打 `#foo` 加空白照樣是標籤（行內 markdown，刻意不擋）
 - [ ] 一鍵鏡像 — 已經在經營 blog 的人怎麼同步過來？普通 blog 與密集連結的 hypertext blog 又是兩種做法
   - 抄 [obsidian-clipper](https://github.com/obsidianmd/obsidian-clipper)：開源，抓網頁轉乾淨 markdown 的部分正是「從既有 blog 匯入」缺的那塊，不用自己寫爬蟲跟正文抽取
 - [ ] 維持個人 vault 內部結構之外，為什麼該跟 Comma 上的人互動？

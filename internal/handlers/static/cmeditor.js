@@ -411,6 +411,7 @@
   // <body> so fixed coordinates resolve against the viewport as intended.
   document.body.appendChild(popup);
   var activeIdx = -1, queryStart = null, fetchTimer;
+  var pickedAt = null; // cursor right after a picked tag: don't reopen there
   var acMode = "wiki"; // "wiki" | "tag"
 
   function closePopup() {
@@ -508,13 +509,36 @@
     fetch(url)
       .then(function (r) { return r.text(); })
       .then(function (html) {
+        // Drop a response the query has moved past: typed on, Enter'd away,
+        // or an older request landing after a newer one.
+        if (!queryStart || cm.getRange(queryStart, cm.getCursor()) !== q) return;
         list.innerHTML = html;
+        if (acMode === "tag") appendNewTag(q);
         if (!list.children.length) { closePopup(); return; }
         popup.hidden = false;
         positionPopup();
-        setActive(0);
+        // A new tag is never the default: Enter after "#foo" with nothing
+        // existing to pick must not mint one. Reaching it takes a deliberate
+        // ArrowDown or click.
+        activeIdx = -1;
+        if (!list.children[0].hasAttribute("data-new")) setActive(0);
       })
       .catch(closePopup);
+  }
+
+  // Existing tags first; creating one is a visually separate last row, only
+  // when q isn't already an existing tag (the server marks that data-exact).
+  function appendNewTag(q) {
+    if (!q || list.querySelector("[data-exact]")) return;
+    var li = document.createElement("li");
+    li.className = "ac-item ac-new";
+    li.setAttribute("data-insert", q);
+    li.setAttribute("data-new", "");
+    var label = document.createElement("span");
+    label.className = "ac-primary";
+    label.textContent = "新標籤 #" + q;
+    li.appendChild(label);
+    list.appendChild(li);
   }
 
   function insertActive() {
@@ -524,6 +548,7 @@
     if (acMode === "tag") {
       cm.replaceRange(insert, queryStart, cm.getCursor());
       closePopup();
+      pickedAt = cm.getCursor();
     } else {
       var partial = insert.endsWith("/"); // "@bob/" — keep searching, don't close
       var end = cm.getCursor();
@@ -554,9 +579,11 @@
   // Tab extends the query to the longest common prefix (e.g. "@b" -> "@bob/"),
   // re-fetching as it grows; only a full match inserts + closes.
   function tabComplete() {
-    var items = list.children;
+    var items = Array.prototype.filter.call(list.children, function (el) {
+      return !el.hasAttribute("data-new"); // Tab completes, it doesn't create
+    });
     if (!items.length || !queryStart) { closePopup(); return; }
-    var inserts = Array.prototype.map.call(items, function (el) {
+    var inserts = items.map(function (el) {
       return el.getAttribute("data-insert") || "";
     });
     var prefix = lcp(inserts);
@@ -572,6 +599,10 @@
   }
 
   cm.on("cursorActivity", function () {
+    // Still right after a picked tag: the pick is done, so Enter can be Enter.
+    var cur = cm.getCursor();
+    if (pickedAt && pickedAt.line === cur.line && pickedAt.ch === cur.ch) return;
+    pickedAt = null;
     var start = triggerStart();
     acMode = "wiki";
     if (!start) { start = triggerTagStart(); acMode = "tag"; }
@@ -593,7 +624,11 @@
     if (popup.hidden) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setActive(activeIdx + 1); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive(activeIdx - 1); }
-    else if (e.key === "Enter") { e.preventDefault(); insertActive(); }
+    else if (e.key === "Enter") {
+      // Nothing picked (only the new-tag row is on offer): let Enter be Enter.
+      if (activeIdx < 0) { closePopup(); return; }
+      e.preventDefault(); insertActive();
+    }
     else if (e.key === "Tab") { e.preventDefault(); tabComplete(); }
     else if (e.key === "Escape") { closePopup(); }
   });
