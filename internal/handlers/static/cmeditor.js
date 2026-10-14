@@ -414,7 +414,10 @@
   document.body.appendChild(popup);
   var ac = null; // Alpine.store("ac") once Alpine starts; alpine.min.js loads after this file
   document.addEventListener("alpine:init", function () {
-    Alpine.store("ac", { open: false, items: [], active: -1 });
+    Alpine.store("ac", {
+      open: false, items: [], active: -1,
+      pick: function (i) { this.active = i; insertActive(); }, // popup @mousedown
+    });
     ac = Alpine.store("ac");
   });
   var queryStart = null, fetchTimer;
@@ -481,10 +484,8 @@
     var n = ac.items.length;
     if (!n) return;
     ac.active = (i + n) % n;
-    Alpine.nextTick(function () {
-      var el = popup.querySelector(".ac-item.active");
-      if (el) el.scrollIntoView({ block: "nearest" });
-    });
+    var el = popup.querySelectorAll(".ac-item")[ac.active];
+    if (el) el.scrollIntoView({ block: "nearest" });
   }
 
   function positionPopup() {
@@ -649,10 +650,4 @@
     else if (e.key === "Tab") { e.preventDefault(); tabComplete(); }
     else if (e.key === "Escape") { closePopup(); }
   });
-
-  // Called from the popup's @mousedown (notes_pages.templ).
-  window.commaAcPick = function (i) {
-    ac.active = i;
-    insertActive();
-  };
 })();

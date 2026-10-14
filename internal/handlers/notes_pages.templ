@@ -106,7 +106,7 @@ templ writePage(p WriteProps) {
 		<div id="ac-popup" class="ac-popup" x-data :hidden="!$store.ac.open" hidden>
 			<ul>
 				<template x-for="(it, i) in $store.ac.items" :key="i">
-					<li class="ac-item" :class="{ active: i === $store.ac.active, 'ac-new': it.isNew }" @mousedown.prevent="commaAcPick(i)">
+					<li class="ac-item" :class="{ active: i === $store.ac.active, 'ac-new': it.isNew }" @mousedown.prevent="$store.ac.pick(i)">
 						<span class="ac-primary" x-text="it.primary"></span>
 						<span class="ac-secondary" x-show="it.secondary" x-text="it.secondary"></span>
 					</li>

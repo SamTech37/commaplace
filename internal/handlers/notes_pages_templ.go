@@ -293,7 +293,7 @@ func writePage(p WriteProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</textarea></div></div><footer class=\"writer-status\" aria-label=\"文件資訊\"><div class=\"writer-status-counts\"><span id=\"word-count\">0 字</span> <span id=\"character-count\">0 個字元</span> <span id=\"cursor-position\">第 1 行，第 1 欄</span></div></footer><div id=\"ac-popup\" class=\"ac-popup\" x-data :hidden=\"!$store.ac.open\" hidden><ul><template x-for=\"(it, i) in $store.ac.items\" :key=\"i\"><li class=\"ac-item\" :class=\"{ active: i === $store.ac.active, 'ac-new': it.isNew }\" @mousedown.prevent=\"commaAcPick(i)\"><span class=\"ac-primary\" x-text=\"it.primary\"></span> <span class=\"ac-secondary\" x-show=\"it.secondary\" x-text=\"it.secondary\"></span></li></template></ul></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</textarea></div></div><footer class=\"writer-status\" aria-label=\"文件資訊\"><div class=\"writer-status-counts\"><span id=\"word-count\">0 字</span> <span id=\"character-count\">0 個字元</span> <span id=\"cursor-position\">第 1 行，第 1 欄</span></div></footer><div id=\"ac-popup\" class=\"ac-popup\" x-data :hidden=\"!$store.ac.open\" hidden><ul><template x-for=\"(it, i) in $store.ac.items\" :key=\"i\"><li class=\"ac-item\" :class=\"{ active: i === $store.ac.active, 'ac-new': it.isNew }\" @mousedown.prevent=\"$store.ac.pick(i)\"><span class=\"ac-primary\" x-text=\"it.primary\"></span> <span class=\"ac-secondary\" x-show=\"it.secondary\" x-text=\"it.secondary\"></span></li></template></ul></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
