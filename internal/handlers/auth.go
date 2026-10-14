@@ -8,6 +8,32 @@ import (
 	"github.com/google/uuid"
 )
 
+// lastLoginCookie remembers which sign-in channel this browser last used, so
+// /login can mark it. Identity is the email, so picking the other channel
+// with a different address silently makes a second account. Deliberately a
+// browser cookie, not a lookup by typed email: that would tell anyone which
+// addresses are registered and how.
+const lastLoginCookie = "last_login"
+
+func setLastLogin(w http.ResponseWriter, method string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     lastLoginCookie,
+		Value:    method,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 365,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func lastLogin(r *http.Request) string {
+	c, err := r.Cookie(lastLoginCookie)
+	if err != nil || (c.Value != "google" && c.Value != "email") {
+		return ""
+	}
+	return c.Value
+}
+
 func (s *Server) GetLogin(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	s.renderPage(w, r, pageTitle("登入"), "", nil, loginPage(loginProps{
@@ -16,6 +42,7 @@ func (s *Server) GetLogin(w http.ResponseWriter, r *http.Request) {
 		Email:        q.Get("email"),
 		Next:         q.Get("next"),
 		OAuthEnabled: s.OAuthCfg != nil,
+		LastLogin:    lastLogin(r),
 	}))
 }
 
@@ -58,6 +85,7 @@ func (s *Server) GetAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Auth.SetSession(w, u.ID)
+	setLastLogin(w, "email")
 
 	next := r.URL.Query().Get("next")
 	if next == "" || !strings.HasPrefix(next, "/") {
@@ -127,6 +155,7 @@ func (s *Server) GetOAuthGoogleCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	s.Auth.SetSession(w, u.ID)
+	setLastLogin(w, "google")
 
 	if onb, _ := userOnboarded(r.Context(), s.DB, u.ID); !onb {
 		http.Redirect(w, r, "/onboarding", http.StatusSeeOther)
