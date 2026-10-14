@@ -95,10 +95,15 @@ func fetchGoogleEmail(ctx context.Context, token *oauth2.Token) (string, error) 
 		return "", err
 	}
 	var info struct {
-		Email string `json:"email"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
 	}
 	if err := json.Unmarshal(body, &info); err != nil || info.Email == "" {
 		return "", fmt.Errorf("no email in Google userinfo response")
+	}
+	// Same email = same account, so an unverified address must not sign in.
+	if !info.EmailVerified {
+		return "", fmt.Errorf("Google email not verified")
 	}
 	return info.Email, nil
 }

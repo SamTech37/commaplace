@@ -249,7 +249,7 @@ func findOrCreateUser(ctx context.Context, tx *sql.Tx, email string) (*User, err
 	email = strings.ToLower(strings.TrimSpace(email))
 	var u User
 	err := tx.QueryRowContext(ctx,
-		`SELECT id, handle, email, created_at, theme FROM users WHERE lower(email) = $1`, email,
+		`SELECT id, handle, email, created_at, theme FROM users WHERE lower(email) = $1 ORDER BY created_at, id LIMIT 1`, email,
 	).Scan(&u.ID, &u.Handle, &u.Email, &u.CreatedAt, &u.Theme)
 	if err == nil {
 		return &u, nil

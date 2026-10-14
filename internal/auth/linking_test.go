@@ -11,8 +11,8 @@ import (
 )
 
 // fakeGoogle serves the token exchange and userinfo endpoints, answering
-// userinfo with *email.
-func fakeGoogle(t *testing.T, email *string) {
+// userinfo with *email and email_verified.
+func fakeGoogle(t *testing.T, email *string, verified bool) {
 	t.Helper()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
@@ -24,18 +24,22 @@ func fakeGoogle(t *testing.T, email *string) {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]string{"email": *email})
+		json.NewEncoder(w).Encode(map[string]any{"email": *email, "email_verified": verified})
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	t.Cleanup(auth.UseFakeGoogle(srv.URL+"/token", srv.URL+"/userinfo"))
 }
 
-func googleSignIn(t *testing.T, a *auth.Auth) *auth.User {
-	t.Helper()
+func googleCallback(a *auth.Auth) (*auth.User, error) {
 	req := httptest.NewRequest("GET", "/auth/google/callback?state=s&code=c", nil)
 	req.AddCookie(&http.Cookie{Name: "oauth_state", Value: "s"})
-	u, err := a.HandleGoogleCallback(httptest.NewRecorder(), req, auth.OAuthConfig{ClientID: "id", ClientSecret: "secret"})
+	return a.HandleGoogleCallback(httptest.NewRecorder(), req, auth.OAuthConfig{ClientID: "id", ClientSecret: "secret"})
+}
+
+func googleSignIn(t *testing.T, a *auth.Auth) *auth.User {
+	t.Helper()
+	u, err := googleCallback(a)
 	if err != nil {
 		t.Fatalf("HandleGoogleCallback: %v", err)
 	}
@@ -67,7 +71,7 @@ func TestMagicLinkAndGoogleShareAccount(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := newTestAuth(t)
-			fakeGoogle(t, &tc.googleEmail)
+			fakeGoogle(t, &tc.googleEmail, true)
 			var first, second *auth.User
 			if tc.googleFirst {
 				first, second = googleSignIn(t, a), magicSignIn(t, a, tc.typed)
@@ -89,10 +93,56 @@ func TestMagicLinkAndGoogleShareAccount(t *testing.T) {
 func TestGoogleCallbackRejectsStateMismatch(t *testing.T) {
 	a := newTestAuth(t)
 	email := "alice@example.com"
-	fakeGoogle(t, &email)
+	fakeGoogle(t, &email, true)
 	req := httptest.NewRequest("GET", "/auth/google/callback?state=other&code=c", nil)
 	req.AddCookie(&http.Cookie{Name: "oauth_state", Value: "s"})
 	if _, err := a.HandleGoogleCallback(httptest.NewRecorder(), req, auth.OAuthConfig{}); err == nil {
 		t.Fatal("want error for mismatched state")
+	}
+}
+
+// An unverified Google email must not create an account or sign into the
+// magic-link account that owns that address.
+func TestGoogleRejectsUnverifiedEmail(t *testing.T) {
+	a := newTestAuth(t)
+	email := "alice@example.com"
+	fakeGoogle(t, &email, false)
+	if _, err := googleCallback(a); err == nil {
+		t.Fatal("want error for unverified email")
+	}
+	var n int
+	a.DB.QueryRow(`SELECT count(*) FROM users`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("users = %d, want 0", n)
+	}
+	magicSignIn(t, a, email)
+	if u, err := googleCallback(a); err == nil {
+		t.Fatalf("unverified Google email signed into %s", u.Handle)
+	}
+}
+
+// Rows differing only by email case (left by the old case-sensitive match)
+// resolve to the oldest account, even after an UPDATE moves its row on disk.
+func TestCaseDuplicateEmailsPickOldest(t *testing.T) {
+	a := newTestAuth(t)
+	var oldest string
+	if err := a.DB.QueryRow(
+		`INSERT INTO users(handle, handle_ci, email, created_at) VALUES('alice', 'alice', 'Alice@Example.com', 100) RETURNING id`,
+	).Scan(&oldest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.DB.Exec(
+		`INSERT INTO users(handle, handle_ci, email, created_at) VALUES('alice2', 'alice2', 'alice@example.com', 200)`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if u := magicSignIn(t, a, "alice@example.com"); u.ID.String() != oldest {
+		t.Fatalf("before update: got %s, want oldest account", u.Handle)
+	}
+	if _, err := a.DB.Exec(`UPDATE users SET theme = 'dark' WHERE id = $1`, oldest); err != nil {
+		t.Fatal(err)
+	}
+	if u := magicSignIn(t, a, "alice@example.com"); u.ID.String() != oldest {
+		t.Fatalf("after update: got %s, want oldest account", u.Handle)
 	}
 }
