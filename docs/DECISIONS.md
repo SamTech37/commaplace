@@ -148,8 +148,14 @@ bigger surface. Adopt the native patterns (out-of-band swaps, `HX-Trigger`,
 `templ` in the same pass as the Meta-App view substrate (`NoteListView` +
 `feedCard` + a `cardRenderers` registry), exactly as this entry called for —
 one migration, not two. `internal/handlers/*.templ` + generated
-`*_templ.go` (committed), `_base.html`/`templates/` deleted outright. The
-Alpine.js half of this decision is untouched — still not adopted, still open.
+`*_templ.go` (committed), `_base.html`/`templates/` deleted outright.
+
+**Alpine half started 2026-10-12.** Vendored `static/alpine.min.js` (3.14.9,
+from the npm tarball, MIT), loaded only on the editor page. First consumer:
+the `[[`/`#` autocomplete popup — `Alpine.store("ac")` holds open/items/active
+and the popup markup renders from it; `cmeditor.js` keeps the CodeMirror glue
+(query anchor, fetch, insert). The suggest endpoints still return `<li>`
+fragments (shared with `tagsearch.js`); the editor parses them into items.
 
 **Decision.** Alpine.js (vendored, no build step) for the richer client-side state
 the design/product founders will want — htmx for the server-driven 90%, Alpine for
