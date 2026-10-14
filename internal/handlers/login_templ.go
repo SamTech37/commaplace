@@ -135,7 +135,7 @@ func loginPage(props loginProps) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " <form method=\"POST\" action=\"/login\"><label style=\"gap: 0.4rem;\"><span style=\"font-size: 0.8rem; color: var(--text-3); font-family: var(--font-sans); font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;\">信箱 ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " <form method=\"POST\" action=\"/login\"><label style=\"gap: 0.4rem;\"><span style=\"font-size: 0.8rem; color: var(--text-3); font-family: var(--font-sans); font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;\"><span id=\"login-email-label\">信箱</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -145,14 +145,14 @@ func loginPage(props loginProps) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</span> <input type=\"email\" name=\"email\" required autofocus value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</span> <input type=\"email\" name=\"email\" aria-labelledby=\"login-email-label\" required autofocus value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Email)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/login.templ`, Line: 67, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/login.templ`, Line: 67, Col: 112}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {

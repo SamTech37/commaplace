@@ -950,6 +950,7 @@ button.secondary:hover {
   font-family: var(--font-sans);
   letter-spacing: 0;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .login-divider {

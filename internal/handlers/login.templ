@@ -59,12 +59,12 @@ templ loginPage(props loginProps) {
 			<form method="POST" action="/login">
 				<label style="gap: 0.4rem;">
 					<span style="font-size: 0.8rem; color: var(--text-3); font-family: var(--font-sans); font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;">
-						信箱
+						<span id="login-email-label">信箱</span>
 						if props.OAuthEnabled && props.LastLogin == "email" {
 							<span class="login-last">上次使用</span>
 						}
 					</span>
-					<input type="email" name="email" required autofocus value={ props.Email } placeholder="you@example.com" style="font-size: 1rem; padding: 0.75em 1em; border-radius: var(--r-btn);"/>
+					<input type="email" name="email" aria-labelledby="login-email-label" required autofocus value={ props.Email } placeholder="you@example.com" style="font-size: 1rem; padding: 0.75em 1em; border-radius: var(--r-btn);"/>
 				</label>
 				if props.Next != "" {
 					<input type="hidden" name="next" value={ props.Next }/>

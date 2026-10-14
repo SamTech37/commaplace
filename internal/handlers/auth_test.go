@@ -67,3 +67,19 @@ func TestLoginMarksLastUsedMethod(t *testing.T) {
 		})
 	}
 }
+
+// The email pill sits inside the <label>; the input must still be named just 信箱.
+func TestLoginEmailNameExcludesLastUsedPill(t *testing.T) {
+	s := newTestServer(t)
+	s.OAuthCfg = &auth.OAuthConfig{ClientID: "id", ClientSecret: "secret"}
+	req := httptest.NewRequest("GET", "/login", nil)
+	req.AddCookie(&http.Cookie{Name: lastLoginCookie, Value: "email"})
+	w := httptest.NewRecorder()
+	s.GetLogin(w, req)
+	body := w.Body.String()
+	for _, want := range []string{`<span id="login-email-label">信箱</span>`, `aria-labelledby="login-email-label"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+}
