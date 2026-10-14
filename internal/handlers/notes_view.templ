@@ -101,7 +101,9 @@ templ notesSentinel(olderURL string) {
 
 templ notesSentinelOOB(olderURL string) {
 	if olderURL != "" {
-		<div id="notes-sentinel" hx-swap-oob="outerHTML" class="feed-sentinel" hx-get={ olderURL } hx-trigger="revealed" hx-target=".notes-items" hx-swap="beforeend">載入更多…</div>
+		<div id="notes-sentinel" hx-swap-oob="outerHTML" class="feed-sentinel" aria-label="載入中" hx-get={ olderURL } hx-trigger="revealed" hx-target=".notes-items" hx-swap="beforeend">
+			<span></span><span></span><span></span>
+		</div>
 	} else {
 		<div id="notes-sentinel" hx-swap-oob="outerHTML" class="feed-end">— 沒有更多了 —</div>
 	}

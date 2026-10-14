@@ -228,7 +228,7 @@ templ noteContent(p NoteViewProps) {
 			</div>
 			<div class="article-actions">
 				if p.ViewerLoggedIn {
-					<form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML">
+					<form class="inline-form" hx-post="/api/like" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button">
 						<input type="hidden" name="note_id" value={ p.Note.ID.String() }/>
 						<button type="submit" class={ "action-btn", templ.KV("liked", p.Liked) } aria-pressed={ strconv.FormatBool(p.Liked) }>
 							if p.Liked {
@@ -243,7 +243,7 @@ templ noteContent(p NoteViewProps) {
 					<span class="action-btn" aria-disabled="true">♡ <span class="count">{ strconv.Itoa(p.LikeCount) }</span></span>
 				}
 				if p.ViewerLoggedIn {
-					<form class="inline-form" hx-post="/api/save" hx-target="this" hx-swap="outerHTML">
+					<form class="inline-form" hx-post="/api/save" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button">
 						<input type="hidden" name="note_id" value={ p.Note.ID.String() }/>
 						<button type="submit" class={ "action-btn save-btn", templ.KV("saved", p.Saved) } aria-pressed={ strconv.FormatBool(p.Saved) }>
 							if p.Saved {
@@ -314,7 +314,7 @@ templ noteContent(p NoteViewProps) {
 							>
 								⚑ 檢舉
 							</button>
-							<form class="inline-form report-form" hx-post="/api/report" hx-target="this" hx-swap="outerHTML" hidden style="padding: 0.45em 0.85em; gap: 0.4em">
+							<form class="inline-form report-form" hx-post="/api/report" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="find button" hidden style="padding: 0.45em 0.85em; gap: 0.4em">
 								<input type="hidden" name="note_id" value={ p.Note.ID.String() }/>
 								<input type="text" name="reason" placeholder="原因（可省略）" maxlength="200" style="font-size: 0.8rem; padding: 0.25em 0.5em"/>
 								<button type="submit" class="link-btn" style="font-size: 0.8rem">送出</button>

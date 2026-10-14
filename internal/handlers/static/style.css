@@ -3855,6 +3855,14 @@ button:disabled {
   cursor: wait;
   opacity: 0.58;
 }
+/* like/save/follow/report disable their button while the request is in
+   flight (hx-disabled-elt). Most answer in a few ms; hold the dimming back
+   so a fast click doesn't flicker. Restating opacity outranks hover rules
+   like .follow-btn:hover, which would otherwise hide the dimming. */
+.inline-form button:disabled {
+  opacity: 0.58;
+  transition: opacity 0s 0.15s;
+}
 
 .topbar {
   position: sticky;
