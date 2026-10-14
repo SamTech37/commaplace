@@ -523,13 +523,9 @@
   }
 
   // Existing tags first; creating one is a visually separate last row, only
-  // when q isn't already an existing tag.
+  // when q isn't already an existing tag (the server marks that data-exact).
   function appendNewTag(q) {
-    var lower = q.toLowerCase();
-    var exists = Array.prototype.some.call(list.children, function (li) {
-      return (li.getAttribute("data-insert") || "").toLowerCase() === lower;
-    });
-    if (!q || exists) return;
+    if (!q || list.querySelector("[data-exact]")) return;
     var li = document.createElement("li");
     li.className = "ac-item ac-new";
     li.setAttribute("data-insert", q);
