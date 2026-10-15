@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
@@ -169,7 +170,14 @@ func likeAnyVariant(col, q string, argOffset int) (string, []any) {
 	clauses := make([]string, len(variants))
 	args := make([]any, len(variants))
 	for i, v := range variants {
-		clauses[i] = fmt.Sprintf("lower(%s) LIKE $%d", col, argOffset+i)
+		expr := "lower(" + col + ")"
+		// Under 3 characters pg_trgm extracts no trigrams, so the trigram
+		// index (migration 016) would be a full-index scan, slower than the
+		// plan without it. `|| ''` keeps the planner off it.
+		if utf8.RuneCountInString(v) < 3 {
+			expr = "(" + expr + " || '')"
+		}
+		clauses[i] = fmt.Sprintf("%s LIKE $%d", expr, argOffset+i)
 		args[i] = "%" + v + "%"
 	}
 	return "(" + strings.Join(clauses, " OR ") + ")", args
