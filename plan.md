@@ -152,7 +152,9 @@
 - [x] Postgres on Render，Go server 單一 binary，不走 serverless
 - [ ] Render.com more expensive tiers 
 - [x] DDoS — 量級攻擊由 Render 前面的 Cloudflare 擋（免費、自動）；應用層濫用由 app 內限流擋（#36，`go-chi/httprate`：每 IP、每登入者寫入、每登入 email）
-  - [ ] 部署後看 Render log：出現 `ratelimit: request without CF-Connecting-IP` 代表拿不到真實 IP，每 IP 限流形同關閉
+  - [ ] **prod 拿不到 `CF-Connecting-IP`（2026-10-15 部署後 log 出現 `ratelimit: request without CF-Connecting-IP; per-IP limits are off`）**。這行只在第一個缺 header 的請求印一次，所以還不知道是**所有**使用者請求都缺，還是只有 Render 內部請求缺。若是前者，每 IP 限流（全站 1200/分、匿名寫入、登入 300/10 分、email+IP）在 prod 等於沒開；每登入者寫入與每 email 每小時上限照常有效
+    - Render 沒有文件說它設哪個 client IP header。社群說法：`X-Forwarded-For` 第一個是真實 IP，但 Render 不清掉 client 自己送的，所以可偽造（[1](https://community.render.com/t/accessing-client-ips-in-a-node-express-app/36282)、[2](https://feedback.render.com/features/p/send-the-correct-xforwardedfor)）
+    - 下一步：加一次性診斷 log（第一個有／沒有 `CF-Connecting-IP` 的請求各印一行：path、有哪些轉送 header 的名稱、`X-Forwarded-For` 有幾段，不印 IP），部署後看實際 header 再決定 key 怎麼取（`internal/handlers/ratelimit.go` `clientIP`）
 - [ ] 並發：寫入佇列？讀取？
 
 - [x] **Tag chips 的修法** — 已有 5 分鐘 in-process cache（`feed.go` `topTagChips`）；100K 筆記時沒快取的聚合 36–49 ms，每 5 分鐘最多跑一次
@@ -162,7 +164,7 @@
   - [x] `/search` — handle 條件改成 `author_id = ANY(...)`（#35），~280 ms → 選擇性高的詞 11–50 ms。只打一兩個字母、命中大部分 handle 時仍是全掃
   - [x] 熱門標籤頁 — 相關標籤雲 5 分鐘快取（#33），快取命中 5–15 ms
   - [x] `/api/wiki/suggest` — pg_trgm 索引（#39），少見的 3 字以上查詢 ~150–360 ms → <10 ms；1–2 字查詢 trigram 幫不上，維持原樣
-    - [ ] 部署後看 Render log `pg_trgm: CJK titles use trigram index = …`；`false` 表示 prod 的 locale 不認中文字，中文查詢走不到索引
+    - [x] prod log（2026-10-15）：`pg_trgm: CJK titles use trigram index = true`，中文 3 字以上查詢走索引
   - [ ] `/api/graph` 全域圖 19 MB 沒上限
 
 原始數字：`docs/BENCHMARK-2026-10-12.md`（取代 06-20 那份；重跑：`scripts/bench-seed.sql` + `scripts/bench-load.sh`）。
