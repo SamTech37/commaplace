@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"html/template"
 
 	"github.com/google/uuid"
@@ -107,48 +106,28 @@ func recomputeLinks(ctx context.Context, tx *sql.Tx, sourceID uuid.UUID, sourceA
 	if _, err := tx.ExecContext(ctx, `DELETE FROM links WHERE source_note_id = $1`, sourceID); err != nil {
 		return err
 	}
-	for _, l := range markdown.Extract(body) {
-		targetHandle := l.User
-		if targetHandle == "" {
-			targetHandle = sourceAuthorHandle
-		}
-		// The target *user* almost always exists even when the target note
-		// does not, so the edge is stored as a uuid and survives a rename.
-		// A link to a handle nobody owns leaves it NULL.
-		var targetUserID *uuid.UUID
-		var uid uuid.UUID
-		switch err := tx.QueryRowContext(ctx,
-			`SELECT id FROM users WHERE handle_ci = lower($1)`, targetHandle,
-		).Scan(&uid); {
-		case err == nil:
-			targetUserID = &uid
-		case errors.Is(err, sql.ErrNoRows):
-		default:
-			return err
-		}
-		var resolved *uuid.UUID
-		var found uuid.UUID
-		if targetUserID != nil {
-			switch err := tx.QueryRowContext(ctx,
-				`SELECT id FROM notes WHERE author_id = $1 AND slug = $2`,
-				*targetUserID, l.Slug,
-			).Scan(&found); {
-			case err == nil:
-				resolved = &found
-			case errors.Is(err, sql.ErrNoRows):
-			default:
-				return err
-			}
-		}
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO links(source_note_id, target_user_id, target_slug, raw_target, resolved_target_id)
-			VALUES($1, $2, $3, $4, $5)`,
-			sourceID, targetUserID, l.Slug, l.Raw, resolved,
-		); err != nil {
-			return err
-		}
+	links := markdown.Extract(body)
+	if len(links) == 0 {
+		return nil
 	}
-	return nil
+	handles, slugs := typedRefs(sourceAuthorHandle, links)
+	raws := make([]string, len(links))
+	for i, l := range links {
+		raws[i] = l.Raw
+	}
+	// One statement for every link. The target *user* almost always exists
+	// even when the target note does not, so the edge is stored as a uuid and
+	// survives a rename; a handle nobody owns leaves it NULL.
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO links(source_note_id, target_user_id, target_slug, raw_target, resolved_target_id)
+		SELECT $1, u.id, t.slug, t.raw, n.id
+		FROM unnest($2::text[], $3::text[], $4::text[]) WITH ORDINALITY AS t(handle, slug, raw, ord)
+		LEFT JOIN users u ON u.handle_ci = lower(t.handle)
+		LEFT JOIN notes n ON n.author_id = u.id AND n.slug = t.slug
+		ORDER BY t.ord`,
+		sourceID, handles, slugs, raws,
+	)
+	return err
 }
 
 // backfillStubLinks resolves any link row still waiting (resolved_target_id

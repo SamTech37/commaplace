@@ -134,14 +134,17 @@ was copied.
 - **Global hover cost.** Loading `linkpreview.js` on every page brings
   previews to the feed. Feed card excerpts don't render wiki links today, so
   confirm the global load is cheap and a no-op there.
-- **Other N+1 queries.** `recomputeLinks` (on save) still runs two queries
-  per link. That's the write path and outside this spec.
 
 ## Resolved during the build
 
 - **Embed N+1:** fixed. `buildEmbedResolver` now runs one query per nesting
   level plus one for all the links inside embeds. Nested embeds now resolve
   against their own vault (they used to use the outer note's).
+- **Save-path N+1:** fixed.
+  - `recomputeLinks` used to run three statements per link. It is now one
+    `INSERT ... SELECT` over `unnest`.
+  - Tag inserts were one statement per tag. All five call sites now share
+    `insertTags`, one statement.
 - **Nesting cap:** `maxEmbedDepth = 2` in `internal/handlers/links.go`.
   Lower it to 1 there when traffic warrants.
 - **Block-ID HTML:** `id="^abc"`. Verified in Chromium 1194:
@@ -199,7 +202,14 @@ Measured 2026-10-15:
 | 1 embed | 16 | 15 |
 | 6 embeds | 31 | 15 |
 
-The count must not grow with the number of embeds.
+The same check for saving a note (`POST /write`), 2026-10-15:
+
+| Save | Before | After |
+|------|--------|-------|
+| 1 link + 1 tag | 13 | 11 |
+| 10 links + 10 tags | 49 | 11 |
+
+Neither count may grow with the number of embeds, links or tags.
 
 ### 4. Browser end-to-end (manual, needs Playwright)
 

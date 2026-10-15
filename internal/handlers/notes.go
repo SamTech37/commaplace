@@ -383,13 +383,8 @@ func (s *Server) saveImportedNote(ctx context.Context, batch, authorID uuid.UUID
 		return uuid.UUID{}, err
 	}
 
-	for _, t := range tags {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
-			noteID, t, now,
-		); err != nil {
-			return uuid.UUID{}, err
-		}
+	if err := insertTags(ctx, tx, noteID, tags, now); err != nil {
+		return uuid.UUID{}, err
 	}
 
 	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
@@ -572,12 +567,8 @@ func (s *Server) autosaveNoteDocument(ctx context.Context, noteID uuid.UUID, aut
 	if _, err := tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id = $1`, noteID); err != nil {
 		return err
 	}
-	for _, t := range tags {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
-			noteID, t, now); err != nil {
-			return err
-		}
+	if err := insertTags(ctx, tx, noteID, tags, now); err != nil {
+		return err
 	}
 	if err := recomputeLinks(ctx, tx, noteID, authorHandle, body); err != nil {
 		return err
@@ -692,10 +683,8 @@ func publishDocument(ctx context.Context, tx *sql.Tx, feedCfg config.Feed, id, a
 	if _, err = tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id=$1`, id); err != nil {
 		return "", err
 	}
-	for _, tag := range parseTags(strings.Join(markdown.ExtractInlineTags(body), ",")) {
-		if _, err = tx.ExecContext(ctx, `INSERT INTO note_tags(note_id,tag,created_at) VALUES($1,$2,$3)`, id, tag, nowUnix()); err != nil {
-			return "", err
-		}
+	if err = insertTags(ctx, tx, id, parseTags(strings.Join(markdown.ExtractInlineTags(body), ",")), nowUnix()); err != nil {
+		return "", err
 	}
 	if err = recomputeLinks(ctx, tx, id, handle, body); err != nil {
 		return "", err
@@ -718,6 +707,17 @@ func (s *Server) absoluteNoteURL(handle, slug string) string {
 }
 
 func nowUnix() int64 { return timeNow().Unix() }
+
+// insertTags adds tags to noteID in one statement, however many there are.
+func insertTags(ctx context.Context, tx *sql.Tx, noteID uuid.UUID, tags []string, now int64) error {
+	if len(tags) == 0 {
+		return nil
+	}
+	_, err := tx.ExecContext(ctx,
+		`INSERT INTO note_tags(note_id, tag, created_at) SELECT $1, t, $3 FROM unnest($2::text[]) AS t`,
+		noteID, tags, now)
+	return err
+}
 
 var timeNow = func() time.Time { return time.Now() }
 

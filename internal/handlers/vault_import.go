@@ -274,10 +274,8 @@ func (s *Server) importVault(ctx context.Context, u *auth.User, batch uuid.UUID,
 		if _, err = tx.ExecContext(ctx, `INSERT INTO notes(id,author_id,slug,slug_ci,title,body_md,created_at,updated_at,published_at,import_batch_id) VALUES($1,$2,$3,$3,$4,$5,$6,$6,$6,$7)`, n.ID, u.ID, n.Slug, n.Title, body, now, batch); err != nil {
 			return nil, err
 		}
-		for _, tag := range n.tags {
-			if _, err = tx.ExecContext(ctx, `INSERT INTO note_tags(note_id,tag,created_at) VALUES($1,$2,$3)`, n.ID, tag, now); err != nil {
-				return nil, err
-			}
+		if err = insertTags(ctx, tx, n.ID, n.tags, now); err != nil {
+			return nil, err
 		}
 		if err = os.WriteFile(n.temp, []byte(body), 0600); err != nil {
 			return nil, err
