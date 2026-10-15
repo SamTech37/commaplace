@@ -84,3 +84,28 @@ func TestBuildTSQueryVariants(t *testing.T) {
 		}
 	}
 }
+
+func TestTrgmIndexable(t *testing.T) {
+	for _, tc := range []struct {
+		q              string
+		ascii, unicode bool // want, with pg_trgm treating CJK as non-word / word
+	}{
+		{"zq", false, false},
+		{"c++", false, false},
+		{"a.b", false, false},
+		{`%_\`, false, false},
+		{"ab cd", false, false},
+		{"abc", true, true},
+		{"w1234", true, true},
+		{"音樂", false, false},
+		{"咖啡店", false, true},
+		{"ab咖", false, true},
+	} {
+		if got := trgmIndexable(tc.q, false); got != tc.ascii {
+			t.Errorf("trgmIndexable(%q, false) = %v", tc.q, got)
+		}
+		if got := trgmIndexable(tc.q, true); got != tc.unicode {
+			t.Errorf("trgmIndexable(%q, true) = %v", tc.q, got)
+		}
+	}
+}

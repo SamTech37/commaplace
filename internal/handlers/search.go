@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"html"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
@@ -176,10 +178,43 @@ func likeAnyVariant(col, q string, argOffset int) (string, []any) {
 	clauses := make([]string, len(variants))
 	args := make([]any, len(variants))
 	for i, v := range variants {
-		clauses[i] = fmt.Sprintf("lower(%s) LIKE $%d", col, argOffset+i)
+		expr := "lower(" + col + ")"
+		// Without a trigram the index (migration 016) is a full-index read,
+		// slower than the plan without it. `|| ''` keeps the planner off it.
+		if !trgmIndexable(v, trgmUnicode) {
+			expr = "(" + expr + " || '')"
+		}
+		clauses[i] = fmt.Sprintf("%s LIKE $%d", expr, argOffset+i)
 		args[i] = "%" + v + "%"
 	}
 	return "(" + strings.Join(clauses, " OR ") + ")", args
+}
+
+// trgmUnicode: pg_trgm counts non-ASCII letters (CJK) as word characters in
+// this database. Depends on its LC_CTYPE (yes under *.UTF-8, no under C).
+// Set once by ProbeTrgm at startup; ASCII-only until then.
+var trgmUnicode bool
+
+func ProbeTrgm(db *sql.DB) {
+	err := db.QueryRow(`SELECT show_trgm('音樂筆記') <> '{}'`).Scan(&trgmUnicode)
+	log.Printf("pg_trgm: CJK titles use trigram index = %v (probe err: %v)", trgmUnicode, err)
+}
+
+// trgmIndexable reports whether pg_trgm gets an unpadded trigram out of
+// LIKE '%v%': only from a run of 3+ word characters. Shorter words give
+// none, or only padded ones ("  b" in 'a.b') that match most of the index.
+func trgmIndexable(v string, unicodeWords bool) bool {
+	run := 0
+	for _, r := range v {
+		if (r < utf8.RuneSelf || unicodeWords) && (unicode.IsLetter(r) || unicode.IsDigit(r)) {
+			if run++; run >= 3 {
+				return true
+			}
+		} else {
+			run = 0
+		}
+	}
+	return false
 }
 
 // buildTSQueryVariants builds a tsquery that ORs the script variants of q:
