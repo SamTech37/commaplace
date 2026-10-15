@@ -152,36 +152,55 @@ func parseFeedCursor(older, olderID string) feedCursor {
 
 func (c feedCursor) set() bool { return c.UpdatedAt > 0 && c.NoteID != uuid.Nil }
 
+// queryRecommendedCards pages through the feed in layers: layer 0 is every
+// author's newest maxPerAuthorPerPage notes, layer 1 their next ones, and so
+// on, each layer newest first. A page never spans two layers, which is what
+// holds the cap. The layers are ranked over the whole feed, not over what lies
+// past the cursor — ranking only the rest let a note the cap held back sit
+// newer than the page's last card, and the next page started below it, so it
+// was never shown at all.
 func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cursor feedCursor, limit int) ([]feedCard, error) {
 	// The CTE holds the filters and the per-author ranking; the outer query
 	// only adds the columns. Written this way the filters exist once, and
 	// noteCardColumns needs no aliasing to survive a subquery.
-	args := []any{}
+	args := []any{maxPerAuthorPerPage}
 	q := strings.Builder{}
 	q.WriteString(`
 		WITH ranked AS (
-		  SELECT n.id,
-		         ROW_NUMBER() OVER (PARTITION BY n.author_id
-		                            ORDER BY n.updated_at DESC, n.id DESC) AS rn
+		  SELECT n.id, n.author_id, n.updated_at,
+		         (ROW_NUMBER() OVER (PARTITION BY n.author_id
+		                             ORDER BY n.updated_at DESC, n.id DESC) - 1) / $1 AS layer
 		  FROM notes n
 		  WHERE ` + recommendableNote)
 	if tagFilter != "" {
 		args = append(args, tagFilter)
 		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
 	}
+	q.WriteString(`)`)
+	rest := `SELECT id, layer, updated_at FROM ranked`
 	if cursor.set() {
+		// The cursor note's layer, counted from the URL's (updated_at, id)
+		// rather than read off its row: still right if that note was edited,
+		// hidden or deleted since the last page.
 		args = append(args, cursor.UpdatedAt, cursor.NoteID)
-		fmt.Fprintf(&q, ` AND (n.updated_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
+		u, id := len(args)-1, len(args)
+		fmt.Fprintf(&q, `,
+		at AS (
+		  SELECT COUNT(*) / $1 AS layer FROM ranked
+		  WHERE author_id = (SELECT author_id FROM notes WHERE id = $%d) AND (updated_at, id) > ($%d, $%d)
+		)`, id, u, id)
+		rest = fmt.Sprintf(`SELECT r.id, r.layer, r.updated_at FROM ranked r, at
+		  WHERE r.layer > at.layer OR (r.layer = at.layer AND (r.updated_at, r.id) < ($%d, $%d))`, u, id)
 	}
-	args = append(args, maxPerAuthorPerPage)
-	fmt.Fprintf(&q, `
-		)
+	args = append(args, limit)
+	fmt.Fprintf(&q, `,
+		page AS (%s ORDER BY layer, updated_at DESC, id DESC LIMIT $%d)
 		SELECT %s
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
-		JOIN ranked r ON r.id = n.id AND r.rn <= $%d`, noteCardColumns, len(args))
-	args = append(args, limit)
-	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC, n.id DESC LIMIT $%d`, len(args))
+		JOIN page p ON p.id = n.id
+		WHERE p.layer = (SELECT MIN(layer) FROM page)
+		ORDER BY n.updated_at DESC, n.id DESC`, rest, len(args), noteCardColumns)
 	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
 	if err != nil {
 		return nil, err

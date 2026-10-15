@@ -97,3 +97,74 @@ func TestFeedPaginatesThroughIdenticalTimestamps(t *testing.T) {
 		}
 	}
 }
+
+// A note the per-author cap holds back must come back on a later page, not
+// vanish. The cursor is the last card shown, so a held-back note newer than
+// that card used to fall behind it for good. "same second" is the shape
+// TestFeedPaginatesThroughIdenticalTimestamps hits only when random ids line
+// up four of one author's notes ahead of the rest; fixed ids make it certain.
+func TestFeedCapDefersRatherThanDrops(t *testing.T) {
+	cases := []struct {
+		name            string
+		loud            int
+		loudAt, quietAt int64
+	}{
+		{"newer author", 10, 2000, 1000},
+		{"same second", 4, 5000, 5000},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestServer(t)
+			loud := mkUser(t, s, "loud")
+			quiet := mkUser(t, s, "quiet")
+			// ids ordered so every loud note sorts ahead of quiet's on a tie.
+			setID := func(id uuid.UUID, hi byte, i int) {
+				want := uuid.UUID{hi, 15: byte(i)}
+				if _, err := s.DB.Exec(`UPDATE notes SET id = $1 WHERE id = $2`, want, id); err != nil {
+					t.Fatalf("set id: %v", err)
+				}
+			}
+			for i := 0; i < tc.loud; i++ {
+				at := tc.loudAt
+				if tc.loudAt != tc.quietAt {
+					at += int64(i)
+				}
+				setID(mkPublishedAt(t, s, loud, "loud-"+string(rune('a'+i)), "Loud", at), 0xff, i)
+			}
+			setID(mkPublishedAt(t, s, quiet, "quiet-1", "Quiet", tc.quietAt), 0x00, 1)
+
+			seen := map[string]int{}
+			cursor := feedCursor{}
+			for page := 0; page < 40; page++ {
+				cards, err := s.queryRecommendedCards(context.Background(), "", cursor, 4)
+				if err != nil {
+					t.Fatalf("page %d: %v", page, err)
+				}
+				if len(cards) == 0 {
+					break
+				}
+				perAuthor := map[string]int{}
+				for _, c := range cards {
+					seen[c.URL]++
+					perAuthor[c.AuthorHandle]++
+				}
+				for h, n := range perAuthor {
+					if n > maxPerAuthorPerPage {
+						t.Errorf("page %d: %s took %d cards, cap is %d", page, h, n, maxPerAuthorPerPage)
+					}
+				}
+				last := cards[len(cards)-1]
+				cursor = feedCursor{UpdatedAt: last.UpdatedAt, NoteID: last.NoteID}
+			}
+
+			if len(seen) != tc.loud+1 {
+				t.Errorf("scrolled to %d of %d notes", len(seen), tc.loud+1)
+			}
+			for url, n := range seen {
+				if n != 1 {
+					t.Errorf("%s appeared %d times", url, n)
+				}
+			}
+		})
+	}
+}
