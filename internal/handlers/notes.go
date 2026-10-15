@@ -34,8 +34,10 @@ func (s *Server) GetWrite(w http.ResponseWriter, r *http.Request) {
 		if replyID, err := uuid.Parse(id); err == nil {
 			var title, slug, handle string
 			if err := s.DB.QueryRowContext(r.Context(),
-				`SELECT n.title, n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id WHERE n.id = $1`,
-				replyID).Scan(&title, &slug, &handle); err == nil {
+				`SELECT n.title, n.slug, u.handle FROM notes n JOIN users u ON u.id = n.author_id
+				 WHERE n.id = $1 AND n.deleted_at IS NULL AND n.hidden_at IS NULL
+				   AND (n.published_at IS NOT NULL OR n.author_id = $2)`,
+				replyID, u.ID).Scan(&title, &slug, &handle); err == nil {
 				var embed string
 				if handle == u.Handle {
 					embed = "![[" + slug + "]]"

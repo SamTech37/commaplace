@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -154,4 +156,23 @@ func TestSlugAndFolderNormalization(t *testing.T) {
 		}
 	}
 
+}
+
+// /write?reply-to= quotes the original's title; it must not reveal someone
+// else's draft, or a hidden or deleted note.
+func TestWriteReplyToSkipsUnreadableNotes(t *testing.T) {
+	s := newTestServer(t)
+	alice, bob := mkUser(t, s, "alice"), mkUser(t, s, "bob")
+	draft, err := s.createDraft(context.Background(), bob)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.Exec(`UPDATE notes SET title = 'secret plan' WHERE id = $1`, draft); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	s.GetWrite(w, authedRequest(s, alice, "GET", "/write?reply-to="+draft.String(), ""))
+	if strings.Contains(w.Body.String(), "secret plan") {
+		t.Fatal("reply-to leaked another user's draft title")
+	}
 }

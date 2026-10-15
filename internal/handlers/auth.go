@@ -68,6 +68,12 @@ func (s *Server) PostLogin(w http.ResponseWriter, r *http.Request) {
 	redirectLoginSent(w, r, next)
 }
 
+// localPath reports whether next is a path on this site. "//host" and
+// "/\host" start with a slash but browsers treat both as another origin.
+func localPath(next string) bool {
+	return strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") && !strings.HasPrefix(next, "/\\")
+}
+
 // redirectLoginSent is the "link sent" response, also given when rateLimit
 // silently skips a send.
 func redirectLoginSent(w http.ResponseWriter, r *http.Request, next string) {
@@ -94,7 +100,7 @@ func (s *Server) GetAuthCallback(w http.ResponseWriter, r *http.Request) {
 	setLastLogin(w, "email")
 
 	next := r.URL.Query().Get("next")
-	if next == "" || !strings.HasPrefix(next, "/") {
+	if !localPath(next) {
 		// First-time users (no onboarded_at) land on the onboarding choice
 		// before /me. Returning users skip straight to /me.
 		if onb, _ := userOnboarded(r.Context(), s.DB, u.ID); !onb {
@@ -142,7 +148,7 @@ func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	s.Auth.SetSession(w, userID)
 	next := r.URL.Query().Get("next")
-	if next == "" || !strings.HasPrefix(next, "/") {
+	if !localPath(next) {
 		next = "/me/desk"
 	}
 	http.Redirect(w, r, next, http.StatusSeeOther)
