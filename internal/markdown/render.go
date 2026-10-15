@@ -829,9 +829,15 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 	url := n.Link.URL(r.currentUser)
 	if rt != nil {
 		url = "/" + rt.Handle + "/" + rt.Slug
-		if n.Link.Anchor != "" {
-			url += "#" + headingAnchor(n.Link.Anchor)
+		if f := fragment(n.Link.Anchor); f != "" {
+			url += "#" + f
 		}
+	}
+	// The raw anchor lets the hover preview ask for this section by name;
+	// the href fragment is slugified and cannot be matched back.
+	anchorAttr := ""
+	if fragment(n.Link.Anchor) != "" {
+		anchorAttr = ` data-anchor="` + htmlpkg.EscapeString(n.Link.Anchor) + `"`
 	}
 	if crossVault {
 		cls := "wikilink-cross"
@@ -848,7 +854,7 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 		}
 		w.WriteString(`<a href="`)
 		w.WriteString(htmlpkg.EscapeString(url))
-		w.WriteString(`" class="` + cls + `"><span class="arrow">↗</span> `)
+		w.WriteString(`" class="` + cls + `"` + anchorAttr + `><span class="arrow">↗</span> `)
 		w.WriteString(htmlpkg.EscapeString(label))
 		w.WriteString(`</a>`)
 	} else {
@@ -858,7 +864,7 @@ func (r *wikiRenderer) render(w util.BufWriter, source []byte, node ast.Node, en
 		}
 		w.WriteString(`<a href="`)
 		w.WriteString(htmlpkg.EscapeString(url))
-		w.WriteString(`" class="` + cls + `">`)
+		w.WriteString(`" class="` + cls + `"` + anchorAttr + `>`)
 		w.WriteString(htmlpkg.EscapeString(n.Link.Label()))
 		w.WriteString(`</a>`)
 	}

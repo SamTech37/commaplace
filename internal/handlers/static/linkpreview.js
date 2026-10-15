@@ -14,6 +14,7 @@
   // as cmeditor.js and tagsearch.js.
   var popup = document.createElement("div");
   popup.className = "link-preview-card";
+  popup.setAttribute("data-no-preview", "");
   popup.hidden = true;
   document.body.appendChild(popup);
 
@@ -116,11 +117,14 @@
     if (e.key === "Escape") { cancelTimers(); hide(); }
   });
 
-  // ---- wiring for <a> hover: wikilinks in note bodies, plus the connected/
-  // backlinks sections' mini-card and backlink-row anchors, which point at
-  // notes exactly the same way (previewURLFor is the one place that decides
-  // what is previewable — external URL previews would plug in here too). ----
+  // ---- wiring for <a> hover, on every page (layout.templ loads this): any
+  // wikilink, plus the connected/backlinks sections' mini-card and
+  // backlink-row anchors, which point at notes exactly the same way
+  // (previewURLFor is the one place that decides what is previewable —
+  // external URL previews would plug in here too). Opt a region out with
+  // data-no-preview. ----
   function previewURLFor(a) {
+    if (a.closest("[data-no-preview]")) return null;
     var known = a.classList.contains("mini-card") || a.classList.contains("backlink-row");
     if (!known) {
       if (!a.classList.contains("wiki-resolved") && !a.classList.contains("wikilink-cross")) return null;
@@ -129,7 +133,9 @@
     var path = a.getAttribute("href") || "";
     var m = path.split("#")[0].match(/^\/([^/]+)\/([^/]+)$/);
     if (!m) return null;
-    return "/api/preview/" + m[1] + "/" + m[2];
+    var url = "/api/preview/" + m[1] + "/" + m[2];
+    var anchor = a.getAttribute("data-anchor");
+    return anchor ? url + "?h=" + encodeURIComponent(anchor) : url;
   }
 
   var hoverAnchor = null;

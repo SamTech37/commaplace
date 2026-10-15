@@ -1297,143 +1297,130 @@ func noteContent(p NoteViewProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 111, "</div><script src=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var73 string
-		templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.ResolveAttributeValue(assetURL("linkpreview.js"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 338, Col: 42}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var73)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "\" defer></script></article>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 111, "</div></article>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.SpaceURL != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 113, "<nav class=\"space-pagination\" aria-label=\"文章導覽\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "<nav class=\"space-pagination\" aria-label=\"文章導覽\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if p.SpacePrevious.URL != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 114, "<a href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 113, "<a href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var74 templ.SafeURL
-				templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(p.SpacePrevious.URL))
+				var templ_7745c5c3_Var73 templ.SafeURL
+				templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(p.SpacePrevious.URL))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 343, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 342, Col: 44}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 114, "\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var74 string
+				templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs("← " + p.SpacePrevious.Title)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 342, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 115, "\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var75 string
-				templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs("← " + p.SpacePrevious.Title)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 343, Col: 79}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 116, "</a> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 115, "</a> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
 			if p.SpaceNext.URL != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 117, "<a class=\"space-next\" href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 116, "<a class=\"space-next\" href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var76 templ.SafeURL
-				templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(p.SpaceNext.URL))
+				var templ_7745c5c3_Var75 templ.SafeURL
+				templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(p.SpaceNext.URL))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 346, Col: 59}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 345, Col: 59}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 117, "\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var76 string
+				templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(p.SpaceNext.Title + " →")
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 345, Col: 90}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 118, "\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var77 string
-				templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(p.SpaceNext.Title + " →")
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 346, Col: 90}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 119, "</a>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 118, "</a>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 120, "</nav>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 119, "</nav>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if len(p.OutgoingSame) > 0 || len(p.OutgoingCross) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 121, "<section class=\"connected-section\" data-reveal data-reveal-delay=\"3\"><div class=\"section-header\">→ 這篇連到的筆記 <span class=\"section-count\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 120, "<section class=\"connected-section\" data-reveal data-reveal-delay=\"3\"><div class=\"section-header\">→ 這篇連到的筆記 <span class=\"section-count\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var78 string
-			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingSame) + len(p.OutgoingCross)))
+			var templ_7745c5c3_Var77 string
+			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingSame) + len(p.OutgoingCross)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 354, Col: 90}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 353, Col: 90}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 122, " 篇</span></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 121, " 篇</span></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(p.OutgoingSame) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 123, "<div class=\"subsection-label\"><span class=\"dot\"></span>在 ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 122, "<div class=\"subsection-label\"><span class=\"dot\"></span>在 ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var78 string
+				templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(p.AuthorHandle)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 357, Col: 50}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 123, " 的同個 vault · ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var79 string
-				templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(p.AuthorHandle)
+				templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingSame)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 358, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 357, Col: 107}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 124, " 的同個 vault · ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var80 string
-				templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingSame)))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 358, Col: 107}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 125, " 篇</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 124, " 篇</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1443,20 +1430,20 @@ func noteContent(p NoteViewProps) templ.Component {
 				}
 			}
 			if len(p.OutgoingCross) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 126, "<div class=\"subsection-label cross\">↝ 連到其他人的筆記 · ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 125, "<div class=\"subsection-label cross\">↝ 連到其他人的筆記 · ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var81 string
-				templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingCross)))
+				var templ_7745c5c3_Var80 string
+				templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.OutgoingCross)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 364, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 363, Col: 73}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 127, " 篇</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 126, " 篇</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1465,57 +1452,57 @@ func noteContent(p NoteViewProps) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 127, "</section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if len(p.BacklinksSame) > 0 || len(p.BacklinksCross) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 129, "<section class=\"backlinks-section\" data-reveal data-reveal-delay=\"4\"><div class=\"section-header\">← 引用了這篇筆記的人 <span class=\"section-count\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "<section class=\"backlinks-section\" data-reveal data-reveal-delay=\"4\"><div class=\"section-header\">← 引用了這篇筆記的人 <span class=\"section-count\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var82 string
-			templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksSame) + len(p.BacklinksCross)))
+			var templ_7745c5c3_Var81 string
+			templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksSame) + len(p.BacklinksCross)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 374, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 373, Col: 92}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 130, " 篇</span></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 129, " 篇</span></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(p.BacklinksSame) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 131, "<div class=\"subsection-label\"><span class=\"dot\"></span>在 ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 130, "<div class=\"subsection-label\"><span class=\"dot\"></span>在 ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var82 string
+				templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(p.AuthorHandle)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 377, Col: 50}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 131, " 的同個 vault 引用 · ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var83 string
-				templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(p.AuthorHandle)
+				templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksSame)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 378, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 377, Col: 115}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var83))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 132, " 的同個 vault 引用 · ")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var84 string
-				templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksSame)))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 378, Col: 115}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 133, " 篇</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 132, " 篇</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1525,20 +1512,20 @@ func noteContent(p NoteViewProps) templ.Component {
 				}
 			}
 			if len(p.BacklinksCross) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 134, "<div class=\"subsection-label cross\">↜ 其他人引用 · ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 133, "<div class=\"subsection-label cross\">↜ 其他人引用 · ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var85 string
-				templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksCross)))
+				var templ_7745c5c3_Var84 string
+				templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(p.BacklinksCross)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 384, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 383, Col: 65}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, " 篇</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 134, " 篇</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1547,26 +1534,26 @@ func noteContent(p NoteViewProps) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "</section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, "</section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if len(p.OutgoingSame) > 0 || len(p.OutgoingCross) > 0 || len(p.BacklinksSame) > 0 || len(p.BacklinksCross) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 137, "<details class=\"local-graph-toggle\"><summary>顯示關聯圖</summary><div class=\"local-graph\" data-lazy-graph=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "<details class=\"local-graph-toggle\"><summary>顯示關聯圖</summary><div class=\"local-graph\" data-lazy-graph=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var86 string
-			templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.ResolveAttributeValue("/api/graph/local?note=" + p.Note.ID.String())
+			var templ_7745c5c3_Var85 string
+			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.ResolveAttributeValue("/api/graph/local?note=" + p.Note.ID.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 393, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/notes_pages.templ`, Line: 392, Col: 91}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var86)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var85)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 138, "\" data-graph-height=\"280\"><canvas></canvas></div></details>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 137, "\" data-graph-height=\"280\"><canvas></canvas></div></details>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

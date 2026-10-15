@@ -335,7 +335,6 @@ templ noteContent(p NoteViewProps) {
 		</div>
 		<h1 class="article-title">{ p.Note.Title }</h1>
 		<div class="article-body">@templ.Raw(string(p.BodyHTML))</div>
-		<script src={ assetURL("linkpreview.js") } defer></script>
 	</article>
 	if p.SpaceURL != "" {
 		<nav class="space-pagination" aria-label="文章導覽">

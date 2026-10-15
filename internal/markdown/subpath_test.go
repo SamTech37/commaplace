@@ -198,3 +198,16 @@ func TestExcerptHidesBlockMarkers(t *testing.T) {
 		t.Errorf("Excerpt = %q, want %q", got, want)
 	}
 }
+
+// data-anchor carries the raw anchor for the hover preview, but only when
+// the link scrolls somewhere: a block anchor with block refs off does not.
+func TestWikiLinkDataAnchor(t *testing.T) {
+	withBlockRefs(t, false)
+	out := render(t, "[[note#Top#Deep]] [[note#^b1]]")
+	if !strings.Contains(out, `data-anchor="Top#Deep"`) {
+		t.Errorf("heading link lacks data-anchor:\n%s", out)
+	}
+	if strings.Contains(out, `data-anchor="^b1"`) {
+		t.Errorf("block link has data-anchor while block refs are off:\n%s", out)
+	}
+}
