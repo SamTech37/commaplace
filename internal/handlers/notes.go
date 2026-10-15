@@ -725,6 +725,7 @@ func (s *Server) PostDeleteNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.tagChips.expire()
+	s.tagClouds.expire()
 	http.Redirect(w, r, "/"+u.Handle, http.StatusSeeOther)
 }
 

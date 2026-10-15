@@ -4,8 +4,11 @@ import (
 	"context"
 	"net/http/httptest"
 	"net/url"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // GetTagPage now shares feed's noteCardColumns + scanCards path instead of
@@ -109,5 +112,84 @@ func TestGetTagSuggestMarksExact(t *testing.T) {
 		if tc.notExact != "" && strings.Contains(body, tc.notExact) {
 			t.Errorf("q=%q: unexpected %s in %s", tc.q, tc.notExact, body)
 		}
+	}
+}
+
+// The related-tag cloud is served from a 5-min cache: a second read doesn't
+// rerun the query (a new co-occurring tag stays invisible), and it refills
+// once the entry expires or a write calls expire().
+func TestRelatedTagsCached(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	aliceID := mkUser(t, s, "alice")
+	cloud := func() []string {
+		var out []string
+		for _, ct := range s.relatedTags(ctx, "a", []string{"a"}, []any{"a"}) {
+			out = append(out, ct.Tag)
+		}
+		return out
+	}
+	save := func(slug string, tags ...string) {
+		if _, err := s.saveNote(ctx, aliceID, "alice", slug, slug, "body", tags); err != nil {
+			t.Fatalf("saveNote %s: %v", slug, err)
+		}
+	}
+
+	save("n1", "a", "b")
+	if got := cloud(); !slices.Equal(got, []string{"b"}) {
+		t.Fatalf("first read = %v, want [b]", got)
+	}
+	save("n2", "a", "c")
+	if got := cloud(); !slices.Equal(got, []string{"b"}) {
+		t.Errorf("cached read = %v, want [b] (query rerun?)", got)
+	}
+
+	// Expiry: backdate the entry past its TTL.
+	s.tagClouds.mu.Lock()
+	e := s.tagClouds.m["a"]
+	e.until = time.Now().Add(-time.Second)
+	s.tagClouds.m["a"] = e
+	s.tagClouds.mu.Unlock()
+	if got := cloud(); !slices.Equal(got, []string{"b", "c"}) {
+		t.Errorf("after expiry = %v, want [b c]", got)
+	}
+
+	save("n3", "a", "d")
+	s.tagClouds.expire()
+	if got := cloud(); !slices.Equal(got, []string{"b", "c", "d"}) {
+		t.Errorf("after expire() = %v, want [b c d]", got)
+	}
+}
+
+// Any string can be a tag, so the cache must stay bounded: expired entries go
+// first, and a full cache of live entries still evicts rather than grows.
+func TestRelatedTagCacheBounded(t *testing.T) {
+	var c relatedTagCache
+	for i := range relatedTagCacheMax + 50 {
+		c.put(strconv.Itoa(i), nil)
+	}
+	if n := len(c.m); n > relatedTagCacheMax {
+		t.Fatalf("cache holds %d entries, max %d", n, relatedTagCacheMax)
+	}
+	if _, ok := c.get(strconv.Itoa(relatedTagCacheMax + 49)); !ok {
+		t.Error("newest entry missing")
+	}
+
+	// Expire everything but one key; the next put sweeps the rest.
+	c.mu.Lock()
+	for k, e := range c.m {
+		if k != "keep" {
+			e.until = time.Now().Add(-time.Second)
+			c.m[k] = e
+		}
+	}
+	c.m["keep"] = relatedTagEntry{until: time.Now().Add(time.Minute)}
+	c.mu.Unlock()
+	c.put("new", nil)
+	if n := len(c.m); n != 2 {
+		t.Errorf("after sweep %d entries, want 2 (keep + new)", n)
+	}
+	if _, ok := c.get("keep"); !ok {
+		t.Error("live entry evicted while expired ones were available")
 	}
 }
