@@ -114,6 +114,8 @@ func (s *Server) PostAdminHide(w http.ResponseWriter, r *http.Request) {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.tagChips.expire()
+	s.tagClouds.expire()
 	if action == "hide" {
 		if _, err := s.DB.ExecContext(r.Context(),
 			`UPDATE reports SET status = 'resolved' WHERE note_id = $1`, noteID); err != nil {

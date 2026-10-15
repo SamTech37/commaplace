@@ -115,6 +115,7 @@ func (s *Server) PostManageNotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.tagChips.expire()
+	s.tagClouds.expire()
 	location := "/" + u.Handle
 	if tab != "" {
 		location += "?tab=" + tab
