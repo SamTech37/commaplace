@@ -181,29 +181,57 @@ func resolverKey(vaultHandle string, l markdown.WikiLink) string {
 // buildResolver resolves wiki links by live-looking-up the typed (handle, slug).
 // Used by PostPreview, where the body is unsaved and has no stored link rows.
 func (s *Server) buildResolver(ctx context.Context, vaultHandle string, links []markdown.WikiLink) markdown.Resolver {
-	resolved := map[string]markdown.ResolvedTarget{}
-	for _, l := range links {
-		h := l.User
-		if h == "" {
-			h = vaultHandle
-		}
-		var rt markdown.ResolvedTarget
-		err := s.DB.QueryRowContext(ctx, `
-			SELECT u.handle, n.slug, n.title FROM notes n
-			JOIN users u ON u.id = n.author_id
-			WHERE u.handle = $1 AND n.slug = $2`,
-			h, l.Slug,
-		).Scan(&rt.Handle, &rt.Slug, &rt.Title)
-		if err == nil {
-			resolved[resolverKey(vaultHandle, l)] = rt
-		}
-	}
+	handles, slugs := typedRefs(vaultHandle, links)
+	resolved := s.lookupTargets(ctx, handles, slugs)
 	return func(l markdown.WikiLink) *markdown.ResolvedTarget {
 		if rt, ok := resolved[resolverKey(vaultHandle, l)]; ok {
 			return &rt
 		}
 		return nil
 	}
+}
+
+// typedRefs turns links into the (handle, slug) pairs their author typed,
+// filling the vault's handle in for same-vault links.
+func typedRefs(vaultHandle string, links []markdown.WikiLink) (handles, slugs []string) {
+	for _, l := range links {
+		h := l.User
+		if h == "" {
+			h = vaultHandle
+		}
+		handles = append(handles, h)
+		slugs = append(slugs, l.Slug)
+	}
+	return handles, slugs
+}
+
+// lookupTargets resolves every (handle, slug) pair in one query, keyed by
+// resolverKey's typed form.
+func (s *Server) lookupTargets(ctx context.Context, handles, slugs []string) map[string]markdown.ResolvedTarget {
+	resolved := map[string]markdown.ResolvedTarget{}
+	if len(handles) == 0 {
+		return resolved
+	}
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT t.h, t.s, u.handle, n.slug, n.title
+		FROM unnest($1::text[], $2::text[]) AS t(h, s)
+		JOIN users u ON u.handle = t.h
+		JOIN notes n ON n.author_id = u.id AND n.slug = t.s`,
+		handles, slugs,
+	)
+	if err != nil {
+		return resolved
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var h, sl string
+		var rt markdown.ResolvedTarget
+		if err := rows.Scan(&h, &sl, &rt.Handle, &rt.Slug, &rt.Title); err != nil {
+			break
+		}
+		resolved[h+"\x00"+sl] = rt
+	}
+	return resolved
 }
 
 // buildResolverForNote resolves a saved note's wiki links through the stored
@@ -243,41 +271,93 @@ func (s *Server) buildResolverForNote(ctx context.Context, vaultHandle string, s
 	}
 }
 
-// buildEmbedResolver returns an EmbedResolver that looks up ![[note]] targets
-// and renders their bodies inline, capped at maxDepth levels of nesting.
-// Beyond the cap, the inner Render gets a nil EmbedResolver so further embeds
-// render as "too deep" placeholders rather than crashing the server.
-func (s *Server) buildEmbedResolver(ctx context.Context, vaultHandle string, maxDepth int) markdown.EmbedResolver {
-	var build func(depth int) markdown.EmbedResolver
-	build = func(depth int) markdown.EmbedResolver {
+// buildEmbedResolver returns an EmbedResolver for body's ![[note]] targets,
+// rendered inline and capped at maxDepth levels of nesting. Beyond the cap the
+// inner Render gets a nil EmbedResolver, so further embeds render as "too
+// deep" placeholders rather than recursing forever.
+//
+// Every target is fetched before rendering starts: one query per nesting
+// level plus one for all the links inside embedded bodies, however many
+// embeds the note has.
+func (s *Server) buildEmbedResolver(ctx context.Context, vaultHandle, body string, maxDepth int) markdown.EmbedResolver {
+	type embedded struct{ handle, title, body string }
+	found := map[string]embedded{}
+
+	type source struct{ vault, body string }
+	frontier := []source{{vaultHandle, body}}
+	for depth := 0; depth < maxDepth && len(frontier) > 0; depth++ {
+		var handles, slugs []string
+		queued := map[string]bool{}
+		for _, src := range frontier {
+			for _, l := range markdown.ExtractEmbeds(src.body) {
+				k := resolverKey(src.vault, l)
+				if _, ok := found[k]; ok || queued[k] {
+					continue
+				}
+				queued[k] = true
+				h, sl := typedRefs(src.vault, []markdown.WikiLink{l})
+				handles, slugs = append(handles, h...), append(slugs, sl...)
+			}
+		}
+		frontier = nil
+		if len(handles) == 0 {
+			break
+		}
+		rows, err := s.DB.QueryContext(ctx, `
+			SELECT t.h, t.s, n.title, n.body_md
+			FROM unnest($1::text[], $2::text[]) AS t(h, s)
+			JOIN users u ON u.handle = t.h
+			JOIN notes n ON n.author_id = u.id AND n.slug = t.s
+			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL
+			  AND n.published_at IS NOT NULL`,
+			handles, slugs,
+		)
+		if err != nil {
+			break
+		}
+		for rows.Next() {
+			var e embedded
+			var sl string
+			if err := rows.Scan(&e.handle, &sl, &e.title, &e.body); err != nil {
+				break
+			}
+			found[e.handle+"\x00"+sl] = e
+			frontier = append(frontier, source{e.handle, e.body})
+		}
+		rows.Close()
+	}
+
+	// One lookup for the links inside every embedded body, each typed
+	// relative to its own vault.
+	var handles, slugs []string
+	for _, e := range found {
+		h, sl := typedRefs(e.handle, markdown.Extract(e.body))
+		handles, slugs = append(handles, h...), append(slugs, sl...)
+	}
+	targets := s.lookupTargets(ctx, handles, slugs)
+
+	var build func(depth int, vault string) markdown.EmbedResolver
+	build = func(depth int, vault string) markdown.EmbedResolver {
 		if depth >= maxDepth {
 			return nil
 		}
 		return func(link markdown.WikiLink) (string, template.HTML, bool) {
-			handle := link.User
-			if handle == "" {
-				handle = vaultHandle
-			}
-			var title, body string
-			err := s.DB.QueryRowContext(ctx, `
-				SELECT n.title, n.body_md FROM notes n
-				JOIN users u ON u.id = n.author_id
-				WHERE u.handle = $1 AND n.slug = $2
-				  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
-				  AND n.published_at IS NOT NULL`,
-				handle, link.Slug,
-			).Scan(&title, &body)
-			if err != nil {
+			e, ok := found[resolverKey(vault, link)]
+			if !ok {
 				return "", "", false
 			}
-			subLinks := markdown.Extract(body)
-			subResolver := s.buildResolver(ctx, handle, subLinks)
-			rendered, err := markdown.Render(body, handle, subResolver, build(depth+1))
-			if err != nil {
-				return title, "", true
+			resolve := func(l markdown.WikiLink) *markdown.ResolvedTarget {
+				if rt, ok := targets[resolverKey(e.handle, l)]; ok {
+					return &rt
+				}
+				return nil
 			}
-			return title, rendered, true
+			rendered, err := markdown.Render(e.body, e.handle, resolve, build(depth+1, e.handle))
+			if err != nil {
+				return e.title, "", true
+			}
+			return e.title, rendered, true
 		}
 	}
-	return build(0)
+	return build(0, vaultHandle)
 }
