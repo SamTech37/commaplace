@@ -23,6 +23,8 @@ func Open(dsn string) (*sql.DB, error) {
 		return nil, err
 	}
 	d.SetMaxOpenConns(25)
+	// Default idle cap of 2 re-dials Postgres every burst; docs/BENCHMARK-2026-10-12.md §3.
+	d.SetMaxIdleConns(25)
 	if err := d.Ping(); err != nil {
 		d.Close()
 		return nil, err
