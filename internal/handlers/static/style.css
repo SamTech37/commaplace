@@ -595,8 +595,14 @@ mark {
     width: 32px;
     height: 32px;
   }
+  .nav {
+    gap: 0;
+  }
+  .nav-links {
+    margin-right: 0;
+  }
   .nav-login {
-    margin-left: 0.2rem;
+    margin-left: 0;
     padding: 0.32em 0.7em;
   }
 }
@@ -4470,6 +4476,13 @@ button:disabled {
 }
 
 @media (max-width: 400px) {
+  /* After the 800px block's padding and touch-target floors: the signed-out
+     bar (mascot, search, 閱覽/工作桌, 設, 登入) is wider than 320px otherwise. */
+  .topbar,
+  .page-wide .topbar {
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+  }
   .editor-bar {
     top: 44px;
   }
