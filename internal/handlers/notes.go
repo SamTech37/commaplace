@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"commonplace/internal/config"
+	"commonplace/internal/feedrank"
 	"commonplace/internal/markdown"
 )
 
@@ -132,9 +134,20 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
+	// 工作桌 reopens the last-edited note from localStorage and marks that
+	// hop ?resume=1. If the note is gone, a 404 page would repeat on every
+	// visit (it never loads private-desk.js to forget the value), so go to
+	// the desk instead, which overwrites the stored note.
+	notEditable := func(code int, msg string) {
+		if r.URL.Query().Has("resume") {
+			http.Redirect(w, r, "/me/desk?space=1", http.StatusSeeOther)
+			return
+		}
+		s.renderError(w, r, code, msg)
+	}
 	noteID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
-		s.renderError(w, r, http.StatusNotFound, "note not found")
+		notEditable(http.StatusNotFound, "note not found")
 		return
 	}
 
@@ -148,7 +161,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		FROM notes WHERE id = $1 AND deleted_at IS NULL AND hidden_at IS NULL`, noteID,
 	).Scan(&authorID, &title, &body, &publishedAt, &slug, &revision, &distribution, &hasDraft)
 	if errors.Is(err, sql.ErrNoRows) {
-		s.renderError(w, r, http.StatusNotFound, "note not found")
+		notEditable(http.StatusNotFound, "note not found")
 		return
 	}
 	if err != nil {
@@ -156,7 +169,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if authorID != u.ID {
-		s.renderError(w, r, http.StatusForbidden, "you can only edit your own notes")
+		notEditable(http.StatusForbidden, "you can only edit your own notes")
 		return
 	}
 
@@ -353,19 +366,31 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 // ---------- save + link recomputation ----------
 
 func (s *Server) saveNote(ctx context.Context, authorID uuid.UUID, authorHandle, slug, title, body string, tags []string) (uuid.UUID, error) {
+	return s.saveImportedNote(ctx, uuid.Nil, authorID, authorHandle, slug, title, body, tags)
+}
+
+// saveImportedNote is saveNote for a note that belongs to import batch
+// (uuid.Nil: none — a plain post).
+func (s *Server) saveImportedNote(ctx context.Context, batch, authorID uuid.UUID, authorHandle, slug, title, body string, tags []string) (uuid.UUID, error) {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
 	defer tx.Rollback()
+	if err := feedrank.LockAuthor(ctx, tx, authorID); err != nil {
+		return uuid.UUID{}, err
+	}
 
 	now := nowUnix()
 	var noteID uuid.UUID
 	if err := tx.QueryRowContext(ctx, `
-		INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at, published_at)
-		VALUES($1, $2, $3, $4, $5, $6, $6, $6) RETURNING id`,
-		authorID, slug, strings.ToLower(slug), title, body, now,
+		INSERT INTO notes(author_id, slug, slug_ci, title, body_md, created_at, updated_at, published_at, import_batch_id)
+		VALUES($1, $2, $3, $4, $5, $6, $6, $6, $7) RETURNING id`,
+		authorID, slug, strings.ToLower(slug), title, body, now, uuid.NullUUID{UUID: batch, Valid: batch != uuid.Nil},
 	).Scan(&noteID); err != nil {
+		return uuid.UUID{}, err
+	}
+	if err := feedrank.Assign(ctx, tx, s.Feed, noteID); err != nil {
 		return uuid.UUID{}, err
 	}
 
@@ -599,6 +624,10 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if err := feedrank.LockAuthor(r.Context(), tx, u.ID); err != nil {
+		http.Error(w, "無法發布", 500)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", 400)
 		return
@@ -620,7 +649,7 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	slug, err := publishDocument(r.Context(), tx, noteID, u.ID, u.Handle)
+	slug, err := publishDocument(r.Context(), tx, s.Feed, noteID, u.ID, u.Handle)
 	if errors.Is(err, errPublishTitle) {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
@@ -655,7 +684,7 @@ func validDistribution(value string) bool { return value == "public" || value ==
 
 // publishDocument promotes a complete draft atomically; readers and indexes
 // continue using notes.title/body_md until this transaction commits.
-func publishDocument(ctx context.Context, tx *sql.Tx, id, author uuid.UUID, handle string) (string, error) {
+func publishDocument(ctx context.Context, tx *sql.Tx, feedCfg config.Feed, id, author uuid.UUID, handle string) (string, error) {
 	var slug, title, body string
 	err := tx.QueryRowContext(ctx, `SELECT slug,COALESCE(draft_title,title),COALESCE(draft_body_md,body_md) FROM notes WHERE id=$1 AND author_id=$2 AND hidden_at IS NULL AND deleted_at IS NULL FOR UPDATE`, id, author).Scan(&slug, &title, &body)
 	if err != nil {
@@ -666,6 +695,9 @@ func publishDocument(ctx context.Context, tx *sql.Tx, id, author uuid.UUID, hand
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE notes SET title=$2,body_md=$3,draft_title=NULL,draft_body_md=NULL,distribution=COALESCE(draft_distribution,distribution),draft_distribution=NULL,published_at=COALESCE(published_at,$4),updated_at=$4,edit_version=edit_version+1 WHERE id=$1`, id, title, body, nowUnix())
 	if err != nil {
+		return "", err
+	}
+	if err = feedrank.Assign(ctx, tx, feedCfg, id); err != nil {
 		return "", err
 	}
 	if _, err = tx.ExecContext(ctx, `DELETE FROM note_tags WHERE note_id=$1`, id); err != nil {

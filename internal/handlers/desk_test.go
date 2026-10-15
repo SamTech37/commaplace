@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"io/fs"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -333,5 +334,51 @@ func TestDeskLibraryIncludesOwnDraftsAndFilters(t *testing.T) {
 	// Filtering the library must never discard existing drafts or editor access.
 	if r := deskRequest(t, s, a, "GET", "/me/desk/pane?kind=edit&ref="+draft.String(), nil); r.Code != 200 {
 		t.Fatalf("draft no longer editable: %d", r.Code)
+	}
+}
+
+// TestDeskResumeOfUneditableNoteFallsBackToDesk is the 工作桌 lockout:
+// private-desk.js reopens the last-edited note from localStorage as
+// /edit/{id}?resume=1, and when that note can no longer be edited the 404
+// page never runs the script that would forget it.
+func TestDeskResumeOfUneditableNoteFallsBackToDesk(t *testing.T) {
+	s := newTestServer(t)
+	a := mkUser(t, s, "alice")
+	b := mkUser(t, s, "bob")
+	note := func(owner uuid.UUID, handle, slug, gone string) string {
+		id, err := s.saveNote(context.Background(), owner, handle, slug, slug, "body", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if gone != "" {
+			if _, err := s.DB.Exec(gone, id); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return id.String()
+	}
+	live := note(a, "alice", "live", "")
+	direct := map[string]int{
+		note(a, "alice", "deleted", `UPDATE notes SET deleted_at=1 WHERE id=$1`): 404,
+		note(a, "alice", "hidden", `UPDATE notes SET hidden_at=1 WHERE id=$1`):   404,
+		note(a, "alice", "swept", `DELETE FROM notes WHERE id=$1`):               404, // sweepOrphanDrafts
+		note(b, "bob", "theirs", ""):                                             403, // handle reused on this browser
+		strings.Repeat("-", 36):                                                  404, // passes the client's pattern
+	}
+	for id, code := range direct {
+		if r := deskRequest(t, s, a, "GET", "/edit/"+id+"?resume=1", nil); r.Code != 303 || r.Header().Get("Location") != "/me/desk?space=1" {
+			t.Errorf("resume %s: %d %q, want 303 to the desk", id, r.Code, r.Header().Get("Location"))
+		}
+		// Shared or typed links keep their honest status.
+		if r := deskRequest(t, s, a, "GET", "/edit/"+id, nil); r.Code != code {
+			t.Errorf("direct %s: %d, want %d", id, r.Code, code)
+		}
+	}
+	if r := deskRequest(t, s, a, "GET", "/edit/"+live+"?resume=1", nil); r.Code != 200 || !strings.Contains(r.Body.String(), `data-note-id="`+live+`"`) {
+		t.Fatalf("resuming a live note: %d", r.Code)
+	}
+	js, err := fs.ReadFile(StaticFS(), "private-desk.js")
+	if err != nil || !strings.Contains(string(js), `location.replace(last + "?resume=1")`) {
+		t.Fatal("private-desk.js must mark the resume navigation the server falls back on")
 	}
 }

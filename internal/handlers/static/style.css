@@ -92,7 +92,7 @@ html[data-theme="dark"] {
   --bg-3: #323232;
   --text: #efe6cc;
   --text-2: #a89e8e;
-  --text-3: #968a72; /* ~5.1:1 on dark --bg */
+  --text-3: #988c74; /* ~5.2:1 on dark --bg, ~4.6:1 on --bg-2 (cards, menus) */
   --text-4: #5a5040;
   --border: #2c2822;
   --border-2: #3a342c;
@@ -595,8 +595,14 @@ mark {
     width: 32px;
     height: 32px;
   }
+  .nav {
+    gap: 0;
+  }
+  .nav-links {
+    margin-right: 0;
+  }
   .nav-login {
-    margin-left: 0.2rem;
+    margin-left: 0;
     padding: 0.32em 0.7em;
   }
 }
@@ -748,6 +754,9 @@ img {
 .wikilink-cross .arrow {
   margin-right: 2px;
   opacity: 0.7;
+}
+.wikilink-cross:hover .arrow {
+  opacity: 1;
 }
 
 /* Collapsed local ego-graph under connected-notes mini-cards. */
@@ -1681,9 +1690,10 @@ html[data-theme="dark"] .masonry-card:hover {
   color: var(--text-2);
   border-color: var(--border-2);
 }
-.follow-btn.following:hover {
+.follow-btn.following:not(:disabled):hover {
   border-color: var(--danger);
   color: var(--danger);
+  opacity: 1;
 }
 .profile-follow {
   margin-bottom: 1.25em;
@@ -2281,6 +2291,13 @@ html[data-theme="dark"] .link-preview-card {
   background: var(--text-2);
   border-color: var(--text-2);
 }
+/* --text-2 fill is already mid-tone; the global button:hover fade drops it
+   below AA, so the hover cue is the border instead. :not(:disabled) keeps the
+   in-flight dimming (.inline-form button:disabled) while the pointer is on it. */
+.action-btn.save-btn.saved:not(:disabled):hover {
+  opacity: 1;
+  border-color: var(--text);
+}
 .action-btn.danger {
   color: var(--danger);
 }
@@ -2361,7 +2378,10 @@ html[data-theme="dark"] .action-menu-list {
 .reader-opt + .reader-opt {
   border-left: 1px solid var(--border-2);
 }
-.reader-opt[aria-pressed="true"] {
+/* :hover too — inside .action-menu-list, `button:hover` (0,2,1) would
+   otherwise repaint the selected option light under its --paper text. */
+.reader-opt[aria-pressed="true"],
+.reader-opt[aria-pressed="true"]:hover {
   background: var(--ink);
   color: var(--paper);
 }
@@ -2616,6 +2636,7 @@ html[data-theme="dark"] .action-menu-list {
 .action-menu-list a:hover,
 .action-menu-list button:hover {
   background: var(--bg-2);
+  opacity: 1;
 }
 .action-menu-sep {
   border-top: 1px solid var(--border);
@@ -3956,11 +3977,12 @@ button:disabled {
   white-space: nowrap;
   cursor: pointer;
 }
-.editor-back-btn:hover,
-.editor-quiet-btn:hover {
+.editor-back-btn:not(:disabled):hover,
+.editor-quiet-btn:not(:disabled):hover {
   color: var(--text);
   background: var(--bg-3);
   text-decoration: none;
+  opacity: 1;
 }
 .editor-document-state {
   padding: 0.28rem 0.55rem;
@@ -4470,6 +4492,13 @@ button:disabled {
 }
 
 @media (max-width: 400px) {
+  /* After the 800px block's padding and touch-target floors: the signed-out
+     bar (mascot, search, 閱覽/工作桌, 設, 登入) is wider than 320px otherwise. */
+  .topbar,
+  .page-wide .topbar {
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+  }
   .editor-bar {
     top: 44px;
   }

@@ -3,6 +3,7 @@ package config_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"commonplace/internal/config"
 )
@@ -64,5 +65,39 @@ func TestDefaultEmail(t *testing.T) {
 	}
 	if e.TourHandle == "" {
 		t.Error("TourHandle empty")
+	}
+}
+
+func TestFeedFromEnv(t *testing.T) {
+	f, err := config.FeedFromEnv()
+	if err != nil || f != config.DefaultFeed() {
+		t.Fatalf("no env: got %+v, %v; want defaults", f, err)
+	}
+	if d := config.DefaultFeed(); d.BatchMin != 3 || d.BurstStep != 2*time.Hour || d.BurstWindow != 24*time.Hour {
+		t.Fatalf("defaults changed: %+v", d)
+	}
+
+	t.Setenv("FEED_BATCH_MIN", "5")
+	t.Setenv("FEED_BURST_STEP", "90m")
+	t.Setenv("FEED_BURST_WINDOW", "12h")
+	f, err = config.FeedFromEnv()
+	if err != nil || f != (config.Feed{BatchMin: 5, BurstStep: 90 * time.Minute, BurstWindow: 12 * time.Hour}) {
+		t.Fatalf("env overrides: got %+v, %v", f, err)
+	}
+
+	// Rank is whole seconds: a zero, negative, sub-second or fractional
+	// duration would silently truncate, so each is refused at boot.
+	bad := []struct{ key, value string }{
+		{"FEED_BATCH_MIN", "0"}, {"FEED_BATCH_MIN", "x"},
+		{"FEED_BURST_STEP", "2"}, {"FEED_BURST_STEP", "0s"}, {"FEED_BURST_STEP", "500ms"}, {"FEED_BURST_STEP", "1.5s"},
+		{"FEED_BURST_WINDOW", "-1h"}, {"FEED_BURST_WINDOW", "0"}, {"FEED_BURST_WINDOW", "999ms"},
+	}
+	for _, b := range bad {
+		t.Run(b.key+"="+b.value, func(t *testing.T) {
+			t.Setenv(b.key, b.value)
+			if _, err := config.FeedFromEnv(); err == nil {
+				t.Fatalf("%s=%s accepted", b.key, b.value)
+			}
+		})
 	}
 }

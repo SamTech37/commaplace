@@ -10,7 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "strconv"
 
-func importBatchPage(items []batchItem) templ.Component {
+func importBatchPage(batch string, items []batchItem) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -75,74 +75,87 @@ func importBatchPage(items []batchItem) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" data-status=\"pending\"><form class=\"batch-item-form\" hx-post=\"/import/save-one\" hx-target=\"closest .batch-item\" hx-swap=\"outerHTML\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" data-status=\"pending\"><form class=\"batch-item-form\" hx-post=\"/import/save-one\" hx-target=\"closest .batch-item\" hx-swap=\"outerHTML\"><input type=\"hidden\" name=\"batch\" value=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var5 string
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(batch)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 24, Col: 52}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if item.Stripped > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<p class=\"batch-stripped\">已移除 ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"batch-stripped\">已移除 ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var5 string
-				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(item.Stripped))
+				var templ_7745c5c3_Var6 string
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(item.Stripped))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 25, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 26, Col: 71}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, " 個圖片或影音</p>")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " 個圖片或影音</p>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<label class=\"batch-field\"><span class=\"batch-field-label\">標題</span> <input type=\"text\" name=\"title\" value=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(item.Title)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 32, Col: 25}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" required autocomplete=\"off\"></label><div class=\"batch-body-row\"><textarea class=\"batch-body\" name=\"body_md\" rows=\"14\" hx-post=\"/preview\" hx-trigger=\"input changed delay:400ms\" hx-target=\"next .batch-preview\" hx-swap=\"innerHTML\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<label class=\"batch-field\"><span class=\"batch-field-label\">標題</span> <input type=\"text\" name=\"title\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(item.Body)
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(item.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 46, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 33, Col: 25}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</textarea><div class=\"batch-preview article-body\"></div></div><label class=\"batch-field\"><span class=\"batch-field-label\">標籤（以逗號分隔）</span> <input type=\"text\" name=\"tags\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" required autocomplete=\"off\"></label><div class=\"batch-body-row\"><textarea class=\"batch-body\" name=\"body_md\" rows=\"14\" hx-post=\"/preview\" hx-trigger=\"input changed delay:400ms\" hx-target=\"next .batch-preview\" hx-swap=\"innerHTML\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(item.Tags)
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(item.Body)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 51, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 47, Col: 18}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" autocomplete=\"off\"></label><div class=\"batch-item-actions\"><button type=\"submit\" class=\"action-btn primary\">儲存這篇</button> <button type=\"button\" class=\"action-btn\" data-batch-discard>捨棄</button> <span class=\"batch-item-status\"></span></div></form></section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</textarea><div class=\"batch-preview article-body\"></div></div><label class=\"batch-field\"><span class=\"batch-field-label\">標籤（以逗號分隔）</span> <input type=\"text\" name=\"tags\" value=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var9 string
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(item.Tags)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/handlers/import_batch_page.templ`, Line: 52, Col: 54}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" autocomplete=\"off\"></label><div class=\"batch-item-actions\"><button type=\"submit\" class=\"action-btn primary\">儲存這篇</button> <button type=\"button\" class=\"action-btn\" data-batch-discard>捨棄</button> <span class=\"batch-item-status\"></span></div></form></section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div><footer class=\"batch-foot\"><button type=\"button\" class=\"action-btn primary\" data-batch-save-all>全部儲存</button></footer>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div><footer class=\"batch-foot\"><button type=\"button\" class=\"action-btn primary\" data-batch-save-all>全部儲存</button></footer>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

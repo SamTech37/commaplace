@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"commonplace/internal/auth"
+	appconfig "commonplace/internal/config"
 	"commonplace/internal/db"
+	"commonplace/internal/feedrank"
 	"commonplace/internal/handlers"
 	"commonplace/internal/seed"
 )
@@ -23,6 +25,10 @@ import (
 func main() {
 	loadDotEnv(".env", ".env.local")
 	cfg := loadConfig()
+	feedCfg, err := appconfig.FeedFromEnv()
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
 
 	d, err := db.Open(cfg.DatabaseURL)
 	if err != nil {
@@ -33,6 +39,13 @@ func main() {
 		log.Fatalf("migrate: %v", err)
 	}
 	handlers.ProbeTrgm(d)
+	// Rank notes the previous binary published during the deploy overlap; the
+	// feed skips unranked notes, so a failure here only delays them.
+	if n, err := feedrank.AssignUnranked(context.Background(), d, feedCfg); err != nil {
+		log.Printf("feed rank: %v", err)
+	} else if n > 0 {
+		log.Printf("feed rank: ranked %d unranked published notes", n)
+	}
 	// Demo data is opt-in so deleting the demo account survives restarts.
 	if os.Getenv("SEED_DEMO") == "1" {
 		if err := seed.ApplyDemo(context.Background(), d, handlers.RecomputeLinks); err != nil {
@@ -77,6 +90,7 @@ func main() {
 		AdminEmail:  cfg.AdminEmail,
 		OAuthCfg:    cfg.googleOAuthConfig(),
 		BaseURL:     cfg.BaseURL,
+		Feed:        feedCfg,
 	}
 
 	log.Printf("commonplace listening on %s (db=postgres, mailer=%s)",

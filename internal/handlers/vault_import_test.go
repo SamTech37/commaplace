@@ -157,7 +157,7 @@ func TestVault800PublishesResolvesAndRetries(t *testing.T) {
 	seen := map[uuid.UUID]bool{}
 	cursor := feedCursor{}
 	for page := 0; page < 42; page++ {
-		cards, next, err := loadRecentNotes(httptest.NewRequest("GET", "/alice", nil), s.DB, id, "alice", id, "", cursor)
+		cards, next, err := loadRecentNotes(httptest.NewRequest("GET", "/alice", nil), s.DB, id, "alice", id, "", uuid.Nil, cursor)
 		if err != nil {
 			t.Fatal(err)
 		}

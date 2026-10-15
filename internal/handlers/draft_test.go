@@ -24,7 +24,7 @@ func publishedAt(t *testing.T, s *Server, id uuid.UUID) (val int64, valid bool) 
 
 func feedHasSlug(t *testing.T, s *Server, slug string) bool {
 	t.Helper()
-	cards, err := s.queryRecommendedCards(context.Background(), "", feedCursor{}, 50)
+	cards, err := s.queryRecommendedCards(context.Background(), "", rankCursor{}, 50)
 	if err != nil {
 		t.Fatalf("queryRecommendedCards: %v", err)
 	}
@@ -93,12 +93,12 @@ func TestDraftLifecycle(t *testing.T) {
 
 	// Owner sees own draft via drafts tab; stranger does not.
 	ownerReq := authedRequest(s, alice, http.MethodGet, "/alice?tab=drafts", "")
-	owned, _, _ := loadRecentNotes(ownerReq, s.DB, alice, "alice", alice, "drafts", feedCursor{})
+	owned, _, _ := loadRecentNotes(ownerReq, s.DB, alice, "alice", alice, "drafts", uuid.Nil, feedCursor{})
 	if !hasNoteTitle(owned, "My Draft") {
 		t.Fatal("owner should see own draft on drafts tab")
 	}
 	strangerReq := authedRequest(s, bob, http.MethodGet, "/alice", "")
-	seen, _, _ := loadRecentNotes(strangerReq, s.DB, alice, "alice", bob, "", feedCursor{})
+	seen, _, _ := loadRecentNotes(strangerReq, s.DB, alice, "alice", bob, "", uuid.Nil, feedCursor{})
 	if hasNoteTitle(seen, "My Draft") {
 		t.Fatal("stranger should not see alice's draft")
 	}
