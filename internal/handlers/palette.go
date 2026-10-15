@@ -31,7 +31,7 @@ func (s *Server) GetPalette(w http.ResponseWriter, r *http.Request) {
 		WHERE `+clause+`
 		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		  AND n.published_at IS NOT NULL
-		ORDER BY n.updated_at DESC
+		ORDER BY n.updated_at DESC, n.id DESC
 		LIMIT 20`, args...)
 	if err != nil {
 		_ = json.NewEncoder(w).Encode(out)

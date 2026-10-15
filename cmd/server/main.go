@@ -32,6 +32,7 @@ func main() {
 	if err := db.Migrate(d); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
+	handlers.ProbeTrgm(d)
 	// Demo data is opt-in so deleting the demo account survives restarts.
 	if os.Getenv("SEED_DEMO") == "1" {
 		if err := seed.ApplyDemo(context.Background(), d, handlers.RecomputeLinks); err != nil {

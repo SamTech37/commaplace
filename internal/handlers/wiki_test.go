@@ -25,10 +25,12 @@ func TestSuggestUsersInsertKeepsTrailingSlash(t *testing.T) {
 	}
 }
 
-// Queries under 3 characters take a different SQL expression in
-// likeAnyVariant than longer ones (trigram index); both must match the same
-// note, in either script.
+// Queries without 3 consecutive word characters take a different SQL
+// expression in likeAnyVariant than longer ones (trigram index); both must
+// match the same note, in either script.
 func TestSuggestNotesMatchesShortAndLongCJK(t *testing.T) {
+	trgmUnicode = true // as ProbeTrgm sets it on a UTF-8 LC_CTYPE
+	t.Cleanup(func() { trgmUnicode = false })
 	s := newTestServer(t)
 	aliceID := mkUser(t, s, "alice")
 	if _, err := s.saveNote(context.Background(), aliceID, "alice", "shulun", "數論筆記", "body", nil); err != nil {
