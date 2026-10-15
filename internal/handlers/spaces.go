@@ -277,6 +277,8 @@ func (s *Server) PublishSpace(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "無法發布", 500)
 		return
 	}
+	s.tagChips.expire()
+	s.tagClouds.expire()
 	deskJSON(w, 200, map[string]string{"url": "/" + u.Handle})
 }
 

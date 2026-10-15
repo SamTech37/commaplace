@@ -122,7 +122,7 @@ func (s *Server) GetTagPage(w http.ResponseWriter, r *http.Request) {
 	s.renderPage(w, r, pageTitle("#"+tag), "", nil, tagPage(TagPageProps{
 		Tag:     tag,
 		View:    view,
-		Related: s.relatedTags(r.Context(), variants, args[:len(variants)]),
+		Related: s.relatedTags(r.Context(), tag, variants, args[:len(variants)]),
 	}))
 }
 
@@ -144,7 +144,14 @@ type cloudTag struct {
 // we have — see plan.md's benchmark table). "What goes with this?" is also the
 // more useful question, and following one lands on that tag's own cloud.
 // Anything outside this view stays reachable through the tag search.
-func (s *Server) relatedTags(ctx context.Context, variants []string, args []any) []cloudTag {
+//
+// Served from s.tagClouds keyed by the normalized tag: the cloud reads only
+// readableNote, nothing about the viewer, so one result fits every request.
+// Errors return nil uncached.
+func (s *Server) relatedTags(ctx context.Context, tag string, variants []string, args []any) []cloudTag {
+	if cached, ok := s.tagClouds.get(tag); ok {
+		return cached
+	}
 	inc := make([]string, len(variants))
 	exc := make([]string, len(variants))
 	for i := range variants {
@@ -194,6 +201,9 @@ func (s *Server) relatedTags(ctx context.Context, variants []string, args []any)
 		span := hi - lo
 		steps := min(4, span)
 		out[i].Size = 1 + ((out[i].Count-lo)*steps+span/2)/span
+	}
+	if rows.Err() == nil { // never cache a cloud cut short mid-read
+		s.tagClouds.put(tag, out)
 	}
 	return out
 }
