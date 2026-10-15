@@ -246,7 +246,7 @@ func (s *Server) GetTagSuggest(w http.ResponseWriter, r *http.Request) {
 		if slices.Contains(variants, strings.ToLower(tag)) {
 			exact = " data-exact"
 		}
-		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q%s><span class="ac-primary">#%s</span><span class="ac-secondary">%d</span></li>`,
-			tag, exact, htmlpkg.EscapeString(tag), uses)
+		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"%s><span class="ac-primary">#%s</span><span class="ac-secondary">%d</span></li>`,
+			htmlpkg.EscapeString(tag), exact, htmlpkg.EscapeString(tag), uses)
 	}
 }
