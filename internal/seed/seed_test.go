@@ -143,3 +143,22 @@ func TestApplyWelcomeNotePinned(t *testing.T) {
 		t.Errorf("want tour user to have a valid pinned note, got count=%d", count)
 	}
 }
+
+// Seeded notes reach the recommended feed only if they carry a feed_rank.
+func TestSeedsRankPublishedNotes(t *testing.T) {
+	d := newTestDB(t)
+	ctx := context.Background()
+	if err := seed.ApplyDemo(ctx, d, noopRecompute); err != nil {
+		t.Fatal(err)
+	}
+	if err := seed.Apply(ctx, d, noopRecompute); err != nil {
+		t.Fatal(err)
+	}
+	if err := seed.ApplyDev(ctx, d, noopRecompute); err != nil {
+		t.Fatal(err)
+	}
+	var unranked int
+	if err := d.QueryRow(`SELECT COUNT(*) FROM notes WHERE published_at IS NOT NULL AND feed_rank IS NULL`).Scan(&unranked); err != nil || unranked != 0 {
+		t.Fatalf("%d seeded notes without feed_rank (%v)", unranked, err)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -56,7 +57,10 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		viewerID = viewer.ID
 	}
 	isSelf := viewer != nil && viewer.ID == profile.ID
-	if r.URL.Query().Get("all") == "" && r.URL.Query().Get("tab") == "" && r.URL.Query().Get("view") == "" && r.URL.Query().Get("older") == "" {
+	// ?batch= narrows the timeline to one import (the feed's batch card links
+	// here); an unparsable id is no filter at all, as if absent.
+	batch, _ := uuid.Parse(r.URL.Query().Get("batch"))
+	if r.URL.Query().Get("all") == "" && r.URL.Query().Get("tab") == "" && r.URL.Query().Get("view") == "" && r.URL.Query().Get("older") == "" && batch == uuid.Nil {
 		space, ok, err := s.loadSpaceReading(r.Context(), profile.ID, profile.Handle)
 		if err != nil {
 			s.renderError(w, r, 500, "無法讀取我的空間")
@@ -80,6 +84,8 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		view     NoteListView
 		tab      string
 		calendar *calendarGridProps
+		// filteredBatch is the ?batch= import shown, uuid.Nil for none.
+		filteredBatch uuid.UUID
 	)
 	switch mode {
 	case "calendar":
@@ -99,7 +105,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 			tab = ""
 		}
 
-		recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, olderThan)
+		recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, batch, olderThan)
 		if err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -108,11 +114,14 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		view = NoteListView{
 			Cards:       recent,
 			Layout:      "list",
-			OlderURL:    profileOlderURL(profile.Handle, nextCursor, tab),
+			OlderURL:    profileOlderURL(profile.Handle, nextCursor, tab, batch),
 			Empty:       profileEmpty(tab),
 			GroupByDate: true,
 		}
-		view.Manage = isSelf
+		// Bulk management acts on the whole tab, not the batch; keep it off the
+		// filtered view so "select all" cannot reach notes outside the batch.
+		view.Manage = isSelf && batch == uuid.Nil
+		filteredBatch = batch
 		if r.Header.Get("HX-Request") == "true" {
 			s.renderFragment(w, r, notesFragment(view))
 			return
@@ -155,6 +164,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		View:           view,
 		Calendar:       calendar,
 		Tab:            tab,
+		Batch:          filteredBatch,
 		IsSelf:         isSelf,
 		ViewerLoggedIn: viewer != nil,
 		Following:      following,
@@ -563,13 +573,16 @@ func profileLinkUnresolved(n *nethtml.Node) bool {
 
 // profileOlderURL builds the infinite-scroll cursor URL, or "" when there's
 // no next page (an unset cursor, as returned by loadRecentNotes).
-func profileOlderURL(handle string, nextCursor feedCursor, tab string) string {
+func profileOlderURL(handle string, nextCursor feedCursor, tab string, batch uuid.UUID) string {
 	if !nextCursor.set() {
 		return ""
 	}
 	href := "/" + handle + "?older=" + strconv.FormatInt(nextCursor.UpdatedAt, 10) + "&older_id=" + nextCursor.NoteID.String()
 	if tab != "" {
 		href += "&tab=" + url.QueryEscape(tab)
+	}
+	if batch != uuid.Nil {
+		href += "&batch=" + batch.String()
 	}
 	return href
 }
@@ -583,8 +596,11 @@ func profileEmpty(tab string) templ.Component {
 
 // loadRecentNotes lists a user's notes as feedCards (the shared card model —
 // see notes_view.templ). Unpublished drafts are included only when the
-// viewer is the author themselves.
-func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, olderThan feedCursor) ([]feedCard, feedCursor, error) {
+// viewer is the author themselves. A non-nil batch keeps only that import's
+// public notes: the view is where the feed's batch card leads, so it lists
+// exactly what the card counts, and semi-public notes stay out of
+// recommendations (docs/public-private-spaces.md) even one click deep.
+func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, batch uuid.UUID, olderThan feedCursor) ([]feedCard, feedCursor, error) {
 	query := `SELECT ` + noteCardColumns + `
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
@@ -598,9 +614,13 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 	} else if tab != "all" {
 		query += ` AND n.published_at IS NOT NULL`
 	}
+	if batch != uuid.Nil {
+		args = append(args, batch)
+		query += fmt.Sprintf(` AND n.import_batch_id = $%d AND n.distribution = 'public'`, len(args))
+	}
 	if olderThan.set() {
 		args = append(args, olderThan.UpdatedAt, olderThan.NoteID)
-		query += ` AND (n.updated_at, n.id) < ($2, $3)`
+		query += fmt.Sprintf(` AND (n.updated_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
 	}
 	query += ` ORDER BY n.updated_at DESC, n.id DESC LIMIT 20`
 	rows, err := db.QueryContext(r.Context(), query, args...)
