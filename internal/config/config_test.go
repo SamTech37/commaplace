@@ -85,11 +85,18 @@ func TestFeedFromEnv(t *testing.T) {
 		t.Fatalf("env overrides: got %+v, %v", f, err)
 	}
 
-	for key, bad := range map[string]string{"FEED_BATCH_MIN": "0", "FEED_BURST_STEP": "2", "FEED_BURST_WINDOW": "-1h"} {
-		t.Run(key, func(t *testing.T) {
-			t.Setenv(key, bad)
+	// Rank is whole seconds: a zero, negative, sub-second or fractional
+	// duration would silently truncate, so each is refused at boot.
+	bad := []struct{ key, value string }{
+		{"FEED_BATCH_MIN", "0"}, {"FEED_BATCH_MIN", "x"},
+		{"FEED_BURST_STEP", "2"}, {"FEED_BURST_STEP", "0s"}, {"FEED_BURST_STEP", "500ms"}, {"FEED_BURST_STEP", "1.5s"},
+		{"FEED_BURST_WINDOW", "-1h"}, {"FEED_BURST_WINDOW", "0"}, {"FEED_BURST_WINDOW", "999ms"},
+	}
+	for _, b := range bad {
+		t.Run(b.key+"="+b.value, func(t *testing.T) {
+			t.Setenv(b.key, b.value)
 			if _, err := config.FeedFromEnv(); err == nil {
-				t.Fatalf("%s=%s accepted", key, bad)
+				t.Fatalf("%s=%s accepted", b.key, b.value)
 			}
 		})
 	}

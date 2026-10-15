@@ -87,8 +87,8 @@ go build -o bin/commonplace ./cmd/server
 | `SEED_DEMO` | `0` | Install the shawn_demo account and sample notes on startup |
 | `SEED_TOUR` | `0` | Also install the legacy English onboarding-fork seed |
 | `FEED_BATCH_MIN` | `3` | Recommended feed: an import of at least this many notes shows as one 「匯入了 N 篇筆記」 card |
-| `FEED_BURST_STEP` | `2h` | Recommended feed: how far back each earlier note in a posting burst pushes the next (Go duration) |
-| `FEED_BURST_WINDOW` | `24h` | Recommended feed: how far back an author's earlier notes count toward a burst (Go duration) |
+| `FEED_BURST_STEP` | `2h` | Recommended feed: how far back each earlier note in a posting burst pushes the next (Go duration, whole seconds ≥ 1s) |
+| `FEED_BURST_WINDOW` | `24h` | Recommended feed: how far back an author's earlier notes count toward a burst (Go duration, whole seconds ≥ 1s) |
 
 The `FEED_*` defaults are starting guesses, to be tuned from real usage. A rank is
 computed once at publish, so a change applies to notes published afterwards.

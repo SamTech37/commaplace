@@ -57,7 +57,10 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 		viewerID = viewer.ID
 	}
 	isSelf := viewer != nil && viewer.ID == profile.ID
-	if r.URL.Query().Get("all") == "" && r.URL.Query().Get("tab") == "" && r.URL.Query().Get("view") == "" && r.URL.Query().Get("older") == "" && r.URL.Query().Get("batch") == "" {
+	// ?batch= narrows the timeline to one import (the feed's batch card links
+	// here); an unparsable id is no filter at all, as if absent.
+	batch, _ := uuid.Parse(r.URL.Query().Get("batch"))
+	if r.URL.Query().Get("all") == "" && r.URL.Query().Get("tab") == "" && r.URL.Query().Get("view") == "" && r.URL.Query().Get("older") == "" && batch == uuid.Nil {
 		space, ok, err := s.loadSpaceReading(r.Context(), profile.ID, profile.Handle)
 		if err != nil {
 			s.renderError(w, r, 500, "無法讀取我的空間")
@@ -102,9 +105,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
 			tab = ""
 		}
 
-		// ?batch= narrows the timeline to one import (the feed's batch card
-		// links here); an unparsable id is ignored rather than an error.
-		batch, _ := uuid.Parse(r.URL.Query().Get("batch"))
 		recent, nextCursor, err := loadRecentNotes(r, s.DB, profile.ID, profile.Handle, viewerID, tab, batch, olderThan)
 		if err != nil {
 			s.renderError(w, r, http.StatusInternalServerError, err.Error())
@@ -597,7 +597,9 @@ func profileEmpty(tab string) templ.Component {
 // loadRecentNotes lists a user's notes as feedCards (the shared card model —
 // see notes_view.templ). Unpublished drafts are included only when the
 // viewer is the author themselves. A non-nil batch keeps only that import's
-// notes.
+// public notes: the view is where the feed's batch card leads, so it lists
+// exactly what the card counts, and semi-public notes stay out of
+// recommendations (docs/public-private-spaces.md) even one click deep.
 func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle string, viewerID uuid.UUID, tab string, batch uuid.UUID, olderThan feedCursor) ([]feedCard, feedCursor, error) {
 	query := `SELECT ` + noteCardColumns + `
 		FROM notes n
@@ -614,7 +616,7 @@ func loadRecentNotes(r *http.Request, db *sql.DB, authorID uuid.UUID, handle str
 	}
 	if batch != uuid.Nil {
 		args = append(args, batch)
-		query += fmt.Sprintf(` AND n.import_batch_id = $%d`, len(args))
+		query += fmt.Sprintf(` AND n.import_batch_id = $%d AND n.distribution = 'public'`, len(args))
 	}
 	if olderThan.set() {
 		args = append(args, olderThan.UpdatedAt, olderThan.NoteID)

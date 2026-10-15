@@ -18,7 +18,6 @@ import (
 )
 
 var TourHandle = config.DefaultEmail(config.DefaultSite().Title).TourHandle
-
 const MakerHandle = "maker"
 const DemoHandle = "shawn_demo"
 

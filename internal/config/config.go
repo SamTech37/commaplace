@@ -60,10 +60,10 @@ type Database struct {
 
 // Email contains email-related configuration.
 type Email struct {
-	SignInIntro string // email body intro
-	SignInSubj  string // email subject
-	ReportSubj  string
-	TourHandle  string
+	SignInIntro  string // email body intro
+	SignInSubj   string // email subject
+	ReportSubj   string
+	TourHandle   string
 }
 
 // DefaultSite returns default site configuration.
@@ -78,9 +78,9 @@ func DefaultSite() Site {
 // DefaultNav returns the canonical display names. Rename here, not in templates.
 func DefaultNav() Nav {
 	return Nav{
-		Write:  "書寫",
-		Feed:   "閱覽",
-		Graph:  "圖譜",
+		Write:    "書寫",
+		Feed:     "閱覽",
+		Graph:    "圖譜",
 		Login:  "登入",
 		Logout: "登出",
 	}
@@ -110,7 +110,8 @@ func DefaultFeed() Feed {
 }
 
 // FeedFromEnv returns DefaultFeed with any FEED_* env vars applied. Durations
-// use Go syntax ("90m", "2h"). A malformed or negative value is an error, not
+// use Go syntax ("90m", "2h") and must be whole seconds of at least 1s, since
+// rank is kept in seconds. A malformed or out-of-range value is an error, not
 // a silent fallback, so a typo in a deploy's env cannot quietly retune the feed.
 func FeedFromEnv() (Feed, error) {
 	f := DefaultFeed()
@@ -124,8 +125,8 @@ func FeedFromEnv() (Feed, error) {
 	for key, dst := range map[string]*time.Duration{"FEED_BURST_STEP": &f.BurstStep, "FEED_BURST_WINDOW": &f.BurstWindow} {
 		if v := os.Getenv(key); v != "" {
 			d, err := time.ParseDuration(v)
-			if err != nil || d < 0 {
-				return f, fmt.Errorf("%s=%q: want a non-negative duration such as 2h", key, v)
+			if err != nil || d < time.Second || d%time.Second != 0 {
+				return f, fmt.Errorf("%s=%q: want a whole number of seconds, at least 1s, such as 2h", key, v)
 			}
 			*dst = d
 		}

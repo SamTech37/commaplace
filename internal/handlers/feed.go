@@ -186,55 +186,14 @@ const batchCardTitles = 3
 // queryRecommendedCards pages the recommended feed: public notes and import
 // batch cards, by (feed_rank, id) descending — a plain keyset, so nothing is
 // dropped or repeated, and notes published mid-scroll rank above the cursor.
-// An import of at least Feed.BatchMin notes is one card at the batch's shared
-// feed_rank, and its notes are not listed on their own; a smaller import is
-// just its notes. The size test counts every note the import created, so
-// hiding some later does not break the card back into notes; the card's N
-// counts only the visible ones, and it disappears when none are left. Each
-// arm is LIMITed before the merge, so the note arm reads only its top of
-// idx_notes_feed_rank.
+// An import of at least Feed.BatchMin notes is one card at the rank its notes
+// share, and its notes are not listed on their own; a smaller import is just
+// its notes. The size test counts every note the import created, so hiding
+// some later does not break the card back into notes; the card's N counts
+// only the recommendable (visible, public) ones, and it disappears when none
+// are left. Unranked notes (see feedrank.AssignUnranked) are skipped.
 func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cursor rankCursor, limit int) ([]feedCard, error) {
-	args := []any{s.Feed.BatchMin, limit}
-	noteFilter, batchTagged, batchFilter := "", "0", ""
-	if tagFilter != "" {
-		args = append(args, tagFilter)
-		hasTag := fmt.Sprintf(`EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
-		noteFilter += ` AND ` + hasTag
-		batchTagged = `COUNT(*) FILTER (WHERE ` + recommendableNote + ` AND ` + hasTag + `)`
-		batchFilter += ` AND b.tagged > 0`
-	}
-	if cursor.set() {
-		args = append(args, cursor.Rank, cursor.ID)
-		noteFilter += fmt.Sprintf(` AND (n.feed_rank, n.id) < ($%d, $%d)`, len(args)-1, len(args))
-		batchFilter += fmt.Sprintf(` AND (b.rank, b.id) < ($%d, $%d)`, len(args)-1, len(args))
-	}
-	q := fmt.Sprintf(`
-		WITH batches AS (
-		  SELECT n.author_id, n.import_batch_id AS id, MAX(n.feed_rank) AS rank,
-		         COUNT(*) FILTER (WHERE %[2]s) AS notes,
-		         MIN(n.published_at) FILTER (WHERE %[2]s) AS published_at, %[1]s AS tagged
-		  FROM notes n
-		  WHERE n.import_batch_id IS NOT NULL
-		  GROUP BY n.author_id, n.import_batch_id
-		  HAVING COUNT(*) >= $1 AND COUNT(*) FILTER (WHERE %[2]s) > 0
-		)
-		SELECT i.rank, i.id, i.notes, i.published_at, i.author_id, COALESCE(u.handle, '')
-		FROM (
-		  (SELECT n.feed_rank AS rank, n.id, 0 AS notes, 0 AS published_at, NULL::uuid AS author_id
-		   FROM notes n
-		   WHERE %[2]s%[3]s
-		     AND (n.import_batch_id IS NULL OR NOT EXISTS (
-		       SELECT 1 FROM batches b WHERE b.author_id = n.author_id AND b.id = n.import_batch_id))
-		   ORDER BY n.feed_rank DESC, n.id DESC LIMIT $2)
-		  UNION ALL
-		  (SELECT b.rank, b.id, b.notes, b.published_at, b.author_id
-		   FROM batches b
-		   WHERE TRUE%[4]s
-		   ORDER BY b.rank DESC, b.id DESC LIMIT $2)
-		) i
-		LEFT JOIN users u ON u.id = i.author_id
-		ORDER BY i.rank DESC, i.id DESC LIMIT $2`,
-		batchTagged, recommendableNote, noteFilter, batchFilter)
+	q, args := s.recommendedSQL(tagFilter, cursor, limit)
 	rows, err := s.DB.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
@@ -341,6 +300,78 @@ func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cu
 		}
 	}
 	return out, nil
+}
+
+// recommendedSQL builds queryRecommendedCards' item query: rank, id, batch
+// count, batch published_at, batch author (NULL for a note), handle. Its
+// cost follows the page, not the table:
+//   - the note arm reads the top of idx_notes_feed_rank (notes outside
+//     imports) below the cursor, LIMIT items;
+//   - the batch arm walks idx_notes_batch_rank down from the cursor, but no
+//     lower than the note arm's last rank when that arm is full (nothing
+//     lower can make the page), aggregates only the imports it meets, and
+//     stops once it has LIMIT items: a card for an import of at least
+//     BatchMin, otherwise that import's notes. It stops in index order,
+//     by rank alone (WITH TIES keeps every item sharing the last rank), so
+//     nothing is sorted before the LIMIT and the plan stays cheap enough
+//     that the planner does not JIT-compile it.
+//
+// Every note of an import shares one rank (feedrank.Assign), which is what
+// lets (feed_rank, import_batch_id) stand for the batch card's key.
+func (s *Server) recommendedSQL(tagFilter string, cursor rankCursor, limit int) (string, []any) {
+	args := []any{s.Feed.BatchMin, limit}
+	noteFilter, batchTag, itemFilter, candFilter := "", "TRUE", "", ""
+	if tagFilter != "" {
+		args = append(args, tagFilter)
+		batchTag = fmt.Sprintf(`EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
+		noteFilter += ` AND ` + batchTag
+	}
+	if cursor.set() {
+		args = append(args, cursor.Rank, cursor.ID)
+		noteFilter += fmt.Sprintf(` AND (n.feed_rank, n.id) < ($%d, $%d)`, len(args)-1, len(args))
+		itemFilter = fmt.Sprintf(` WHERE (x.rank, x.id) < ($%d, $%d)`, len(args)-1, len(args))
+		candFilter = fmt.Sprintf(` AND n.feed_rank <= $%d`, len(args)-1)
+	}
+	return fmt.Sprintf(`
+		WITH note_arm AS MATERIALIZED (
+		  SELECT n.feed_rank AS rank, n.id FROM notes n
+		  WHERE %[1]s AND n.import_batch_id IS NULL AND n.feed_rank IS NOT NULL%[2]s
+		  ORDER BY n.feed_rank DESC, n.id DESC LIMIT $2
+		), batch_arm AS (
+		  SELECT x.* FROM (
+		    SELECT DISTINCT n.feed_rank AS rank, n.import_batch_id AS id, n.author_id
+		    FROM notes n
+		    WHERE n.import_batch_id IS NOT NULL AND n.feed_rank IS NOT NULL%[5]s
+		      AND n.feed_rank >= COALESCE((SELECT min(rank) FROM note_arm HAVING count(*) = $2),
+		                                  '-9223372036854775808'::bigint)
+		    ORDER BY 1 DESC, 2 DESC, 3
+		  ) c
+		  CROSS JOIN LATERAL (
+		    SELECT count(*) AS size,
+		           count(*) FILTER (WHERE %[1]s) AS notes,
+		           count(*) FILTER (WHERE %[1]s AND %[3]s) AS tagged,
+		           min(n.published_at) FILTER (WHERE %[1]s) AS published_at
+		    FROM notes n WHERE n.author_id = c.author_id AND n.import_batch_id = c.id
+		  ) b
+		  CROSS JOIN LATERAL (
+		    SELECT c.rank, c.id, b.notes, b.published_at, c.author_id
+		    WHERE b.size >= $1 AND b.tagged > 0
+		    UNION ALL
+		    SELECT n.feed_rank, n.id, 0, 0, NULL::uuid FROM notes n
+		    WHERE b.size < $1 AND n.author_id = c.author_id AND n.import_batch_id = c.id
+		      AND n.feed_rank = c.rank AND %[1]s AND %[3]s
+		  ) x%[4]s
+		  ORDER BY c.rank DESC FETCH FIRST ($2) ROWS WITH TIES
+		)
+		SELECT i.rank, i.id, i.notes, i.published_at, i.author_id, COALESCE(u.handle, '')
+		FROM (
+		  SELECT rank, id, 0 AS notes, 0::bigint AS published_at, NULL::uuid AS author_id FROM note_arm
+		  UNION ALL
+		  SELECT * FROM batch_arm
+		) i
+		LEFT JOIN users u ON u.id = i.author_id
+		ORDER BY i.rank DESC, i.id DESC LIMIT $2`,
+		recommendableNote, noteFilter, batchTag, itemFilter, candFilter), args
 }
 
 func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, tagFilter string, older feedCursor, limit int) ([]feedCard, error) {

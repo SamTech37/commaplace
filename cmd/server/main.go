@@ -17,6 +17,7 @@ import (
 	"commonplace/internal/auth"
 	appconfig "commonplace/internal/config"
 	"commonplace/internal/db"
+	"commonplace/internal/feedrank"
 	"commonplace/internal/handlers"
 	"commonplace/internal/seed"
 )
@@ -36,6 +37,13 @@ func main() {
 	defer d.Close()
 	if err := db.Migrate(d); err != nil {
 		log.Fatalf("migrate: %v", err)
+	}
+	// Rank notes the previous binary published during the deploy overlap; the
+	// feed skips unranked notes, so a failure here only delays them.
+	if n, err := feedrank.AssignUnranked(context.Background(), d, feedCfg); err != nil {
+		log.Printf("feed rank: %v", err)
+	} else if n > 0 {
+		log.Printf("feed rank: ranked %d unranked published notes", n)
 	}
 	// Demo data is opt-in so deleting the demo account survives restarts.
 	if os.Getenv("SEED_DEMO") == "1" {
@@ -187,15 +195,15 @@ func (c config) googleOAuthConfig() *auth.OAuthConfig {
 
 func loadConfig() config {
 	c := config{
-		Addr:               envOr("ADDR", ":8080"),
-		DatabaseURL:        envOr("DATABASE_URL", "postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable"),
-		SessionSecret:      os.Getenv("SESSION_SECRET"),
-		BaseURL:            envOr("BASE_URL", ""),
-		SMTPHost:           os.Getenv("SMTP_HOST"),
-		SMTPPort:           envOr("SMTP_PORT", "587"),
-		SMTPUser:           os.Getenv("SMTP_USER"),
-		SMTPPass:           os.Getenv("SMTP_PASS"),
-		SMTPFrom:           envOr("SMTP_FROM", "Comma, <noreply@example.com>"),
+		Addr:          envOr("ADDR", ":8080"),
+		DatabaseURL:   envOr("DATABASE_URL", "postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable"),
+		SessionSecret: os.Getenv("SESSION_SECRET"),
+		BaseURL:       envOr("BASE_URL", ""),
+		SMTPHost:      os.Getenv("SMTP_HOST"),
+		SMTPPort:      envOr("SMTP_PORT", "587"),
+		SMTPUser:      os.Getenv("SMTP_USER"),
+		SMTPPass:      os.Getenv("SMTP_PASS"),
+		SMTPFrom:      envOr("SMTP_FROM", "Comma, <noreply@example.com>"),
 		AdminHandle:        strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
 		AdminEmail:         strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
 		Debug:              os.Getenv("DEBUG") == "1",
