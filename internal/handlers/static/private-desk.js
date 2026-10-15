@@ -9,10 +9,11 @@
   const activeID = editor ? editor.dataset.noteId : "";
   let filter = "all", offset = 0, generation = 0, timer;
   if (location.pathname === "/me/desk" && !location.search) {
-    try { const last = localStorage.getItem(lastKey); if (/^\/edit\/[a-f0-9-]{36}$/.test(last || "")) { location.replace(last); return; } } catch (_) {}
+    try { const last = localStorage.getItem(lastKey); if (/^\/edit\/[a-f0-9-]{36}$/.test(last || "")) { location.replace(last + "?resume=1"); return; } } catch (_) {}
   }
   try { localStorage.setItem(lastKey, activeID ? "/edit/" + activeID : "/me/desk?space=1"); } catch (_) {}
   root.querySelector(".private-space-link").classList.toggle("is-current", !activeID);
+  document.addEventListener("submit", e => { if (!e.defaultPrevented && activeID && e.target.getAttribute("action") === "/delete/" + activeID) try { localStorage.removeItem(lastKey); } catch (_) {} });
   function button(text, label) { const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.setAttribute("aria-label", label); return b; }
   async function load(append) {
     const request = ++generation;

@@ -134,9 +134,20 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 	if u == nil {
 		return
 	}
+	// 工作桌 reopens the last-edited note from localStorage and marks that
+	// hop ?resume=1. If the note is gone, a 404 page would repeat on every
+	// visit (it never loads private-desk.js to forget the value), so go to
+	// the desk instead, which overwrites the stored note.
+	notEditable := func(code int, msg string) {
+		if r.URL.Query().Has("resume") {
+			http.Redirect(w, r, "/me/desk?space=1", http.StatusSeeOther)
+			return
+		}
+		s.renderError(w, r, code, msg)
+	}
 	noteID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
-		s.renderError(w, r, http.StatusNotFound, "note not found")
+		notEditable(http.StatusNotFound, "note not found")
 		return
 	}
 
@@ -150,7 +161,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		FROM notes WHERE id = $1 AND deleted_at IS NULL AND hidden_at IS NULL`, noteID,
 	).Scan(&authorID, &title, &body, &publishedAt, &slug, &revision, &distribution, &hasDraft)
 	if errors.Is(err, sql.ErrNoRows) {
-		s.renderError(w, r, http.StatusNotFound, "note not found")
+		notEditable(http.StatusNotFound, "note not found")
 		return
 	}
 	if err != nil {
@@ -158,7 +169,7 @@ func (s *Server) GetEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if authorID != u.ID {
-		s.renderError(w, r, http.StatusForbidden, "you can only edit your own notes")
+		notEditable(http.StatusForbidden, "you can only edit your own notes")
 		return
 	}
 
