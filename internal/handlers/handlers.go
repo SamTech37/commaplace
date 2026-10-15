@@ -141,7 +141,7 @@ func (s *Server) Routes() http.Handler {
 	if s.Debug {
 		return gzipMiddleware(mux)
 	}
-	return gzipMiddleware(rateLimit(mux))
+	return gzipMiddleware(rateLimit(s.Auth, mux))
 }
 
 // cacheControl caches assets by how precisely the URL identifies its bytes.

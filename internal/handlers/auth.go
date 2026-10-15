@@ -65,6 +65,12 @@ func (s *Server) PostLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	redirectLoginSent(w, r, next)
+}
+
+// redirectLoginSent is the "link sent" response, also given when rateLimit
+// silently skips a send.
+func redirectLoginSent(w http.ResponseWriter, r *http.Request, next string) {
 	v := url.Values{"sent": []string{"1"}}
 	if next != "" {
 		v.Set("next", next)
