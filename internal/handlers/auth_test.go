@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -81,5 +82,40 @@ func TestLoginEmailNameExcludesLastUsedPill(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+}
+
+// /_dev/login mints users from ?as= on playtest deploys; a handle outside
+// handleRE must not be created (it would flow into suggest fragments).
+func TestDevLoginRejectsInvalidHandle(t *testing.T) {
+	s := newTestServer(t)
+	s.PlaytestKey = "k"
+	mkUser(t, s, "shawn_demo")
+	cases := []struct {
+		as   string
+		want int
+	}{
+		{`x" onmouseover="alert(1)`, http.StatusBadRequest},
+		{"Alice", http.StatusBadRequest},
+		{"alice", http.StatusSeeOther},
+		{"shawn_demo", http.StatusSeeOther}, // existing seed handle still logs in
+	}
+	for _, tc := range cases {
+		req := httptest.NewRequest("GET", "/_dev/login?key=k&as="+url.QueryEscape(tc.as), nil)
+		w := httptest.NewRecorder()
+		s.GetDevLogin(w, req)
+		if w.Code != tc.want {
+			t.Fatalf("as=%q: status = %d, want %d", tc.as, w.Code, tc.want)
+		}
+		if gotCookie := len(w.Result().Cookies()) > 0; gotCookie != (tc.want == http.StatusSeeOther) {
+			t.Fatalf("as=%q: session cookie set = %v", tc.as, gotCookie)
+		}
+	}
+	var n int
+	if err := s.DB.QueryRow(`SELECT count(*) FROM users`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("users = %d, want 2 (shawn_demo + alice)", n)
 	}
 }

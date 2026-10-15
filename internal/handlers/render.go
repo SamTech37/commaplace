@@ -63,11 +63,70 @@ type tagChipCache struct {
 	until time.Time
 }
 
-// expire forces the next read to refill, for writes that remove notes from
-// view; waiting out the TTL would leave chips pointing at empty pages.
+// expire forces the next read to refill, for writes that change which notes
+// are readable or how they're tagged; waiting out the TTL would leave chips
+// pointing at empty pages.
 func (c *tagChipCache) expire() {
 	c.mu.Lock()
 	c.until = time.Time{}
+	c.mu.Unlock()
+}
+
+// relatedTagCache is tagChipCache keyed by normalized tag, for the /tag/{tag}
+// related-tag cloud (relatedTags): 126–260ms on a hot tag at 100k notes. Same
+// 5-min TTL and lazy expiry. The key space is any string a URL can carry, so
+// it holds at most relatedTagCacheMax entries (see put).
+type relatedTagCache struct {
+	mu sync.RWMutex
+	m  map[string]relatedTagEntry
+}
+
+type relatedTagEntry struct {
+	data  []cloudTag
+	until time.Time
+}
+
+const relatedTagCacheMax = 512
+
+func (c *relatedTagCache) get(tag string) ([]cloudTag, bool) {
+	c.mu.RLock()
+	e, ok := c.m[tag]
+	c.mu.RUnlock()
+	if !ok || !time.Now().Before(e.until) {
+		return nil, false
+	}
+	return e.data, true
+}
+
+// put stores data for 5 minutes. When full it first drops expired entries,
+// then, if none were, one arbitrary entry.
+func (c *relatedTagCache) put(tag string, data []cloudTag) {
+	now := time.Now()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.m == nil {
+		c.m = map[string]relatedTagEntry{}
+	}
+	if _, ok := c.m[tag]; !ok && len(c.m) >= relatedTagCacheMax {
+		for k, e := range c.m {
+			if !now.Before(e.until) {
+				delete(c.m, k)
+			}
+		}
+		for k := range c.m {
+			if len(c.m) < relatedTagCacheMax {
+				break
+			}
+			delete(c.m, k)
+		}
+	}
+	c.m[tag] = relatedTagEntry{data, now.Add(5 * time.Minute)}
+}
+
+// expire drops every entry, for the same writes that expire tagChipCache.
+func (c *relatedTagCache) expire() {
+	c.mu.Lock()
+	c.m = nil
 	c.mu.Unlock()
 }
 
@@ -80,7 +139,9 @@ type Server struct {
 	AdminEmail  string            // must match too, since a handle can be renamed into by anyone
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
 	BaseURL     string            // e.g. "http://localhost:8080"; for absolute OG/canonical URLs
+	Feed        config.Feed       // recommended-feed ranking parameters (config.FeedFromEnv)
 	tagChips    tagChipCache      // memoized top-tag chips; see tagChipCache
+	tagClouds   relatedTagCache   // memoized /tag/{tag} related-tag clouds; see relatedTagCache
 }
 
 // chrome builds the site-chrome data (nav, current user, theme) every

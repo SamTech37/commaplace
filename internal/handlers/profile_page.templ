@@ -13,6 +13,7 @@ type ProfilePageProps struct {
 	View           NoteListView
 	Calendar       *calendarGridProps
 	Tab            string
+	Batch          uuid.UUID // ?batch= import filter on the timeline; uuid.Nil for none
 	IsSelf         bool
 	ViewerLoggedIn bool
 	Following      bool
@@ -209,6 +210,11 @@ templ profilePage(p ProfilePageProps) {
 			<div class="graph-empty" hidden>還沒有筆記可以畫。</div>
 			<div class="graph-tooltip" hidden></div>
 		</div>
+	} else if p.Batch != uuid.Nil {
+		<div class="profile-notes-heading" style="margin-top:1em">
+			一次匯入的筆記 · <a href={ templ.URL("/" + p.Handle + "?all=1") }>全部筆記</a>
+		</div>
+		@profileNotesList(p)
 	} else {
 		if p.IsSelf {
 			<nav class="feed-tabs profile-manager-tabs" style="margin-top: 1em;">

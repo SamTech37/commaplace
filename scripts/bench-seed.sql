@@ -37,6 +37,21 @@ JOIN users u ON u.handle = format('u%s', lpad((n % 100)::text, 3, '0'))
 CROSS JOIN LATERAL (SELECT string_agg('w' || (random() * 4999)::int, ' ') AS body
                     FROM generate_series(1, 80 + n % 40)) b;
 
+-- Rank every published note the way feedrank.Assign does at its defaults
+-- (FEED_BURST_STEP 2h, FEED_BURST_WINDOW 24h), as window functions — the same
+-- backfill as migration 017. The recommended feed skips unranked notes.
+UPDATE notes n
+SET feed_rank = r.published_at - 7200 * (r.rn - 1 - r.before_window), first_published_at = r.published_at
+FROM (
+  SELECT id, published_at,
+         row_number() OVER (PARTITION BY author_id ORDER BY published_at, id) AS rn,
+         count(*) OVER (PARTITION BY author_id ORDER BY published_at
+                        RANGE BETWEEN UNBOUNDED PRECEDING AND 86401 PRECEDING) AS before_window
+  FROM notes
+  WHERE published_at IS NOT NULL
+) r
+WHERE n.id = r.id;
+
 -- Three tag draws per note, floor(500·U³) (duplicates within a note collapse):
 -- a steep head and a flat tail, not Zipf. t0 lands on 33K notes, t10 on 2.6K,
 -- t100 on ~600; the median tag has ~320 and the rarest ~180 (t499: ~200).

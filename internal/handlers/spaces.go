@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"commonplace/internal/feedrank"
 	"commonplace/internal/markdown"
 	"github.com/google/uuid"
 )
@@ -181,6 +182,10 @@ func (s *Server) PublishSpace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if err = feedrank.LockAuthor(r.Context(), tx, u.ID); err != nil {
+		http.Error(w, "無法發布", 500)
+		return
+	}
 	var raw []byte
 	var revision int64
 	err = tx.QueryRowContext(r.Context(), `SELECT document,revision FROM user_spaces WHERE user_id=$1 FOR UPDATE`, u.ID).Scan(&raw, &revision)
@@ -248,7 +253,7 @@ func (s *Server) PublishSpace(w http.ResponseWriter, r *http.Request) {
 					_, err = tx.ExecContext(r.Context(), `UPDATE notes SET draft_distribution=$2 WHERE id=$1`, id, b.Distribution)
 				}
 				if err == nil {
-					_, err = publishDocument(r.Context(), tx, id, u.ID, u.Handle)
+					_, err = publishDocument(r.Context(), tx, s.Feed, id, u.ID, u.Handle)
 				}
 			} else if b.Distribution != "" {
 				// Changing reach must never publish unfinished edits to this child.
@@ -277,6 +282,8 @@ func (s *Server) PublishSpace(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "無法發布", 500)
 		return
 	}
+	s.tagChips.expire()
+	s.tagClouds.expire()
 	deskJSON(w, 200, map[string]string{"url": "/" + u.Handle})
 }
 

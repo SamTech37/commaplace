@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"commonplace/internal/auth"
+	"commonplace/internal/config"
 	"commonplace/internal/db"
 	"commonplace/internal/markdown"
 )
@@ -35,6 +36,7 @@ func newTestServer(t *testing.T) *Server {
 	return &Server{
 		DB:   d,
 		Auth: &auth.Auth{DB: d, Secret: []byte("test")},
+		Feed: config.DefaultFeed(),
 	}
 }
 

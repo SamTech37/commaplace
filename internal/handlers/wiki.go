@@ -79,8 +79,8 @@ func (s *Server) suggestUsers(ctx context.Context, w http.ResponseWriter, prefix
 			return
 		}
 		insert := "@" + handle + "/"
-		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">@%s</span><span class="ac-secondary">user</span></li>`,
-			insert, htmlpkg.EscapeString(handle))
+		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"><span class="ac-primary">@%s</span><span class="ac-secondary">user</span></li>`,
+			htmlpkg.EscapeString(insert), htmlpkg.EscapeString(handle))
 	}
 }
 
@@ -127,8 +127,8 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 		}
 		insert := buildWikiInsert(sg, viewerHandle)
 		secondary := "@" + sg.Handle
-		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
-			insert, htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
+		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
+			htmlpkg.EscapeString(insert), htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
 	}
 }
 
@@ -250,8 +250,8 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 	for _, sg := range results {
 		insert := buildWikiInsert(sg, myHandle)
 		secondary := "@" + sg.Handle
-		fmt.Fprintf(w, `<li class="ac-item" data-insert=%q><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
-			insert, htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
+		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
+			htmlpkg.EscapeString(insert), htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
 	}
 }
 

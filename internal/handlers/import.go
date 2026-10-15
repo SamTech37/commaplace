@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"commonplace/internal/markdown"
 )
 
@@ -78,6 +80,10 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// One id per upload: the batch editor saves each note in its own
+	// /import/save-one request, so the id rides along in every item's form.
+	batch := uuid.New()
+
 	// Single file → preserve old behavior: save immediately, redirect to note.
 	if len(items) == 1 {
 		it := items[0]
@@ -86,7 +92,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		tags := parseTags(it.Tags)
-		if _, err := s.saveNote(r.Context(), u.ID, u.Handle, it.Slug, it.Title, it.Body, tags); err != nil {
+		if _, err := s.saveImportedNote(r.Context(), batch, u.ID, u.Handle, it.Slug, it.Title, it.Body, tags); err != nil {
 			msg := err.Error()
 			if isUniqueViolation(err) {
 				msg = "A note with this title already exists."
@@ -99,7 +105,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Multi-file → render batch editor.
-	s.renderPage(w, r, pageTitle("批次匯入"), "", nil, importBatchPage(items))
+	s.renderPage(w, r, pageTitle("批次匯入"), "", nil, importBatchPage(batch.String(), items))
 }
 
 // PostImportSaveOne saves a single pending note from the batch editor.
@@ -128,8 +134,11 @@ func (s *Server) PostImportSaveOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tags := parseTags(tagsInput)
+	// Client-supplied, so it only ever groups this author's own notes: the
+	// feed and the profile filter key batches by (author, batch id).
+	batch, _ := uuid.Parse(r.PostFormValue("batch"))
 
-	if _, err := s.saveNote(r.Context(), u.ID, u.Handle, slug, title, body, tags); err != nil {
+	if _, err := s.saveImportedNote(r.Context(), batch, u.ID, u.Handle, slug, title, body, tags); err != nil {
 		if isUniqueViolation(err) {
 			writeBatchError(w, "已有同名筆記")
 			return

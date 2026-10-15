@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"commonplace/internal/config"
+	"commonplace/internal/feedrank"
 )
 
 var nonSlugRE = regexp.MustCompile(`[^a-z0-9]+`)
@@ -26,6 +29,10 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 		return err
 	}
 
+	feedCfg, err := config.FeedFromEnv()
+	if err != nil {
+		return err
+	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -60,6 +67,9 @@ func ApplyDev(ctx context.Context, db *sql.DB, recompute func(ctx context.Contex
 			authorID, slug, strings.ToLower(slug), title, body, t,
 		).Scan(&nid)
 		if err != nil {
+			return uuid.UUID{}, err
+		}
+		if err := feedrank.Assign(ctx, tx, feedCfg, nid); err != nil {
 			return uuid.UUID{}, err
 		}
 		for _, tag := range tags {
