@@ -382,6 +382,51 @@ func TestSearchCrossScript(t *testing.T) {
 	}
 }
 
+// TestSearchHandleAndTextMatches: a query matches note text (FTS) or the
+// author's handle. A note matching both appears once; text matches rank above
+// handle-only ones (ts_rank order).
+func TestSearchHandleAndTextMatches(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	zq := mkUser(t, s, "zqfox")
+	bob := mkUser(t, s, "bob")
+	for _, n := range []struct {
+		author       uuid.UUID
+		handle, slug string
+		title, body  string
+	}{
+		{bob, "bob", "text-only", "Zq Text Only", "zqfox zqfox zqfox"},
+		{zq, "zqfox", "both", "Zq Both", "a single zqfox mention"},
+		{zq, "zqfox", "handle-only", "Zq Handle Only", "nothing relevant"},
+		{bob, "bob", "neither", "Zq Neither", "nothing relevant"},
+	} {
+		if _, err := s.saveNote(ctx, n.author, n.handle, n.slug, n.title, n.body, nil); err != nil {
+			t.Fatalf("saveNote %s: %v", n.slug, err)
+		}
+	}
+
+	w := httptest.NewRecorder()
+	s.GetSearch(w, httptest.NewRequest(http.MethodGet, "/search?q=zqfox", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("search: status %d", w.Code)
+	}
+	body := w.Body.String()
+	last := -1
+	for _, title := range []string{"Zq Text Only", "Zq Both", "Zq Handle Only"} {
+		if c := strings.Count(body, title); c != 1 {
+			t.Fatalf("%q appears %d times, want 1:\n%s", title, c, body)
+		}
+		i := strings.Index(body, title)
+		if i < last {
+			t.Fatalf("%q out of order:\n%s", title, body)
+		}
+		last = i
+	}
+	if strings.Contains(body, "Zq Neither") {
+		t.Fatalf("unmatched note in results:\n%s", body)
+	}
+}
+
 func TestSearchNoMatch(t *testing.T) {
 	s := newTestServer(t)
 	ctx := context.Background()
