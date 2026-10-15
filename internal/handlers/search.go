@@ -40,6 +40,11 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
+			// The handle match is an author_id array over notes alone, not
+			// "u.handle ILIKE $2": an OR spanning both tables kept Postgres off
+			// idx_notes_search_tsv (full scan); this way, for selective terms, it
+			// BitmapOrs that index with idx_notes_author_updated. A pattern that
+			// matches most handles (e.g. one letter) is still a linear scan.
 			rows, err := s.DB.QueryContext(r.Context(), `
 				SELECT n.id, n.title, n.slug, u.handle, n.updated_at,
 				       ts_headline('simple', n.body_md, query,
@@ -47,7 +52,9 @@ func (s *Server) GetSearch(w http.ResponseWriter, r *http.Request) {
 				FROM notes n
 				JOIN users u ON u.id = n.author_id
 				CROSS JOIN to_tsquery('simple', $1) query
-				WHERE (n.search_tsv @@ query OR u.handle ILIKE $2) AND `+readableNote+where+`
+				WHERE (n.search_tsv @@ query
+				       OR n.author_id = ANY(ARRAY(SELECT id FROM users WHERE handle ILIKE $2)))
+				  AND `+readableNote+where+`
 				ORDER BY ts_rank(n.search_tsv, query) DESC
 				LIMIT 50`, args...)
 			if err != nil {

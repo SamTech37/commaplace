@@ -344,5 +344,7 @@ func (s *Server) importVault(ctx context.Context, u *auth.User, batch uuid.UUID,
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
+	s.tagChips.expire()
+	s.tagClouds.expire()
 	return report, nil
 }

@@ -119,6 +119,12 @@ func (s *Server) GetDevLogin(w http.ResponseWriter, r *http.Request) {
 		`SELECT id FROM users WHERE handle = $1`, handle,
 	).Scan(&userID)
 	if err != nil {
+		// Only minting is gated: existing seed handles outside handleRE
+		// (seed.DemoHandle "shawn_demo") must stay loggable.
+		if !handleRE.MatchString(handle) {
+			s.renderError(w, r, http.StatusBadRequest, "用戶名只能用小寫英數字與連字號（2–30 字），不能以連字號開頭或結尾。")
+			return
+		}
 		err := s.DB.QueryRowContext(r.Context(),
 			`INSERT INTO users(handle, handle_ci, email, created_at) VALUES($1, $2, $3, $4) RETURNING id`,
 			handle, strings.ToLower(handle), handle+"@dev.local", nowUnix(),
