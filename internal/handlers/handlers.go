@@ -136,7 +136,12 @@ func (s *Server) Routes() http.Handler {
 	// Profile + note view + assets (last; catch-all for user routes).
 	mux.HandleFunc("GET /{path...}", s.GetCatchAll(static))
 
-	return gzipMiddleware(mux)
+	// DEBUG is never set on a deploy; locally every client is 127.0.0.1 and
+	// scripts/bench-load.sh (which needs DEBUG) runs far past these limits.
+	if s.Debug {
+		return gzipMiddleware(mux)
+	}
+	return gzipMiddleware(rateLimit(s.Auth, mux))
 }
 
 // cacheControl caches assets by how precisely the URL identifies its bytes.
