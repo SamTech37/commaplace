@@ -271,6 +271,10 @@ func (s *Server) buildResolverForNote(ctx context.Context, vaultHandle string, s
 	}
 }
 
+// maxEmbedDepth is how many levels of ![[embed]] a page expands: 2 means an
+// embed's own embeds render, theirs do not. Each level costs one query.
+const maxEmbedDepth = 2
+
 // buildEmbedResolver returns an EmbedResolver for body's ![[note]] targets,
 // rendered inline and capped at maxDepth levels of nesting. Beyond the cap the
 // inner Render gets a nil EmbedResolver, so further embeds render as "too

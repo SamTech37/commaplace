@@ -79,39 +79,78 @@ masonry card.
   that. Rendering the whole note and cutting the HTML would break footnotes,
   heading IDs and relative structure.
 
-## Behavior questions to settle from app.js
+## Behavior rules (from Obsidian 1.14.4 `app.js`, read 2026-10-15)
 
-Each answer becomes a prose rule plus at least one golden test:
+Source: `obsidian-1.14.4.asar.gz` from `obsidianmd/obsidian-releases`. Its
+SHA-256 matches `desktop-releases.json`. Rules are restated in prose; no code
+was copied.
 
-1. Where a heading section ends. Assumed: at the next heading of the same or
-   a higher level, or at the end of the note. Do nested callouts or code
-   fences change that?
-2. How a heading anchor matches its heading: case, whitespace, markdown
-   inside the heading, the nested-path form `#H1#H2`, and duplicate headings
-   (first match?).
-3. The block-ID grammar: allowed characters, where it may appear (paragraph,
-   list item, table, quote, the line after a code fence), and how it attaches
-   when it sits on its own line after a block.
-4. How a block embed works for a list item: does it take the item alone or
-   its sub-list too?
-5. What a missing section shows: Obsidian's fallback for an unknown heading
-   or `^id` in links, embeds and hover.
+1. **Subpath parsing.** The text after the first `#` is split on `#`, and
+   empty parts are dropped.
+   - One part starting with `^` is a block ref.
+   - One part of the form `[^x]` is a footnote ref (out of scope).
+   - Anything else is a heading path.
+2. **Heading match.** Both the heading text and the path part are normalized:
+   - Each of ``!"#$%&()*+,.:;<=>?@^`{|}~/[]\`` and CR/LF is replaced with
+     a space.
+   - Runs of whitespace collapse to one space, and the result is trimmed and
+     lowercased.
+
+   Headings are walked in document order. Path part *k* matches only a
+   heading deeper than the heading part *k-1* matched, so `#A#C` matches `C`
+   anywhere below `A`, not only as a direct child. The first full match wins.
+   [Inference] The heading text compared is the heading's source text, not
+   its rendered text.
+3. **Section extent.** A section runs from its heading to the next heading of
+   the same or a higher level (level ≤ the target's), or to end of file. The
+   heading line itself is included. Headings inside code fences are not
+   headings, because the cache is built from the parsed tree.
+4. **Block-ID grammar.** `^` followed by `[A-Za-z0-9-]+`. An ID is recognized
+   in two forms:
+   - **Inline:** at the very end of a block's text, preceded by whitespace.
+     A `^` that starts the text does not count.
+   - **Standalone:** a paragraph consisting only of `^id`, followed by end of
+     input or a blank line. It attaches to the *previous* sibling block and is
+     removed. Standalone as the first block, it is dropped.
+
+   Placement rules:
+   - **List items:** the ID found in an item (not counting its nested lists)
+     belongs to that item.
+   - **Other blocks** (quote, callout, table): an ID anywhere inside belongs
+     to the outer block, and the last one wins.
+   - **Lookup:** IDs are case-insensitive. A block ref is honored only as the
+     sole subpath part, so `#H#^id` is a failed heading lookup.
+5. **Block extent.** The block's own source range. For a list item, the range
+   extends over every following item nested under it, so the sub-list is
+   included.
+6. **Missing target.** An embed whose section or block can't be found
+   renders an h5 line, "unable to find section *subpath* in *file*". Links
+   with a missing subpath still open the note. Our copy is
+   `找不到段落 <code>#subpath</code>（<code>file</code>）`, in the existing
+   `embed-missing` style.
 
 ## Open questions
 
-- **N+1 queries.** `buildEmbedResolver` runs one query per embed per depth
-  level. Section embeds don't make that worse, but a note with many embeds
-  is already N+1. Batch it now or later?
-- **HTML id for block refs.** `^` is a legal `id` character in HTML5 but
-  awkward in CSS selectors. Use `id="^abc"` (Obsidian-style URLs) or
-  `id="block-abc"` (clean, but `#^abc` URLs then need JS)?
 - **Global hover cost.** Loading `linkpreview.js` on every page brings
   previews to the feed. Feed card excerpts don't render wiki links today, so
   confirm the global load is cheap and a no-op there.
-- **Getting app.js.** The asar is not in the container. Either the user
-  supplies it, or it is fetched from the `obsidianmd/obsidian-releases`
-  GitHub releases. Running REA against it needs the user's approval (the
-  `rea doctor` call was blocked by the permission classifier).
+- **Other N+1 queries.** `recomputeLinks` (on save) still runs two queries
+  per link. That's the write path and outside this spec.
+
+## Resolved during the build
+
+- **Embed N+1:** fixed. `buildEmbedResolver` now runs one query per nesting
+  level plus one for all the links inside embeds. Nested embeds now resolve
+  against their own vault (they used to use the outer note's).
+- **Nesting cap:** `maxEmbedDepth = 2` in `internal/handlers/links.go`.
+  Lower it to 1 there when traffic warrants.
+- **Block-ID HTML:** `id="^abc"`. Verified in Chromium 1194:
+  - Fragment navigation to `#^abc` scrolls and sets `:target` natively.
+  - `getElementById` works.
+  - A raw `querySelector('#^abc')` throws, so JS selectors must use
+    `CSS.escape`.
+
+  `id="block-abc"` would need JS to make `#^abc` URLs work.
 
 ## Out of scope for v0
 

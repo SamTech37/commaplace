@@ -115,7 +115,7 @@ func (s *Server) PostPreview(w http.ResponseWriter, r *http.Request) {
 	body := r.PostFormValue("body_md")
 	links := markdown.Extract(body)
 	resolver := s.buildResolver(r.Context(), u.Handle, links)
-	embed := s.buildEmbedResolver(r.Context(), u.Handle, body, 2)
+	embed := s.buildEmbedResolver(r.Context(), u.Handle, body, maxEmbedDepth)
 	html, err := markdown.Render(body, u.Handle, resolver, embed)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -259,7 +259,7 @@ func (s *Server) GetNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resolver := s.buildResolverForNote(r.Context(), handle, n.ID)
-	embed := s.buildEmbedResolver(r.Context(), handle, n.BodyMD, 2)
+	embed := s.buildEmbedResolver(r.Context(), handle, n.BodyMD, maxEmbedDepth)
 	bodyHTML, err := markdown.Render(n.BodyMD, handle, resolver, embed)
 	if err != nil {
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
