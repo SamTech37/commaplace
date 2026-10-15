@@ -63,8 +63,9 @@ type tagChipCache struct {
 	until time.Time
 }
 
-// expire forces the next read to refill, for writes that remove notes from
-// view; waiting out the TTL would leave chips pointing at empty pages.
+// expire forces the next read to refill, for writes that change which notes
+// are readable or how they're tagged; waiting out the TTL would leave chips
+// pointing at empty pages.
 func (c *tagChipCache) expire() {
 	c.mu.Lock()
 	c.until = time.Time{}

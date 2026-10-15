@@ -389,6 +389,8 @@ func (s *Server) saveNote(ctx context.Context, authorID uuid.UUID, authorHandle,
 	if err := tx.Commit(); err != nil {
 		return uuid.UUID{}, err
 	}
+	s.tagChips.expire()
+	s.tagClouds.expire()
 	return noteID, nil
 }
 
@@ -641,6 +643,8 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	s.tagChips.expire()
+	s.tagClouds.expire()
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	fmt.Fprintf(w, `{"url":%q,"revision":%d}`, noteURL(u.Handle, slug), revision)
 }
