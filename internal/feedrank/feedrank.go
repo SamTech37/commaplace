@@ -13,6 +13,19 @@ import (
 	"commonplace/internal/config"
 )
 
+// LockAuthor takes author's ranking lock for the rest of tx. Lock order: a
+// transaction that will call Assign calls this first, before it locks, inserts
+// or updates any notes row. Assign takes the same lock, so a caller that
+// locked rows first would wait on it while holding them, and a vault import
+// (which holds the lock while linking to the author's notes) waits on those
+// rows: a deadlock. Assign's own lock is then a re-entrant no-op; it is the
+// only lock where no other transaction can hold the rows (the seeds create the
+// author in the same tx) or none are held before it (AssignUnranked).
+func LockAuthor(ctx context.Context, tx *sql.Tx, author uuid.UUID) error {
+	_, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, author.String())
+	return err
+}
+
 // Assign sets feed_rank (and first_published_at, its time) on each of ids that
 // is published and not yet ranked:
 //
@@ -44,8 +57,8 @@ func Assign(ctx context.Context, tx *sql.Tx, cfg config.Feed, ids ...uuid.UUID) 
 	if len(ids) == 0 {
 		return nil
 	}
-	// Same key as vault import's per-author lock, so an import in progress
-	// and a publish by its author are ranked one after the other.
+	// LockAuthor's key, so an import in progress and a publish by its author
+	// are ranked one after the other.
 	if _, err := tx.ExecContext(ctx, `
 		SELECT pg_advisory_xact_lock(hashtextextended(a::text, 0))
 		FROM (SELECT DISTINCT author_id AS a FROM notes WHERE id = ANY($1) ORDER BY 1) s`, ids); err != nil {

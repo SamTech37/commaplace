@@ -70,6 +70,12 @@ func (s *Server) PostManageNotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if action == "publish" {
+		if err := feedrank.LockAuthor(r.Context(), tx, u.ID); err != nil {
+			http.Error(w, "操作失敗，請重試。", 500)
+			return
+		}
+	}
 	// Lock the concrete target set before validating and updating it, so a
 	// concurrent edit cannot invalidate the publish checks mid-operation.
 	rows, err := tx.QueryContext(r.Context(), `SELECT id, title, slug FROM notes WHERE `+where+` FOR UPDATE`, args...)

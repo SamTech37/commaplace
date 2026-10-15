@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"commonplace/internal/feedrank"
 	"commonplace/internal/markdown"
 	"github.com/google/uuid"
 )
@@ -181,6 +182,10 @@ func (s *Server) PublishSpace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if err = feedrank.LockAuthor(r.Context(), tx, u.ID); err != nil {
+		http.Error(w, "無法發布", 500)
+		return
+	}
 	var raw []byte
 	var revision int64
 	err = tx.QueryRowContext(r.Context(), `SELECT document,revision FROM user_spaces WHERE user_id=$1 FOR UPDATE`, u.ID).Scan(&raw, &revision)

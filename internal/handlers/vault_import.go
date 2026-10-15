@@ -214,7 +214,7 @@ func (s *Server) importVault(ctx context.Context, u *auth.User, batch uuid.UUID,
 	}
 	defer tx.Rollback()
 	// Serialize imports by author without blocking other authors' writes.
-	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, u.ID.String()); err != nil {
+	if err = feedrank.LockAuthor(ctx, tx, u.ID); err != nil {
 		return nil, err
 	}
 	var receipt []byte

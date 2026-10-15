@@ -366,6 +366,9 @@ func (s *Server) saveImportedNote(ctx context.Context, batch, authorID uuid.UUID
 		return uuid.UUID{}, err
 	}
 	defer tx.Rollback()
+	if err := feedrank.LockAuthor(ctx, tx, authorID); err != nil {
+		return uuid.UUID{}, err
+	}
 
 	now := nowUnix()
 	var noteID uuid.UUID
@@ -610,6 +613,10 @@ func (s *Server) PublishNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if err := feedrank.LockAuthor(r.Context(), tx, u.ID); err != nil {
+		http.Error(w, "無法發布", 500)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", 400)
 		return
