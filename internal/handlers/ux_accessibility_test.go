@@ -95,6 +95,35 @@ func TestSelectedReaderOptionKeepsInkOnHover(t *testing.T) {
 	}
 }
 
+// Hover rules that set opacity: 1 outrank button:disabled, so a disabled or
+// in-flight button under the pointer would stop looking disabled. Each must
+// exclude :disabled.
+func TestOpaqueHoverRulesSkipDisabled(t *testing.T) {
+	stylesheet, err := os.ReadFile("static/style.css")
+	if err != nil {
+		t.Fatalf("read stylesheet: %v", err)
+	}
+	css := string(stylesheet)
+	for _, selector := range []string{
+		".follow-btn.following:not(:disabled):hover {",
+		".action-btn.save-btn.saved:not(:disabled):hover {",
+		".editor-quiet-btn:not(:disabled):hover {",
+	} {
+		if !strings.Contains(css, selector) {
+			t.Errorf("stylesheet missing %s", selector)
+		}
+	}
+	for _, bare := range []string{
+		".follow-btn.following:hover",
+		".action-btn.save-btn.saved:hover",
+		".editor-quiet-btn:hover",
+	} {
+		if strings.Contains(css, bare) {
+			t.Errorf("%s would override button:disabled", bare)
+		}
+	}
+}
+
 func TestWritePageKeepsEditorActionsAndStatus(t *testing.T) {
 	var out strings.Builder
 	if err := writePage(WriteProps{NoteID: "note-id", Document: "Title\n\nBody"}).Render(context.Background(), &out); err != nil {

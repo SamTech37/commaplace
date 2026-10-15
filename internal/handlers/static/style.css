@@ -1690,7 +1690,7 @@ html[data-theme="dark"] .masonry-card:hover {
   color: var(--text-2);
   border-color: var(--border-2);
 }
-.follow-btn.following:hover {
+.follow-btn.following:not(:disabled):hover {
   border-color: var(--danger);
   color: var(--danger);
   opacity: 1;
@@ -2292,9 +2292,11 @@ html[data-theme="dark"] .link-preview-card {
   border-color: var(--text-2);
 }
 /* --text-2 fill is already mid-tone; the global button:hover fade drops it
-   below AA. */
-.action-btn.save-btn.saved:hover {
+   below AA, so the hover cue is the border instead. :not(:disabled) keeps the
+   in-flight dimming (.inline-form button:disabled) while the pointer is on it. */
+.action-btn.save-btn.saved:not(:disabled):hover {
   opacity: 1;
+  border-color: var(--text);
 }
 .action-btn.danger {
   color: var(--danger);
@@ -3975,8 +3977,8 @@ button:disabled {
   white-space: nowrap;
   cursor: pointer;
 }
-.editor-back-btn:hover,
-.editor-quiet-btn:hover {
+.editor-back-btn:not(:disabled):hover,
+.editor-quiet-btn:not(:disabled):hover {
   color: var(--text);
   background: var(--bg-3);
   text-decoration: none;
