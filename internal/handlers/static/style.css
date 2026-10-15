@@ -92,7 +92,7 @@ html[data-theme="dark"] {
   --bg-3: #323232;
   --text: #efe6cc;
   --text-2: #a89e8e;
-  --text-3: #968a72; /* ~5.1:1 on dark --bg */
+  --text-3: #988c74; /* ~5.2:1 on dark --bg, ~4.6:1 on --bg-2 (cards, menus) */
   --text-4: #5a5040;
   --border: #2c2822;
   --border-2: #3a342c;
@@ -748,6 +748,9 @@ img {
 .wikilink-cross .arrow {
   margin-right: 2px;
   opacity: 0.7;
+}
+.wikilink-cross:hover .arrow {
+  opacity: 1;
 }
 
 /* Collapsed local ego-graph under connected-notes mini-cards. */
@@ -1684,6 +1687,7 @@ html[data-theme="dark"] .masonry-card:hover {
 .follow-btn.following:hover {
   border-color: var(--danger);
   color: var(--danger);
+  opacity: 1;
 }
 .profile-follow {
   margin-bottom: 1.25em;
@@ -2281,6 +2285,11 @@ html[data-theme="dark"] .link-preview-card {
   background: var(--text-2);
   border-color: var(--text-2);
 }
+/* --text-2 fill is already mid-tone; the global button:hover fade drops it
+   below AA. */
+.action-btn.save-btn.saved:hover {
+  opacity: 1;
+}
 .action-btn.danger {
   color: var(--danger);
 }
@@ -2361,7 +2370,10 @@ html[data-theme="dark"] .action-menu-list {
 .reader-opt + .reader-opt {
   border-left: 1px solid var(--border-2);
 }
-.reader-opt[aria-pressed="true"] {
+/* :hover too — inside .action-menu-list, `button:hover` (0,2,1) would
+   otherwise repaint the selected option light under its --paper text. */
+.reader-opt[aria-pressed="true"],
+.reader-opt[aria-pressed="true"]:hover {
   background: var(--ink);
   color: var(--paper);
 }
@@ -2616,6 +2628,7 @@ html[data-theme="dark"] .action-menu-list {
 .action-menu-list a:hover,
 .action-menu-list button:hover {
   background: var(--bg-2);
+  opacity: 1;
 }
 .action-menu-sep {
   border-top: 1px solid var(--border);
@@ -3961,6 +3974,7 @@ button:disabled {
   color: var(--text);
   background: var(--bg-3);
   text-decoration: none;
+  opacity: 1;
 }
 .editor-document-state {
   padding: 0.28rem 0.55rem;
