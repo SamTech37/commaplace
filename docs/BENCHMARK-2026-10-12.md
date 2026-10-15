@@ -112,7 +112,7 @@ every released connection beyond two, so each burst re-dials Postgres (TCP,
 SCRAM auth, a new backend process) — 1,528 new sessions for 3,000 requests,
 with CPU at 90%.
 
-**Experiment, not in this PR:** the same binary plus one line,
+**Experiment (since shipped in #32):** the same binary plus one line,
 `d.SetMaxIdleConns(25)`:
 
 | Load | p50 | p99 | New PG sessions | CPU |
@@ -151,7 +151,7 @@ the problem; no write queue needed at this scale.
    (default 2), so bursts reconnect to Postgres. Setting it to the open cap
    took cheap pages at 200/s from p50 147 ms to 7 ms, and mixed 40/s from a
    baseline p50 of 30–127 ms (unstable, see §2) to a steady 17–18 ms.
-   One line in `internal/db/db.go`.
+   One line in `internal/db/db.go` — shipped in #32.
 3. Three reads are O(table), and each saturates the box alone below 20 req/s:
    - `/feed` recommended (the front door): the per-author cap ranks all 84,607
      public notes on every load. Untested direction: rank only the newest
