@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"commonplace/internal/auth"
+	"commonplace/internal/feedrank"
 	"commonplace/internal/markdown"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
@@ -270,7 +271,7 @@ func (s *Server) importVault(ctx context.Context, u *auth.User, batch uuid.UUID,
 			return nil, err
 		}
 		body := rewriteVaultLinks(string(raw), n, index)
-		if _, err = tx.ExecContext(ctx, `INSERT INTO notes(id,author_id,slug,slug_ci,title,body_md,created_at,updated_at,published_at) VALUES($1,$2,$3,$3,$4,$5,$6,$6,$6)`, n.ID, u.ID, n.Slug, n.Title, body, now); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO notes(id,author_id,slug,slug_ci,title,body_md,created_at,updated_at,published_at,import_batch_id) VALUES($1,$2,$3,$3,$4,$5,$6,$6,$6,$7)`, n.ID, u.ID, n.Slug, n.Title, body, now, batch); err != nil {
 			return nil, err
 		}
 		for _, tag := range n.tags {
@@ -308,6 +309,9 @@ func (s *Server) importVault(ctx context.Context, u *auth.User, batch uuid.UUID,
 	ids := make([]uuid.UUID, len(notes))
 	for i, n := range notes {
 		ids[i] = n.ID
+	}
+	if err = feedrank.Assign(ctx, tx, s.Feed, ids...); err != nil {
+		return nil, err
 	}
 	byID := map[uuid.UUID]*vaultNote{}
 	for _, n := range notes {

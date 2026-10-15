@@ -139,6 +139,7 @@ type Server struct {
 	AdminEmail  string            // must match too, since a handle can be renamed into by anyone
 	OAuthCfg    *auth.OAuthConfig // nil means Google OAuth is disabled
 	BaseURL     string            // e.g. "http://localhost:8080"; for absolute OG/canonical URLs
+	Feed        config.Feed       // recommended-feed ranking parameters (config.FeedFromEnv)
 	tagChips    tagChipCache      // memoized top-tag chips; see tagChipCache
 	tagClouds   relatedTagCache   // memoized /tag/{tag} related-tag clouds; see relatedTagCache
 }

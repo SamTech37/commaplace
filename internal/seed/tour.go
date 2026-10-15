@@ -14,9 +14,11 @@ import (
 	"github.com/google/uuid"
 
 	"commonplace/internal/config"
+	"commonplace/internal/feedrank"
 )
 
 var TourHandle = config.DefaultEmail(config.DefaultSite().Title).TourHandle
+
 const MakerHandle = "maker"
 const DemoHandle = "shawn_demo"
 
@@ -52,6 +54,10 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 		return err
 	}
 
+	feedCfg, err := config.FeedFromEnv()
+	if err != nil {
+		return err
+	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -74,6 +80,9 @@ func ApplyDemo(ctx context.Context, db *sql.DB, recompute func(ctx context.Conte
 			VALUES($1, $2, $3, $4, $5, $6, $6, $6) RETURNING id`,
 			authorID, n.Slug, strings.ToLower(n.Slug), n.Title, n.Body, now,
 		).Scan(&nid); err != nil {
+			return err
+		}
+		if err := feedrank.Assign(ctx, tx, feedCfg, nid); err != nil {
 			return err
 		}
 		for _, t := range n.Tags {
@@ -263,6 +272,10 @@ func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, 
 		return err
 	}
 
+	feedCfg, err := config.FeedFromEnv()
+	if err != nil {
+		return err
+	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -293,6 +306,9 @@ func Apply(ctx context.Context, db *sql.DB, recompute func(ctx context.Context, 
 			VALUES($1, $2, $3, $4, $5, $6, $6, $6) RETURNING id`,
 			authorID, n.Slug, strings.ToLower(n.Slug), n.Title, n.Body, now,
 		).Scan(&nid); err != nil {
+			return err
+		}
+		if err := feedrank.Assign(ctx, tx, feedCfg, nid); err != nil {
 			return err
 		}
 		for _, t := range n.Tags {

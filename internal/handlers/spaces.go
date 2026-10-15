@@ -248,7 +248,7 @@ func (s *Server) PublishSpace(w http.ResponseWriter, r *http.Request) {
 					_, err = tx.ExecContext(r.Context(), `UPDATE notes SET draft_distribution=$2 WHERE id=$1`, id, b.Distribution)
 				}
 				if err == nil {
-					_, err = publishDocument(r.Context(), tx, id, u.ID, u.Handle)
+					_, err = publishDocument(r.Context(), tx, s.Feed, id, u.ID, u.Handle)
 				}
 			} else if b.Distribution != "" {
 				// Changing reach must never publish unfinished edits to this child.

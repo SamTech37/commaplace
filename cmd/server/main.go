@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"commonplace/internal/auth"
+	appconfig "commonplace/internal/config"
 	"commonplace/internal/db"
 	"commonplace/internal/handlers"
 	"commonplace/internal/seed"
@@ -23,6 +24,10 @@ import (
 func main() {
 	loadDotEnv(".env", ".env.local")
 	cfg := loadConfig()
+	feedCfg, err := appconfig.FeedFromEnv()
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
 
 	d, err := db.Open(cfg.DatabaseURL)
 	if err != nil {
@@ -76,6 +81,7 @@ func main() {
 		AdminEmail:  cfg.AdminEmail,
 		OAuthCfg:    cfg.googleOAuthConfig(),
 		BaseURL:     cfg.BaseURL,
+		Feed:        feedCfg,
 	}
 
 	log.Printf("commonplace listening on %s (db=postgres, mailer=%s)",
@@ -181,15 +187,15 @@ func (c config) googleOAuthConfig() *auth.OAuthConfig {
 
 func loadConfig() config {
 	c := config{
-		Addr:          envOr("ADDR", ":8080"),
-		DatabaseURL:   envOr("DATABASE_URL", "postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable"),
-		SessionSecret: os.Getenv("SESSION_SECRET"),
-		BaseURL:       envOr("BASE_URL", ""),
-		SMTPHost:      os.Getenv("SMTP_HOST"),
-		SMTPPort:      envOr("SMTP_PORT", "587"),
-		SMTPUser:      os.Getenv("SMTP_USER"),
-		SMTPPass:      os.Getenv("SMTP_PASS"),
-		SMTPFrom:      envOr("SMTP_FROM", "Comma, <noreply@example.com>"),
+		Addr:               envOr("ADDR", ":8080"),
+		DatabaseURL:        envOr("DATABASE_URL", "postgres://commaplace:commaplace@localhost:5432/commaplace?sslmode=disable"),
+		SessionSecret:      os.Getenv("SESSION_SECRET"),
+		BaseURL:            envOr("BASE_URL", ""),
+		SMTPHost:           os.Getenv("SMTP_HOST"),
+		SMTPPort:           envOr("SMTP_PORT", "587"),
+		SMTPUser:           os.Getenv("SMTP_USER"),
+		SMTPPass:           os.Getenv("SMTP_PASS"),
+		SMTPFrom:           envOr("SMTP_FROM", "Comma, <noreply@example.com>"),
 		AdminHandle:        strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_HANDLE"))),
 		AdminEmail:         strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))),
 		Debug:              os.Getenv("DEBUG") == "1",

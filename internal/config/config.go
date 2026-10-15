@@ -1,7 +1,12 @@
 // Package config centralizes application configuration and constants.
 package config
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"time"
+)
 
 // Site contains core site metadata.
 type Site struct {
@@ -32,6 +37,15 @@ type Pagination struct {
 	SearchLimit       int
 }
 
+// Feed tunes the recommended feed's ranking (see internal/feedrank). The
+// defaults are starting guesses, to be tuned from real usage; each can be
+// overridden by the env var named beside it.
+type Feed struct {
+	BatchMin    int           // FEED_BATCH_MIN: smallest import shown as one batch card
+	BurstStep   time.Duration // FEED_BURST_STEP: push-back per earlier note in a posting burst
+	BurstWindow time.Duration // FEED_BURST_WINDOW: how far back a burst counts an author's notes
+}
+
 // Auth contains authentication-related configuration.
 type Auth struct {
 	TokenTTL      time.Duration
@@ -46,10 +60,10 @@ type Database struct {
 
 // Email contains email-related configuration.
 type Email struct {
-	SignInIntro  string // email body intro
-	SignInSubj   string // email subject
-	ReportSubj   string
-	TourHandle   string
+	SignInIntro string // email body intro
+	SignInSubj  string // email subject
+	ReportSubj  string
+	TourHandle  string
 }
 
 // DefaultSite returns default site configuration.
@@ -64,9 +78,9 @@ func DefaultSite() Site {
 // DefaultNav returns the canonical display names. Rename here, not in templates.
 func DefaultNav() Nav {
 	return Nav{
-		Write:    "書寫",
-		Feed:     "閱覽",
-		Graph:    "圖譜",
+		Write:  "書寫",
+		Feed:   "閱覽",
+		Graph:  "圖譜",
 		Login:  "登入",
 		Logout: "登出",
 	}
@@ -83,6 +97,40 @@ func DefaultPagination() Pagination {
 		AdminLimit:        200,
 		SearchLimit:       50,
 	}
+}
+
+// DefaultFeed returns the feed-ranking defaults — starting guesses, not
+// measurements; tune them from real usage.
+func DefaultFeed() Feed {
+	return Feed{
+		BatchMin:    3,
+		BurstStep:   2 * time.Hour,
+		BurstWindow: 24 * time.Hour,
+	}
+}
+
+// FeedFromEnv returns DefaultFeed with any FEED_* env vars applied. Durations
+// use Go syntax ("90m", "2h"). A malformed or negative value is an error, not
+// a silent fallback, so a typo in a deploy's env cannot quietly retune the feed.
+func FeedFromEnv() (Feed, error) {
+	f := DefaultFeed()
+	if v := os.Getenv("FEED_BATCH_MIN"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			return f, fmt.Errorf("FEED_BATCH_MIN=%q: want an integer >= 1", v)
+		}
+		f.BatchMin = n
+	}
+	for key, dst := range map[string]*time.Duration{"FEED_BURST_STEP": &f.BurstStep, "FEED_BURST_WINDOW": &f.BurstWindow} {
+		if v := os.Getenv(key); v != "" {
+			d, err := time.ParseDuration(v)
+			if err != nil || d < 0 {
+				return f, fmt.Errorf("%s=%q: want a non-negative duration such as 2h", key, v)
+			}
+			*dst = d
+		}
+	}
+	return f, nil
 }
 
 // DefaultAuth returns default auth configuration.

@@ -3,6 +3,7 @@ package config_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"commonplace/internal/config"
 )
@@ -64,5 +65,32 @@ func TestDefaultEmail(t *testing.T) {
 	}
 	if e.TourHandle == "" {
 		t.Error("TourHandle empty")
+	}
+}
+
+func TestFeedFromEnv(t *testing.T) {
+	f, err := config.FeedFromEnv()
+	if err != nil || f != config.DefaultFeed() {
+		t.Fatalf("no env: got %+v, %v; want defaults", f, err)
+	}
+	if d := config.DefaultFeed(); d.BatchMin != 3 || d.BurstStep != 2*time.Hour || d.BurstWindow != 24*time.Hour {
+		t.Fatalf("defaults changed: %+v", d)
+	}
+
+	t.Setenv("FEED_BATCH_MIN", "5")
+	t.Setenv("FEED_BURST_STEP", "90m")
+	t.Setenv("FEED_BURST_WINDOW", "12h")
+	f, err = config.FeedFromEnv()
+	if err != nil || f != (config.Feed{BatchMin: 5, BurstStep: 90 * time.Minute, BurstWindow: 12 * time.Hour}) {
+		t.Fatalf("env overrides: got %+v, %v", f, err)
+	}
+
+	for key, bad := range map[string]string{"FEED_BATCH_MIN": "0", "FEED_BURST_STEP": "2", "FEED_BURST_WINDOW": "-1h"} {
+		t.Run(key, func(t *testing.T) {
+			t.Setenv(key, bad)
+			if _, err := config.FeedFromEnv(); err == nil {
+				t.Fatalf("%s=%s accepted", key, bad)
+			}
+		})
 	}
 }

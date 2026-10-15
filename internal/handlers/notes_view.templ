@@ -5,6 +5,8 @@ import (
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // NoteListView is the shared view-model for every note-listing surface
@@ -24,9 +26,12 @@ type NoteListView struct {
 // handler changes. Two are registered: "masonry" (feed, hover-preview — the
 // only surface that was ever masonry before this substrate existed) and
 // "list" (tag/search/saved/profile — plain rows, same as before).
+// "batch" is per card, not per view: renderCards uses it for any card that is
+// an import batch (feedCard.BatchID), whatever the view's layout.
 var cardRenderers = map[string]func(feedCard) templ.Component{
 	"masonry": masonryCard,
 	"list":    listCard,
+	"batch":   batchCard,
 }
 
 // renderCards renders every card in view.Cards through view.Layout's
@@ -44,6 +49,13 @@ func renderCards(view NoteListView) templ.Component {
 	}
 	if view.Manage {
 		render = managedNoteCard
+	}
+	layoutRender := render
+	render = func(c feedCard) templ.Component {
+		if c.BatchID != uuid.Nil {
+			return cardRenderers["batch"](c)
+		}
+		return layoutRender(c)
 	}
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		if !view.GroupByDate {
@@ -244,6 +256,27 @@ templ masonryCardLink(c feedCard) {
 			if c.CrossCount > 0 {
 				<span class="meta-cross">↝ { strconv.Itoa(c.CrossCount) }</span>
 			}
+		</div>
+	</a>
+}
+
+// batchCard is one import batch on the recommended feed: "@alice 匯入了 N 篇
+// 筆記", a few titles, and a link to the batch on her profile.
+templ batchCard(c feedCard) {
+	<a class="masonry-card variant-batch" href={ templ.URL(c.URL) } data-reveal>
+		<div class="card-title">{ "@" + c.AuthorHandle + " 匯入了 " + strconv.Itoa(c.BatchCount) + " 篇筆記" }</div>
+		<ul class="card-list">
+			for _, title := range c.ListItems {
+				<li>{ title }</li>
+			}
+		</ul>
+		if c.BatchCount > len(c.ListItems) {
+			<div class="card-excerpt">{ "還有 " + strconv.Itoa(c.BatchCount-len(c.ListItems)) + " 篇" }</div>
+		}
+		<div class="card-meta">
+			<span class="meta-handle">{ "@" + c.AuthorHandle }</span>
+			<span class="meta-spacer"></span>
+			<span>{ c.UpdatedRel }</span>
 		</div>
 	</a>
 }

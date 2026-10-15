@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+
+	"commonplace/internal/feedrank"
 )
 
 // PostManageNotes applies one atomic operation to owned, non-moderated notes.
@@ -109,6 +111,16 @@ func (s *Server) PostManageNotes(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "操作失敗，請重試。", 500)
 		return
+	}
+	if action == "publish" {
+		published := make([]uuid.UUID, len(targets))
+		for i, id := range targets {
+			published[i] = uuid.MustParse(id)
+		}
+		if err := feedrank.Assign(r.Context(), tx, s.Feed, published...); err != nil {
+			http.Error(w, "操作失敗，請重試。", 500)
+			return
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		http.Error(w, "操作失敗，請重試。", 500)

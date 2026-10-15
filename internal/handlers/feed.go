@@ -40,6 +40,9 @@ type feedCard struct {
 	ImageURL     string          // first body image, shown as masonry thumbnail
 	IsDraft      bool            // unpublished note; displayed as hidden/draft to its owner
 	SnippetHTML  templ.Component // search's ts_headline <mark> highlight; overrides Excerpt when set
+	FeedRank     int64           // recommended feed only: the card's keyset rank (internal/feedrank)
+	BatchID      uuid.UUID       // non-nil: an import-batch card (recommended feed); ListItems holds sample titles
+	BatchCount   int             // batch card: the batch's visible note count
 }
 
 type tagChip struct {
@@ -55,7 +58,6 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		tab = "recommended"
 	}
 	tagFilter := normalizeTag(q.Get("tag"))
-	cursor := parseFeedCursor(q.Get("older"), q.Get("older_id"))
 
 	viewer, _ := s.Auth.CurrentUser(r)
 
@@ -67,9 +69,11 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 		if viewer == nil {
 			cards = nil
 		} else {
+			cursor := parseFeedCursor(q.Get("older"), q.Get("older_id"))
 			cards, err = s.queryFollowingCards(r.Context(), viewer.ID, tagFilter, cursor, pageCfg.FeedPageSize)
 		}
 	} else {
+		cursor := parseRankCursor(q.Get("older"), q.Get("older_id"))
 		cards, err = s.queryRecommendedCards(r.Context(), tagFilter, cursor, pageCfg.FeedPageSize)
 	}
 	if err != nil {
@@ -78,17 +82,22 @@ func (s *Server) GetFeed(w http.ResponseWriter, r *http.Request) {
 	}
 	attachTagsToCards(r.Context(), s.DB, cards)
 
-	// Cursor: the last card's (updated_at, id). The id half is what makes a
-	// batch of notes sharing one timestamp paginable at all — see feedCursor.
-	// A full page is no longer the test for "there is more": maxPerAuthor can
-	// leave a page short while notes remain, so ask again whenever anything
-	// came back and let the next request return nothing.
+	// Cursor: the last card's key — (updated_at, id) on following, (feed_rank,
+	// note or batch id) on recommended. The id half is what makes notes
+	// sharing one timestamp paginable at all — see feedCursor. Ask again
+	// whenever anything came back and let the next request return nothing.
 	var olderURL string
 	if len(cards) > 0 {
 		last := cards[len(cards)-1]
 		v := r.URL.Query()
-		v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
-		v.Set("older_id", last.NoteID.String())
+		if tab == "following" {
+			v.Set("older", strconv.FormatInt(last.UpdatedAt, 10))
+			v.Set("older_id", last.NoteID.String())
+		} else {
+			c := last.rankCursor()
+			v.Set("older", strconv.FormatInt(c.Rank, 10))
+			v.Set("older_id", c.ID.String())
+		}
 		olderURL = "/feed?" + v.Encode()
 	}
 
@@ -127,14 +136,9 @@ func feedEmpty(tagFilter string) templ.Component {
 	return feedEmptyNoTag()
 }
 
-// maxPerAuthorPerPage caps how much of one page a single author may occupy.
-// Without it the recommended feed is pure recency, so the first person to
-// import a large vault owns every page of it — and because import publishes
-// immediately, that is the first such person, not the thousandth.
-const maxPerAuthorPerPage = 3
-
-// feedCursor is the recommended feed's pagination key. updated_at alone is not
-// enough: a bulk import writes one timestamp across every note it creates, and
+// feedCursor is the (updated_at, id) pagination key of the following feed and
+// the other updated_at-ordered lists. updated_at alone is not enough: a bulk
+// import writes one timestamp across every note it creates, and
 // "updated_at < last" then steps over every sibling sharing that second — those
 // notes become unreachable by scrolling rather than merely late. The note id
 // breaks the tie, and the same (updated_at, id) pair orders the rows.
@@ -152,41 +156,191 @@ func parseFeedCursor(older, olderID string) feedCursor {
 
 func (c feedCursor) set() bool { return c.UpdatedAt > 0 && c.NoteID != uuid.Nil }
 
-func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cursor feedCursor, limit int) ([]feedCard, error) {
-	// The CTE holds the filters and the per-author ranking; the outer query
-	// only adds the columns. Written this way the filters exist once, and
-	// noteCardColumns needs no aliasing to survive a subquery.
-	args := []any{}
-	q := strings.Builder{}
-	q.WriteString(`
-		WITH ranked AS (
-		  SELECT n.id,
-		         ROW_NUMBER() OVER (PARTITION BY n.author_id
-		                            ORDER BY n.updated_at DESC, n.id DESC) AS rn
-		  FROM notes n
-		  WHERE ` + recommendableNote)
+// rankCursor is the recommended feed's pagination key: (feed_rank, id), where
+// id is a note's id or, for a batch card, the batch id. feed_rank never
+// changes after publish (internal/feedrank), so the key is stable.
+type rankCursor struct {
+	Rank int64
+	ID   uuid.UUID
+}
+
+func parseRankCursor(older, olderID string) rankCursor {
+	var c rankCursor
+	c.Rank, _ = strconv.ParseInt(older, 10, 64)
+	c.ID, _ = uuid.Parse(olderID)
+	return c
+}
+
+func (c rankCursor) set() bool { return c.ID != uuid.Nil }
+
+func (c feedCard) rankCursor() rankCursor {
+	if c.BatchID != uuid.Nil {
+		return rankCursor{c.FeedRank, c.BatchID}
+	}
+	return rankCursor{c.FeedRank, c.NoteID}
+}
+
+// batchCardTitles is how many of a batch's note titles its card previews.
+const batchCardTitles = 3
+
+// queryRecommendedCards pages the recommended feed: public notes and import
+// batch cards, by (feed_rank, id) descending — a plain keyset, so nothing is
+// dropped or repeated, and notes published mid-scroll rank above the cursor.
+// An import of at least Feed.BatchMin notes is one card at the batch's shared
+// feed_rank, and its notes are not listed on their own; a smaller import is
+// just its notes. The size test counts every note the import created, so
+// hiding some later does not break the card back into notes; the card's N
+// counts only the visible ones, and it disappears when none are left. Each
+// arm is LIMITed before the merge, so the note arm reads only its top of
+// idx_notes_feed_rank.
+func (s *Server) queryRecommendedCards(ctx context.Context, tagFilter string, cursor rankCursor, limit int) ([]feedCard, error) {
+	args := []any{s.Feed.BatchMin, limit}
+	noteFilter, batchTagged, batchFilter := "", "0", ""
 	if tagFilter != "" {
 		args = append(args, tagFilter)
-		fmt.Fprintf(&q, ` AND EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
+		hasTag := fmt.Sprintf(`EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id AND nt.tag = $%d)`, len(args))
+		noteFilter += ` AND ` + hasTag
+		batchTagged = `COUNT(*) FILTER (WHERE ` + recommendableNote + ` AND ` + hasTag + `)`
+		batchFilter += ` AND b.tagged > 0`
 	}
 	if cursor.set() {
-		args = append(args, cursor.UpdatedAt, cursor.NoteID)
-		fmt.Fprintf(&q, ` AND (n.updated_at, n.id) < ($%d, $%d)`, len(args)-1, len(args))
+		args = append(args, cursor.Rank, cursor.ID)
+		noteFilter += fmt.Sprintf(` AND (n.feed_rank, n.id) < ($%d, $%d)`, len(args)-1, len(args))
+		batchFilter += fmt.Sprintf(` AND (b.rank, b.id) < ($%d, $%d)`, len(args)-1, len(args))
 	}
-	args = append(args, maxPerAuthorPerPage)
-	fmt.Fprintf(&q, `
+	q := fmt.Sprintf(`
+		WITH batches AS (
+		  SELECT n.author_id, n.import_batch_id AS id, MAX(n.feed_rank) AS rank,
+		         COUNT(*) FILTER (WHERE %[2]s) AS notes,
+		         MIN(n.published_at) FILTER (WHERE %[2]s) AS published_at, %[1]s AS tagged
+		  FROM notes n
+		  WHERE n.import_batch_id IS NOT NULL
+		  GROUP BY n.author_id, n.import_batch_id
+		  HAVING COUNT(*) >= $1 AND COUNT(*) FILTER (WHERE %[2]s) > 0
 		)
-		SELECT %s
-		FROM notes n
-		JOIN users u ON u.id = n.author_id
-		JOIN ranked r ON r.id = n.id AND r.rn <= $%d`, noteCardColumns, len(args))
-	args = append(args, limit)
-	fmt.Fprintf(&q, ` ORDER BY n.updated_at DESC, n.id DESC LIMIT $%d`, len(args))
-	rows, err := s.DB.QueryContext(ctx, q.String(), args...)
+		SELECT i.rank, i.id, i.notes, i.published_at, i.author_id, COALESCE(u.handle, '')
+		FROM (
+		  (SELECT n.feed_rank AS rank, n.id, 0 AS notes, 0 AS published_at, NULL::uuid AS author_id
+		   FROM notes n
+		   WHERE %[2]s%[3]s
+		     AND (n.import_batch_id IS NULL OR NOT EXISTS (
+		       SELECT 1 FROM batches b WHERE b.author_id = n.author_id AND b.id = n.import_batch_id))
+		   ORDER BY n.feed_rank DESC, n.id DESC LIMIT $2)
+		  UNION ALL
+		  (SELECT b.rank, b.id, b.notes, b.published_at, b.author_id
+		   FROM batches b
+		   WHERE TRUE%[4]s
+		   ORDER BY b.rank DESC, b.id DESC LIMIT $2)
+		) i
+		LEFT JOIN users u ON u.id = i.author_id
+		ORDER BY i.rank DESC, i.id DESC LIMIT $2`,
+		batchTagged, recommendableNote, noteFilter, batchFilter)
+	rows, err := s.DB.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}
-	return scanCards(rows)
+	var (
+		cards        []feedCard
+		cardAuthors  []uuid.UUID // batch cards' author ids, aligned with cards
+		noteIDs      []uuid.UUID
+		batchAuthors []uuid.UUID
+		batchIDs     []uuid.UUID
+	)
+	for rows.Next() {
+		var (
+			c         feedCard
+			id        uuid.UUID
+			published int64
+			author    uuid.NullUUID
+		)
+		if err := rows.Scan(&c.FeedRank, &id, &c.BatchCount, &published, &author, &c.AuthorHandle); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if author.Valid {
+			c.BatchID = id
+			c.URL = "/" + c.AuthorHandle + "?batch=" + id.String()
+			c.UpdatedAt, c.UpdatedRel = published, relativeTime(published)
+			batchAuthors = append(batchAuthors, author.UUID)
+			batchIDs = append(batchIDs, id)
+		} else {
+			c.NoteID = id
+			noteIDs = append(noteIDs, id)
+		}
+		cards = append(cards, c)
+		cardAuthors = append(cardAuthors, author.UUID)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(noteIDs) > 0 {
+		rows, err := s.DB.QueryContext(ctx, `SELECT `+noteCardColumns+`
+			FROM notes n JOIN users u ON u.id = n.author_id
+			WHERE n.id = ANY($1)`, noteIDs)
+		if err != nil {
+			return nil, err
+		}
+		full, err := scanCards(rows)
+		if err != nil {
+			return nil, err
+		}
+		byID := make(map[uuid.UUID]feedCard, len(full))
+		for _, c := range full {
+			byID[c.NoteID] = c
+		}
+		for i, c := range cards {
+			if c.BatchID == uuid.Nil {
+				f := byID[c.NoteID] // zero if deleted since the first query; dropped below
+				f.FeedRank = c.FeedRank
+				cards[i] = f
+			}
+		}
+	}
+
+	if len(batchIDs) > 0 {
+		rows, err := s.DB.QueryContext(ctx, `
+			SELECT t.author_id, t.import_batch_id, t.title FROM (
+			  SELECT n.author_id, n.import_batch_id, n.title,
+			         row_number() OVER (PARTITION BY n.author_id, n.import_batch_id
+			                            ORDER BY n.published_at, n.slug) AS rn
+			  FROM notes n
+			  WHERE `+recommendableNote+`
+			    AND (n.author_id, n.import_batch_id) IN (SELECT * FROM unnest($1::uuid[], $2::uuid[]))
+			) t
+			WHERE t.rn <= $3
+			ORDER BY t.rn`, batchAuthors, batchIDs, batchCardTitles)
+		if err != nil {
+			return nil, err
+		}
+		titles := map[[2]uuid.UUID][]string{}
+		for rows.Next() {
+			var key [2]uuid.UUID
+			var title string
+			if err := rows.Scan(&key[0], &key[1], &title); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			titles[key] = append(titles[key], title)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		for i := range cards {
+			if cards[i].BatchID != uuid.Nil {
+				cards[i].ListItems = titles[[2]uuid.UUID{cardAuthors[i], cards[i].BatchID}]
+			}
+		}
+	}
+	out := cards[:0]
+	for _, c := range cards {
+		if c.NoteID != uuid.Nil || c.BatchID != uuid.Nil {
+			out = append(out, c)
+		}
+	}
+	return out, nil
 }
 
 func (s *Server) queryFollowingCards(ctx context.Context, viewerID uuid.UUID, tagFilter string, older feedCursor, limit int) ([]feedCard, error) {
