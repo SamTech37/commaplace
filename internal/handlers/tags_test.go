@@ -111,3 +111,20 @@ func TestGetTagSuggestMarksExact(t *testing.T) {
 		}
 	}
 }
+
+func TestGetTagSuggestEscapesDataInsert(t *testing.T) {
+	s := newTestServer(t)
+	id := mkUser(t, s, "alice")
+	if _, err := s.saveNote(context.Background(), id, "alice", "n1", "N1", "body", []string{hostile}); err != nil {
+		t.Fatalf("saveNote: %v", err)
+	}
+	w := httptest.NewRecorder()
+	s.GetTagSuggest(w, httptest.NewRequest("GET", "/api/tags/suggest?q=evil", nil))
+	body := w.Body.String()
+	if got := between(body, `data-insert="`, `"`); len(got) != 1 || got[0] != hostile {
+		t.Errorf("data-insert = %q, want [%q]\n%s", got, hostile, body)
+	}
+	if got := between(body, `<span class="ac-primary">`, `</span>`); len(got) != 1 || got[0] != "#"+hostile {
+		t.Errorf("ac-primary = %q, want [%q]\n%s", got, "#"+hostile, body)
+	}
+}
