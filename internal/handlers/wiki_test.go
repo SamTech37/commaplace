@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"context"
+	"html"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -19,5 +22,55 @@ func TestSuggestUsersInsertKeepsTrailingSlash(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), `data-insert="@bob/"`) {
 		t.Fatalf("expected data-insert to end with /, got %s", w.Body.String())
+	}
+}
+
+// hostile holds every character special in HTML or in a Go %q literal, plus
+// CJK, which the editor must receive verbatim. App paths normalize handles,
+// slugs and tags to letters, digits and "-", so tests write these rows
+// directly, as a legacy row or a looser future normalizer could.
+const hostile = `evil"<>&'\中`
+
+// between returns each substring of body between open and the next close,
+// HTML-unescaped the way a browser decodes it. For open = `attr="` and
+// close = `"`, that is exactly the attribute value a browser would read.
+func between(body, open, close string) []string {
+	var out []string
+	for {
+		i := strings.Index(body, open)
+		if i < 0 {
+			return out
+		}
+		body = body[i+len(open):]
+		j := strings.Index(body, close)
+		if j < 0 {
+			return append(out, "<unterminated>")
+		}
+		out = append(out, html.UnescapeString(body[:j]))
+		body = body[j+len(close):]
+	}
+}
+
+func TestWikiSuggestEscapesDataInsert(t *testing.T) {
+	s := newTestServer(t)
+	id := mkUser(t, s, hostile)
+	title := "Title " + hostile
+	if _, err := s.saveNote(context.Background(), id, hostile, hostile, title, "body", nil); err != nil {
+		t.Fatalf("saveNote: %v", err)
+	}
+	for _, tc := range []struct{ q, insert, primary string }{
+		{"@evil", "@" + hostile + "/", "@" + hostile},               // suggestUsers
+		{"@" + hostile + "/", "@" + hostile + "/" + hostile, title}, // suggestNotesForUser
+		{"evil", "@" + hostile + "/" + hostile, title},              // suggestNotes
+	} {
+		w := httptest.NewRecorder()
+		s.GetWikiSuggest(w, httptest.NewRequest("GET", "/api/wiki/suggest?q="+url.QueryEscape(tc.q), nil))
+		body := w.Body.String()
+		if got := between(body, `data-insert="`, `"`); len(got) != 1 || got[0] != tc.insert {
+			t.Errorf("q=%q: data-insert = %q, want [%q]\n%s", tc.q, got, tc.insert, body)
+		}
+		if got := between(body, `<span class="ac-primary">`, `</span>`); len(got) != 1 || got[0] != tc.primary {
+			t.Errorf("q=%q: ac-primary = %q, want [%q]\n%s", tc.q, got, tc.primary, body)
+		}
 	}
 }
