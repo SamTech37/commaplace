@@ -42,6 +42,41 @@ func normalizeHeading(s string) string {
 	return strings.ToLower(strings.Join(strings.Fields(headingPunct.ReplaceAllString(s, " ")), " "))
 }
 
+// Heading is one heading of a note, as Headings reports it.
+type Heading struct {
+	Level int
+	Text  string // source text, as written after the #s
+}
+
+// Headings lists md's headings in order. Lines inside code fences are not
+// headings.
+func Headings(md string) []Heading {
+	_, body := SplitFrontmatter(md)
+	src := []byte(stripComments(body))
+	doc := goldmark.New(goldmark.WithExtensions(staticExts...)).Parser().Parse(text.NewReader(src))
+	var out []Heading
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if h, ok := n.(*ast.Heading); ok && entering {
+			out = append(out, Heading{Level: h.Level, Text: strings.TrimSpace(string(h.Lines().Value(src)))})
+		}
+		return ast.WalkContinue, nil
+	})
+	return out
+}
+
+// NormalizeHeading is the comparison form of a heading or of one part of a
+// link's heading path.
+func NormalizeHeading(s string) string { return normalizeHeading(s) }
+
+var subpathUnsafe = regexp.MustCompile(`[:#|^\\\r\n]|%%|\[\[|\]\]`)
+
+// HeadingSubpath is heading text made safe to write inside [[note#...]]:
+// characters that would end or split the link become spaces. It still
+// matches its heading, since matching ignores them too.
+func HeadingSubpath(s string) string {
+	return strings.Join(strings.Fields(subpathUnsafe.ReplaceAllString(s, " ")), " ")
+}
+
 // fragment is the URL fragment a link's anchor scrolls to: the last heading
 // of a heading path, or the block id while block refs are on.
 func fragment(anchor string) string {
