@@ -69,3 +69,29 @@ func TestEmbedResolverDepthCap(t *testing.T) {
 		t.Errorf("no too-deep placeholder:\n%s", html)
 	}
 }
+
+// ![[note#Heading]] embeds only that section; an unknown heading shows the
+// missing-section line inside the embed instead of the whole note.
+func TestEmbedResolverSection(t *testing.T) {
+	s := newTestServer(t)
+	ctx := context.Background()
+	id := mkUser(t, s, "alice")
+	src := "# A\nIN-A\n## A1\nIN-A1\n# B\nIN-B\n"
+	if _, err := s.saveNote(ctx, id, "alice", "src", "Src", src, nil); err != nil {
+		t.Fatal(err)
+	}
+	body := "![[src#A]]\n\n![[src#Nope]]"
+	html, err := markdown.Render(body, "alice", nil, s.buildEmbedResolver(ctx, "alice", body, maxEmbedDepth))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := string(html)
+	for _, want := range []string{"IN-A", "IN-A1", "找不到段落 <code>#Nope</code>", `href="/alice/src#a"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "IN-B") {
+		t.Errorf("section embed leaked the next section:\n%s", out)
+	}
+}

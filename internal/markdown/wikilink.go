@@ -35,15 +35,15 @@ type WikiLink struct {
 func (l WikiLink) URL(currentUser string) string {
 	if l.Slug == "" {
 		// Same-note heading link: [[#Heading]]
-		return "#" + headingAnchor(l.Anchor)
+		return "#" + fragment(l.Anchor)
 	}
 	handle := l.User
 	if handle == "" {
 		handle = currentUser
 	}
 	u := "/" + handle + "/" + l.Slug
-	if l.Anchor != "" {
-		u += "#" + headingAnchor(l.Anchor)
+	if f := fragment(l.Anchor); f != "" {
+		u += "#" + f
 	}
 	return u
 }

@@ -3567,6 +3567,10 @@ blockquote.embed.embed-missing {
   font-size: var(--fs-sm);
   color: var(--text-2);
 }
+blockquote.embed .embed-body p.embed-missing {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
 /* ── Command palette (Cmd/Ctrl+K) ──────────────────────────────────────── */
 dialog.palette {
   margin: 8vh auto 0;

@@ -350,13 +350,17 @@ func (s *Server) buildEmbedResolver(ctx context.Context, vaultHandle, body strin
 			if !ok {
 				return "", "", false
 			}
+			body, ok := markdown.Section(e.body, link.Anchor)
+			if !ok {
+				return e.title, markdown.MissingSection(link.Anchor), true
+			}
 			resolve := func(l markdown.WikiLink) *markdown.ResolvedTarget {
 				if rt, ok := targets[resolverKey(e.handle, l)]; ok {
 					return &rt
 				}
 				return nil
 			}
-			rendered, err := markdown.Render(e.body, e.handle, resolve, build(depth+1, e.handle))
+			rendered, err := markdown.Render(body, e.handle, resolve, build(depth+1, e.handle))
 			if err != nil {
 				return e.title, "", true
 			}

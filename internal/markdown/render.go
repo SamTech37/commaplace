@@ -11,6 +11,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
+	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -38,6 +39,7 @@ var staticExts = []goldmark.Extender{
 	&calloutExt{},
 	&mathExt{},
 	&codeBlockExt{},
+	&blockRefExt{},
 }
 
 // EmbedResolver looks up the target of an ![[embed]] and returns its title
@@ -157,7 +159,7 @@ func Excerpt(md string, n int) string {
 		raw := strings.Split(s, "\n")
 		out := make([]string, 0, len(raw))
 		for _, ln := range raw {
-			ln = strings.TrimSpace(ln)
+			ln = strings.TrimSpace(blockIDRe.ReplaceAllString(ln, ""))
 			ln = stripLeadingMarker(ln)
 			out = append(out, ln)
 		}
@@ -588,7 +590,11 @@ func (r *calloutRenderer) render(w util.BufWriter, _ []byte, node ast.Node, ente
 	ctVal, isCallout := node.Attribute([]byte("data-callout"))
 	if !isCallout {
 		if entering {
-			w.WriteString("<blockquote>\n")
+			w.WriteString("<blockquote")
+			if node.Attributes() != nil {
+				html.RenderAttributes(w, node, html.BlockquoteAttributeFilter)
+			}
+			w.WriteString(">\n")
 		} else {
 			w.WriteString("</blockquote>\n")
 		}
@@ -596,6 +602,10 @@ func (r *calloutRenderer) render(w util.BufWriter, _ []byte, node ast.Node, ente
 	}
 	ct := htmlpkg.EscapeString(string(ctVal.([]byte)))
 	_, foldable := node.Attribute([]byte("data-callout-fold"))
+	id := ""
+	if v, ok := node.AttributeString("id"); ok {
+		id = ` id="` + htmlpkg.EscapeString(string(v.([]byte))) + `"`
+	}
 
 	if entering {
 		titleVal, _ := node.Attribute([]byte("data-callout-title"))
@@ -606,11 +616,11 @@ func (r *calloutRenderer) render(w util.BufWriter, _ []byte, node ast.Node, ente
 			if string(foldState.([]byte)) == "open" {
 				open = " open"
 			}
-			w.WriteString(`<details class="callout callout-` + ct + `"` + open + ">\n")
+			w.WriteString(`<details class="callout callout-` + ct + `"` + id + open + ">\n")
 			w.WriteString(`<summary class="callout-title">` + title + "</summary>\n")
 			w.WriteString("<div class=\"callout-body\">\n")
 		} else {
-			w.WriteString(`<div class="callout callout-` + ct + "\">\n")
+			w.WriteString(`<div class="callout callout-` + ct + `"` + id + ">\n")
 			w.WriteString(`<div class="callout-title">` + title + "</div>\n")
 			w.WriteString("<div class=\"callout-body\">\n")
 		}
