@@ -124,6 +124,9 @@ func TestRateLimitSignIn(t *testing.T) {
 	distinct := func(i int) string { return fmt.Sprintf("u%d@example.com", i) }
 	hit(t, h, 200, login("203.0.113.9", distinct))
 	assert429(t, hit(t, h, 101, from("203.0.113.9", "GET", "/_dev/login?as=x&key=guess")), "600")
+	// HEAD reaches the same handler, so it shares the budget.
+	h = rateLimit(testAuth, okHandler)
+	assert429(t, hit(t, h, 301, from("203.0.113.9", "HEAD", "/_dev/login?as=x&key=guess")), "600")
 	// A classroom on that IP still completes sign-ins already under way.
 	assertOK(t, hit(t, h, 100, func(i int) *http.Request {
 		return from("203.0.113.9", "GET", fmt.Sprintf("/auth/google/callback?state=s%d&code=c%d", i, i))(i)
@@ -131,6 +134,23 @@ func TestRateLimitSignIn(t *testing.T) {
 	assertOK(t, hit(t, h, 100, func(i int) *http.Request {
 		return from("203.0.113.9", "GET", fmt.Sprintf("/auth/tok%d", i))(i)
 	}))
+}
+
+// The middleware reads the login email without parsing multipart bodies, so
+// an anonymous POST /login can't make it spool file parts to disk.
+func TestRateLimitLoginSkipsMultipart(t *testing.T) {
+	var parsed bool
+	h := rateLimit(testAuth, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		parsed = r.MultipartForm != nil
+	}))
+	body := "--b\r\nContent-Disposition: form-data; name=\"f\"; filename=\"f\"\r\n\r\nx\r\n--b--\r\n"
+	r := httptest.NewRequest("POST", "/login", strings.NewReader(body))
+	r.Header.Set("Content-Type", "multipart/form-data; boundary=b")
+	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	h.ServeHTTP(httptest.NewRecorder(), r)
+	if parsed {
+		t.Fatal("middleware parsed a multipart body")
+	}
 }
 
 func TestEmailKey(t *testing.T) {

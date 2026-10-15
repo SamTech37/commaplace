@@ -21,7 +21,7 @@ import (
 //   - any non-GET/HEAD: 300/min per signed-in user, else per IP. Autosave
 //     (800 ms debounce) plus desk-state saves (1.2 s throttle) peak around
 //     125/min for one typist.
-//   - POST /login and GET /_dev/login: 300 per 10 min per IP — a 100-person
+//   - POST /login and GET/HEAD /_dev/login: 300 per 10 min per IP — a 100-person
 //     classroom behind one NAT signing in at once, three tries each. The
 //     /_dev/login key is a shared password, so it needs this cap too.
 //     /auth/{token} and the OAuth callback are not counted: single-use tokens
@@ -60,10 +60,15 @@ func rateLimit(a *auth.Auth, next http.Handler) http.Handler {
 			}
 		}
 		login := r.Method == http.MethodPost && path == "/login"
-		if ip != "" && (login || (r.Method == http.MethodGet && path == "/_dev/login")) && signin.RespondOnLimit(w, r, ip) {
+		// HEAD is routed to GET handlers too, and still answers a key guess.
+		devLogin := (r.Method == http.MethodGet || r.Method == http.MethodHead) && path == "/_dev/login"
+		if ip != "" && (login || devLogin) && signin.RespondOnLimit(w, r, ip) {
 			return
 		}
 		if login {
+			// ParseForm first: PostFormValue alone would parse a multipart body
+			// and spool its file parts to disk before any handler runs.
+			r.ParseForm()
 			if e := emailKey(r.PostFormValue("email")); e != "" &&
 				((ip != "" && emailIP.OnLimit(w, r, e+" "+ip)) || email.OnLimit(w, r, e)) {
 				redirectLoginSent(w, r, r.PostFormValue("next"))
