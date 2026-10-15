@@ -1,6 +1,8 @@
 package db_test
 
 import (
+	"context"
+	"database/sql"
 	"os"
 	"testing"
 
@@ -22,6 +24,33 @@ func TestOpen(t *testing.T) {
 		t.Fatalf("Open: %v", err)
 	}
 	d.Close()
+}
+
+// A burst's connections must stay idle in the pool after release, not be
+// closed and re-dialed next burst (database/sql's default keeps only 2).
+func TestOpenKeepsIdleConns(t *testing.T) {
+	d, err := db.Open(dsn(t))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer d.Close()
+	ctx := context.Background()
+	const burst = 5
+	var conns []*sql.Conn
+	for i := 0; i < burst; i++ {
+		c, err := d.Conn(ctx)
+		if err != nil {
+			t.Fatalf("Conn: %v", err)
+		}
+		conns = append(conns, c)
+	}
+	for _, c := range conns {
+		c.Close()
+	}
+	if s := d.Stats(); s.Idle != burst || s.MaxIdleClosed != 0 {
+		t.Errorf("after burst of %d: Idle=%d MaxIdleClosed=%d, want Idle=%d MaxIdleClosed=0",
+			burst, s.Idle, s.MaxIdleClosed, burst)
+	}
 }
 
 func TestOpenBadDSN(t *testing.T) {
