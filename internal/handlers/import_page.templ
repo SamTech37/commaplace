@@ -20,6 +20,15 @@ templ importPage(props ImportPageProps) {
 				required
 			/>
 		</label>
+		<fieldset class="import-title-from" title="選的地方沒有，就依序往下找">
+			<legend>標題取自</legend>
+			for i, src := range titleSources {
+				<label>
+					<input type="radio" name="title_from" value={ src.Value } checked?={ i == 0 }/>
+					{ src.Label }
+				</label>
+			}
+		</fieldset>
 		<div style="display: flex; gap: 1em; align-items: center; margin-top: 0.5em">
 			<button type="submit" class="action-btn primary">匯入</button>
 			<a href="/write" class="note-meta">直接寫一篇新的 →</a>

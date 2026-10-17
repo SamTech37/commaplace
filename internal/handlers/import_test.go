@@ -85,3 +85,52 @@ func TestPostImportSaveOneCreatesNote(t *testing.T) {
 		t.Errorf("note count = %d, want 1", count)
 	}
 }
+
+// importOne posts a single file to /import with title_from (omitted when
+// empty) and returns where the import redirected.
+func importOne(t *testing.T, s *Server, user uuid.UUID, name, content, titleFrom string) string {
+	t.Helper()
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, err := mw.CreateFormFile("files", name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fw.Write([]byte(content))
+	if titleFrom != "" {
+		mw.WriteField("title_from", titleFrom)
+	}
+	mw.Close()
+	req := httptest.NewRequest("POST", "/import", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.AddCookie(sessionCookie(t, s, user))
+	rec := httptest.NewRecorder()
+	s.PostImport(rec, req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("%s: status = %d\n%s", name, rec.Code, rec.Body.String())
+	}
+	return rec.Header().Get("Location")
+}
+
+func TestImportTitleFrom(t *testing.T) {
+	s := newTestServer(t)
+	alice := mkUser(t, s, "alice")
+
+	// A fenced "# line" is a comment, not a heading.
+	all := "---\ntitle: FM Title\n---\n```sh\n# not a heading\n```\n# Real Heading\n"
+	noFM := "```sh\n# not a heading\n```\n# Real Heading\n"
+	cases := []struct{ file, content, from, want string }{
+		{"x1.md", all, "", "/alice/fm-title"}, // default: frontmatter, as before
+		{"Guide Two.md", all, "filename", "/alice/guide-two"},
+		{"x2.md", noFM, "heading", "/alice/real-heading"},
+		// An empty choice falls back: no frontmatter → heading.
+		{"x3.md", "# Fallback Heading\n", "frontmatter", "/alice/fallback-heading"},
+		// No heading at all → frontmatter, then filename.
+		{"Only Name.md", "plain body\n", "heading", "/alice/only-name"},
+	}
+	for _, c := range cases {
+		if got := importOne(t, s, alice, c.file, c.content, c.from); got != c.want {
+			t.Errorf("%s title_from=%q: landed on %s, want %s", c.file, c.from, got, c.want)
+		}
+	}
+}

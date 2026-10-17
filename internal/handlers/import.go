@@ -63,7 +63,7 @@ func (s *Server) PostImport(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]batchItem, 0, len(headers))
 	for i, hdr := range headers {
-		title, body, tagsInput, stripped, err := parseUploadedNote(hdr)
+		title, body, tagsInput, stripped, err := parseUploadedNote(hdr, r.PostFormValue("title_from"))
 		if err != nil {
 			s.renderPage(w, r, pageTitle("匯入筆記"), "", nil, importPage(ImportPageProps{
 				Error: fmt.Sprintf("%s: %s", hdr.Filename, err.Error()),
@@ -174,7 +174,18 @@ func htmlEscape(s string) string {
 	return r.Replace(s)
 }
 
-func parseUploadedNote(hdr *multipart.FileHeader) (title, body, tagsInput string, stripped int, err error) {
+// titleSource is one place an imported note's title can come from.
+type titleSource struct{ Value, Label string }
+
+// titleSources lists them in the order tried when the chosen one is empty;
+// the first is the default.
+var titleSources = []titleSource{
+	{"frontmatter", "frontmatter 的 title"},
+	{"heading", "第一個 H1"},
+	{"filename", "檔名"},
+}
+
+func parseUploadedNote(hdr *multipart.FileHeader, titleFrom string) (title, body, tagsInput string, stripped int, err error) {
 	f, err := hdr.Open()
 	if err != nil {
 		return "", "", "", 0, fmt.Errorf("could not open: %w", err)
@@ -193,14 +204,19 @@ func parseUploadedNote(hdr *multipart.FileHeader) (title, body, tagsInput string
 	// every viewer. Hyperlinks stay; media does not.
 	body, stripped = markdown.StripMedia(body)
 
-	title = fm["title"]
-	if title == "" {
-		title = extractH1(body)
+	candidates := map[string]string{
+		"frontmatter": fm["title"],
+		"heading":     extractH1(body),
+		"filename":    strings.TrimSuffix(hdr.Filename, filepath.Ext(hdr.Filename)),
 	}
-	if title == "" {
-		title = strings.TrimSuffix(hdr.Filename, filepath.Ext(hdr.Filename))
+	// The chosen source first; when it is empty, the rest in the usual order.
+	title = strings.TrimSpace(candidates[titleFrom])
+	for _, src := range titleSources {
+		if title != "" {
+			break
+		}
+		title = strings.TrimSpace(candidates[src.Value])
 	}
-	title = strings.TrimSpace(title)
 	if title == "" {
 		return "", "", "", 0, fmt.Errorf("could not determine a title; add a # heading or title: frontmatter")
 	}
@@ -260,10 +276,10 @@ func parseFrontmatter(raw []byte) (map[string]string, string) {
 
 // extractH1 returns the text of the first # heading in the markdown, or "".
 func extractH1(body string) string {
-	for _, line := range strings.Split(body, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "# ") {
-			return strings.TrimPrefix(line, "# ")
+	// Parsed, not scanned: a "# comment" in a code fence is not a heading.
+	for _, h := range markdown.Headings(body) {
+		if h.Level == 1 {
+			return h.Text
 		}
 	}
 	return ""

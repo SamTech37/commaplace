@@ -4137,6 +4137,10 @@ button:disabled {
 .vault-dialog [hidden] { display: none; }
 .vault-review { min-width: 0; margin: 1rem 0; padding: 0.75rem; border: 1px solid var(--border-2); border-radius: var(--r-btn); }
 .vault-review legend { font-size: var(--fs-sm); }
+.import-title-from { display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0.75rem 0; padding: 0.75rem; border: 1px solid var(--border-2); border-radius: var(--r-btn); }
+.import-title-from legend { font-size: var(--fs-sm); }
+.import-title-from label { flex-direction: row; align-items: center; gap: 0.4rem; cursor: pointer; }
+.import-title-from input[type="radio"] { accent-color: var(--ink); }
 .vault-review input[type="search"] { box-sizing: border-box; width: 100%; font: inherit; }
 .vault-candidates { list-style: none; padding: 0; max-height: 18rem; overflow-y: auto; }
 .vault-candidates li { display: flex; flex-direction: row; align-items: center; gap: 0.4rem; border-bottom: 1px solid var(--border); }
