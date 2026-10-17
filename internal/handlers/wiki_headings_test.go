@@ -46,6 +46,14 @@ func TestWikiSuggestHeadings(t *testing.T) {
 	if got := headingSuggest(t, s, bob, "@alice/doc#us"); !strings.Contains(got, `data-insert="@alice/doc#Usage"`) {
 		t.Errorf("cross-vault headings missing:\n%s", got)
 	}
+	// Lookup ignores case but links resolve by exact slug and handle, so the
+	// insert carries the stored names, not the typed ones.
+	if got := headingSuggest(t, s, alice, "Doc#us"); !strings.Contains(got, `data-insert="doc#Usage"`) {
+		t.Errorf("own vault insert not canonical:\n%s", got)
+	}
+	if got := headingSuggest(t, s, bob, "@ALICE/Doc#us"); !strings.Contains(got, `data-insert="@alice/doc#Usage"`) {
+		t.Errorf("cross-vault insert not canonical:\n%s", got)
+	}
 
 	// Drafts: their author sees the headings, nobody else does.
 	if got := headingSuggest(t, s, alice, "draft#"); !strings.Contains(got, "Secret plan") {

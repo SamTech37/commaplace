@@ -291,8 +291,7 @@ func (s *Server) buildEmbedResolver(ctx context.Context, vaultHandle, body strin
 			FROM unnest($1::text[], $2::text[]) AS t(h, s)
 			JOIN users u ON u.handle = t.h
 			JOIN notes n ON n.author_id = u.id AND n.slug = t.s
-			WHERE n.hidden_at IS NULL AND n.deleted_at IS NULL
-			  AND n.published_at IS NOT NULL`,
+			WHERE `+readableNote,
 			handles, slugs,
 		)
 		if err != nil {

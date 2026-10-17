@@ -132,6 +132,8 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 	}
 }
 
+const maxHeadingSuggestions = 10
+
 // suggestHeadings lists the headings of target ("slug" in the viewer's vault,
 // or "@bob/slug") that contain the last part of path. Drafts are offered only
 // to their author, as in suggestNotesForUser.
@@ -153,13 +155,19 @@ func (s *Server) suggestHeadings(r *http.Request, w http.ResponseWriter, target,
 	}
 	var body string
 	if err := s.DB.QueryRowContext(r.Context(), `
-		SELECT n.body_md FROM notes n JOIN users u ON u.id = n.author_id
+		SELECT n.body_md, u.handle, n.slug FROM notes n JOIN users u ON u.id = n.author_id
 		WHERE u.handle_ci = lower($1) AND n.slug_ci = lower($2)
 		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
 		  AND (n.published_at IS NOT NULL OR u.handle_ci = lower($3))`,
 		handle, slug, viewerHandle,
-	).Scan(&body); err != nil {
+	).Scan(&body, &handle, &slug); err != nil {
 		return
+	}
+	// Links resolve by exact handle and slug, so insert the stored names.
+	if strings.HasPrefix(target, "@") {
+		target = "@" + handle + "/" + slug
+	} else {
+		target = slug
 	}
 	// "A#B" completes B; the parts before it are kept as typed.
 	done, q := "", path
@@ -169,7 +177,7 @@ func (s *Server) suggestHeadings(r *http.Request, w http.ResponseWriter, target,
 	want := markdown.NormalizeHeading(q)
 	n := 0
 	for _, h := range markdown.Headings(body) {
-		if n == 10 {
+		if n == maxHeadingSuggestions {
 			break
 		}
 		if !strings.Contains(markdown.NormalizeHeading(h.Text), want) {
