@@ -96,13 +96,8 @@ func (s *Server) forkTour(ctx context.Context, newUserID uuid.UUID, newUserHandl
 		if n.IsWelcome {
 			welcomeID = nid
 		}
-		for _, t := range n.Tags {
-			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO note_tags(note_id, tag, created_at) VALUES($1, $2, $3)`,
-				nid, t, now,
-			); err != nil {
-				return uuid.UUID{}, err
-			}
+		if err := insertTags(ctx, tx, nid, n.Tags, now); err != nil {
+			return uuid.UUID{}, err
 		}
 		if err := recomputeLinks(ctx, tx, nid, newUserHandle, n.Body); err != nil {
 			return uuid.UUID{}, err

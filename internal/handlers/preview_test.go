@@ -105,3 +105,38 @@ func TestPreviewUsesSharedCardVariant(t *testing.T) {
 		t.Errorf("expected list variant card:\n%s", body)
 	}
 }
+
+// ?h= previews just that section; an unknown section, or a draft, falls back
+// to what the plain preview would do.
+func TestPreviewSection(t *testing.T) {
+	s := newTestServer(t)
+	alice := mkUser(t, s, "alice")
+	mkPreviewNote(t, s, alice, "doc", "Doc", "# A\nIN-A\n## A1\nIN-A1\n# B\nIN-B\n", "published")
+	mkPreviewNote(t, s, alice, "draft", "Draft", "# A\nSECRET\n", "draft")
+
+	get := func(slug, h string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("GET", "/api/preview/alice/"+slug+"?h="+h, nil)
+		req.SetPathValue("user", "alice")
+		req.SetPathValue("slug", slug)
+		w := httptest.NewRecorder()
+		s.GetNotePreview(w, req)
+		return w
+	}
+
+	body := get("doc", "A").Body.String()
+	for _, want := range []string{"preview-section", "IN-A", "IN-A1", `href="/alice/doc"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("section preview missing %q:\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, "IN-B") {
+		t.Errorf("section preview leaked the next section:\n%s", body)
+	}
+
+	if body := get("doc", "Nope").Body.String(); strings.Contains(body, "preview-section") || !strings.Contains(body, "masonry-card") {
+		t.Errorf("unknown section should fall back to the card:\n%s", body)
+	}
+	if w := get("draft", "A"); w.Code != 404 || strings.Contains(w.Body.String(), "SECRET") {
+		t.Errorf("draft section: want empty 404, got %d %q", w.Code, w.Body.String())
+	}
+}

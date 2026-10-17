@@ -2116,6 +2116,34 @@ html[data-theme="dark"] .link-preview-card {
 .link-preview-card .masonry-card:hover {
   transform: none;
 }
+/* [[note#Heading]] previews the section, scrolling inside the card. */
+.preview-section {
+  display: flex;
+  flex-direction: column;
+  /* The card's cap, which linkpreview.js lowers when a side is short. */
+  max-height: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+.preview-section-head {
+  padding: 0.5em 1em;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.preview-section-head a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+.preview-section-body {
+  padding: 0.75em 1em;
+  overflow-y: auto;
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+.preview-section-body > :first-child { margin-top: 0; }
+.preview-section-body > :last-child { margin-bottom: 0; }
 .ac-popup ul {
   list-style: none;
   padding: 0.4em;
@@ -3585,6 +3613,10 @@ blockquote.embed.embed-missing {
   border-left-color: #b91c1c;
   background: rgba(185, 28, 28, 0.08);
   padding: 0.5em 0.85em;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+blockquote.embed .embed-body p.embed-missing {
   font-size: var(--fs-sm);
   color: var(--text-2);
 }

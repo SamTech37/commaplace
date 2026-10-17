@@ -35,15 +35,15 @@ type WikiLink struct {
 func (l WikiLink) URL(currentUser string) string {
 	if l.Slug == "" {
 		// Same-note heading link: [[#Heading]]
-		return "#" + headingAnchor(l.Anchor)
+		return "#" + fragment(l.Anchor)
 	}
 	handle := l.User
 	if handle == "" {
 		handle = currentUser
 	}
 	u := "/" + handle + "/" + l.Slug
-	if l.Anchor != "" {
-		u += "#" + headingAnchor(l.Anchor)
+	if f := fragment(l.Anchor); f != "" {
+		u += "#" + f
 	}
 	return u
 }
@@ -157,7 +157,13 @@ func ParseLink(body string) (WikiLink, bool) {
 
 // Extract uses the renderer's Markdown parser so code examples, comments and
 // YAML do not create phantom graph edges. Deduplicate by (user, slug).
-func Extract(body string) []WikiLink {
+func Extract(body string) []WikiLink { return extract(body, false) }
+
+// ExtractEmbeds is Extract restricted to ![[embeds]], so a caller can fetch
+// every embed target of a body in one query before rendering it.
+func ExtractEmbeds(body string) []WikiLink { return extract(body, true) }
+
+func extract(body string, embedsOnly bool) []WikiLink {
 	var out []WikiLink
 	seen := map[string]bool{}
 	_, body = SplitFrontmatter(body)
@@ -172,6 +178,9 @@ func Extract(body string) []WikiLink {
 		var l WikiLink
 		switch n := node.(type) {
 		case *wikiNode:
+			if embedsOnly {
+				return ast.WalkContinue, nil
+			}
 			l = n.Link
 		case *embedNode:
 			l = n.Link

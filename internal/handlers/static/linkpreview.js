@@ -14,6 +14,7 @@
   // as cmeditor.js and tagsearch.js.
   var popup = document.createElement("div");
   popup.className = "link-preview-card";
+  popup.setAttribute("data-no-preview", "");
   popup.hidden = true;
   document.body.appendChild(popup);
 
@@ -29,16 +30,25 @@
   // near the link — the card ended up floating disconnected from what you
   // were hovering. Stacking above/below always stays visually attached.
   function position(rect) {
+    popup.style.maxHeight = "";
     var pw = popup.offsetWidth;
     var ph = popup.offsetHeight;
 
     var left = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - pw - MARGIN));
 
+    // The sticky topbar covers the top of the viewport; a card above it hides.
+    var bar = document.querySelector(".topbar");
+    var minTop = Math.max(MARGIN, bar ? bar.getBoundingClientRect().bottom + 4 : 0);
     var below = window.innerHeight - MARGIN - (rect.bottom + 4);
-    var above = rect.top - 4 - MARGIN;
-    var top;
-    if (ph <= below || below >= above) top = rect.bottom + 4;
-    else top = Math.max(MARGIN, rect.top - ph - 4);
+    var above = rect.top - 4 - minTop;
+    var docksBelow = ph <= below || below >= above;
+    // Too tall for either side: shrink to the side it docks on.
+    var room = docksBelow ? below : above;
+    if (ph > room) {
+      ph = room;
+      popup.style.maxHeight = room + "px";
+    }
+    var top = docksBelow ? rect.bottom + 4 : rect.top - ph - 4;
 
     popup.style.left = left + "px";
     popup.style.top = top + "px";
@@ -116,11 +126,14 @@
     if (e.key === "Escape") { cancelTimers(); hide(); }
   });
 
-  // ---- wiring for <a> hover: wikilinks in note bodies, plus the connected/
-  // backlinks sections' mini-card and backlink-row anchors, which point at
-  // notes exactly the same way (previewURLFor is the one place that decides
-  // what is previewable — external URL previews would plug in here too). ----
+  // ---- wiring for <a> hover, on every page (layout.templ loads this): any
+  // wikilink, plus the connected/backlinks sections' mini-card and
+  // backlink-row anchors, which point at notes exactly the same way
+  // (previewURLFor is the one place that decides what is previewable —
+  // external URL previews would plug in here too). Opt a region out with
+  // data-no-preview. ----
   function previewURLFor(a) {
+    if (a.closest("[data-no-preview]")) return null;
     var known = a.classList.contains("mini-card") || a.classList.contains("backlink-row");
     if (!known) {
       if (!a.classList.contains("wiki-resolved") && !a.classList.contains("wikilink-cross")) return null;
@@ -129,7 +142,9 @@
     var path = a.getAttribute("href") || "";
     var m = path.split("#")[0].match(/^\/([^/]+)\/([^/]+)$/);
     if (!m) return null;
-    return "/api/preview/" + m[1] + "/" + m[2];
+    var url = "/api/preview/" + m[1] + "/" + m[2];
+    var anchor = a.getAttribute("data-anchor");
+    return anchor ? url + "?h=" + encodeURIComponent(anchor) : url;
   }
 
   var hoverAnchor = null;

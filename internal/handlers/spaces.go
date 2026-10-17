@@ -339,7 +339,7 @@ func (s *Server) loadSpaceReading(ctx context.Context, user uuid.UUID, handle st
 		all += "\n\n" + b.Text
 	}
 	resolver := s.buildResolver(ctx, handle, markdown.Extract(all))
-	embed := s.buildEmbedResolver(ctx, handle, 2)
+	embed := s.buildEmbedResolver(ctx, handle, all, maxEmbedDepth)
 	render := func(text string) template.HTML {
 		html, _ := markdown.Render(text, handle, resolver, embed)
 		return template.HTML(html)

@@ -1,0 +1,12 @@
+package handlers
+
+// sectionPreview is the hover card for a [[note#Heading]] link: the section
+// itself rather than the whole-note feed card.
+templ sectionPreview(title, url, anchor string, body string) {
+	<div class="preview-section">
+		<div class="preview-section-head"><a href={ templ.SafeURL(url) }>{ title }</a> › { anchor }</div>
+		<div class="preview-section-body">
+			@templ.Raw(body)
+		</div>
+	</div>
+}

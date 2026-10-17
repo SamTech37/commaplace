@@ -5,9 +5,12 @@ import (
 	"fmt"
 	htmlpkg "html"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
+
+	"commonplace/internal/markdown"
 )
 
 // GetWikiSuggest returns an HTML <li> fragment for autocomplete in the editor.
@@ -19,9 +22,18 @@ import (
 //   - "@bob"      → user handle prefix search for "bob"
 //   - "@bob/"     → all of bob's notes
 //   - "@bob/wiki" → bob's notes whose title contains "wiki"
+//   - "note#he"   → headings of note (or @bob/note) containing "he"
 func (s *Server) GetWikiSuggest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if i := strings.IndexByte(q, '#'); i >= 0 {
+		// "#..." alone is a same-note link; the unsaved note has no
+		// headings to offer from here.
+		if i > 0 {
+			s.suggestHeadings(r, w, q[:i], q[i+1:])
+		}
+		return
+	}
 	if strings.HasPrefix(q, "@") {
 		rest := q[1:]
 		if idx := strings.Index(rest, "/"); idx >= 0 {
@@ -117,6 +129,64 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 		secondary := "@" + sg.Handle
 		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"><span class="ac-primary">%s</span><span class="ac-secondary">%s</span></li>`,
 			htmlpkg.EscapeString(insert), htmlpkg.EscapeString(sg.Title), htmlpkg.EscapeString(secondary))
+	}
+}
+
+const maxHeadingSuggestions = 10
+
+// suggestHeadings lists the headings of target ("slug" in the viewer's vault,
+// or "@bob/slug") that contain the last part of path. Drafts are offered only
+// to their author, as in suggestNotesForUser.
+func (s *Server) suggestHeadings(r *http.Request, w http.ResponseWriter, target, path string) {
+	viewerHandle := ""
+	if viewer, _ := s.Auth.CurrentUser(r); viewer != nil {
+		viewerHandle = viewer.Handle
+	}
+	handle, slug := viewerHandle, target
+	if strings.HasPrefix(target, "@") {
+		j := strings.IndexByte(target, '/')
+		if j < 2 {
+			return
+		}
+		handle, slug = target[1:j], target[j+1:]
+	}
+	if handle == "" || slug == "" {
+		return
+	}
+	var body string
+	if err := s.DB.QueryRowContext(r.Context(), `
+		SELECT n.body_md, u.handle, n.slug FROM notes n JOIN users u ON u.id = n.author_id
+		WHERE u.handle_ci = lower($1) AND n.slug_ci = lower($2)
+		  AND n.hidden_at IS NULL AND n.deleted_at IS NULL
+		  AND (n.published_at IS NOT NULL OR u.handle_ci = lower($3))`,
+		handle, slug, viewerHandle,
+	).Scan(&body, &handle, &slug); err != nil {
+		return
+	}
+	// Links resolve by exact handle and slug, so insert the stored names.
+	if strings.HasPrefix(target, "@") {
+		target = "@" + handle + "/" + slug
+	} else {
+		target = slug
+	}
+	// "A#B" completes B; the parts before it are kept as typed.
+	done, q := "", path
+	if k := strings.LastIndexByte(path, '#'); k >= 0 {
+		done, q = path[:k+1], path[k+1:]
+	}
+	want := markdown.NormalizeHeading(q)
+	n := 0
+	for _, h := range markdown.Headings(body) {
+		if n == maxHeadingSuggestions {
+			break
+		}
+		if !strings.Contains(markdown.NormalizeHeading(h.Text), want) {
+			continue
+		}
+		n++
+		insert := target + "#" + done + markdown.HeadingSubpath(h.Text)
+		fmt.Fprintf(w, `<li class="ac-item" data-insert="%s"><span class="ac-primary">%s</span><span class="ac-secondary">H%s</span></li>`,
+			htmlpkg.EscapeString(insert), htmlpkg.EscapeString(h.Text), strconv.Itoa(h.Level))
 	}
 }
 
