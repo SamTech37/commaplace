@@ -258,7 +258,9 @@ Use `make watch`, logged in as alice. Expected results are in brackets.
    - [The card stays readable and scrolls inside itself when long.]
    - [On touch there is no preview; a tap navigates.]
 7. Import an Obsidian vault that uses `^ids` and `![[note#Heading]]`
-   (`scripts/make-beta-vault.py` makes one).
+   through the 匯入筆記 dialog on `/write`, which names notes by filename
+   (`/import` names them by first heading, so `[[Guide#…]]` misses).
+   `scripts/make-beta-vault.py` writes neither `^ids` nor section embeds.
    [No raw `^id` text shows, and heading embeds slice correctly.]
 8. Optional, block refs on: set `blockRefs = true` locally and rerun steps
    3–4.
