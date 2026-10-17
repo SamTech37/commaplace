@@ -38,6 +38,7 @@ func main() {
 	if err := db.Migrate(d); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
+	handlers.ProbeTrgm(d)
 	// Rank notes the previous binary published during the deploy overlap; the
 	// feed skips unranked notes, so a failure here only delays them.
 	if n, err := feedrank.AssignUnranked(context.Background(), d, feedCfg); err != nil {

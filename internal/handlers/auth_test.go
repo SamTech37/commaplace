@@ -119,3 +119,30 @@ func TestDevLoginRejectsInvalidHandle(t *testing.T) {
 		t.Fatalf("users = %d, want 2 (shawn_demo + alice)", n)
 	}
 }
+
+func TestLocalPath(t *testing.T) {
+	for next, want := range map[string]bool{
+		"/feed":          true,
+		"/edit/x?y=1":    true,
+		"":               false,
+		"feed":           false,
+		"//evil.example": false,
+		`/\evil.example`: false,
+		"https://evil":   false,
+	} {
+		if got := localPath(next); got != want {
+			t.Errorf("localPath(%q) = %v, want %v", next, got, want)
+		}
+	}
+}
+
+// A protocol-relative next= must not send a freshly signed-in user offsite.
+func TestDevLoginIgnoresOffsiteNext(t *testing.T) {
+	s := newTestServer(t)
+	s.Debug = true
+	w := httptest.NewRecorder()
+	s.GetDevLogin(w, httptest.NewRequest("GET", "/_dev/login?as=alice&next=//evil.example/x", nil))
+	if loc := w.Header().Get("Location"); loc != "/me/desk" {
+		t.Fatalf("Location = %q, want /me/desk", loc)
+	}
+}

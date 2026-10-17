@@ -2,7 +2,7 @@
 
 ## 資料夾匯入 Beta — 2026-09-05
 
-書寫頁新增「匯入筆記 Beta」，支援選取 Markdown 檔案或資料夾、在本機查看原文並逐檔勾選、發布勾選內容、進度／結果報告；預設全部不勾選。補齊 profile、tag、saved、following 的複合游標。目標是實際觀察大量匯入帶來的好與壞事件。待討論問題、beta 邊界與 30 分鐘驗證流程見 [`docs/BETA-vault-import.md`](docs/BETA-vault-import.md)。原始日期排序與批次 feed 卡尚未定案。
+書寫頁新增「匯入筆記 Beta」，支援選取 Markdown 檔案或資料夾、在本機查看原文並逐檔勾選、發布勾選內容、進度／結果報告；預設全部不勾選。補齊 profile、tag、saved、following 的複合游標。目標是實際觀察大量匯入帶來的好與壞事件。待討論問題、beta 邊界與 30 分鐘驗證流程見 [`docs/BETA-vault-import.md`](docs/BETA-vault-import.md)。批次 feed 卡已定案（#42）：一次匯入 ≥ `FEED_BATCH_MIN` 篇，在推薦 feed 收成一張「@alice 匯入了 N 篇筆記」卡，連到 `/{user}?batch=<id>`。原始日期排序仍未定案。
 
 ## Meta-App view Substrate + Templ — 已完成（2026-08-31）
 
@@ -92,8 +92,8 @@
 
 - [x] 明暗主題、減少動畫、本地端字體選項（Aa popover：字級 + 宋/黑體）
 - [x] 繁簡轉換 — 後端搜尋互通（opencc s2t/t2s 接進 `/search`、wiki-link、tag autocomplete）＋ 前端 原→简→繁 三態鈕
-- [ ] 字體 — 思源宋體已上（見下方 CJK 交付）；黑體待選：[genyo-font](https://github.com/ButTaiwan/genyo-font)、思源或源流黑體
-- [ ] **tag picker 剩下的**：選現成標籤要是阻力最小的路，開新標籤必須是刻意、視覺上分開的最後一步，不能是在自由輸入框按 Enter。目標是擋掉 X/FB 那種把標籤當強調色用的濫用，但不禁止開新標籤。**還沒做**——現在 Enter 就能塞任意自由文字，完全沒有「現有 vs 新建」的區別
+- [ ] 字體 — 思源宋體已上（見下方 CJK 交付）；黑體目前沒有字檔，走 `--font-sans` 系統字（各平台各長一樣：PingFang TC／微軟正黑體／Noto Sans CJK）。待選：[genyo-font](https://github.com/ButTaiwan/genyo-font)、思源或源流黑體
+- [x] **tag picker**：選現成標籤要是阻力最小的路，開新標籤必須是刻意、視覺上分開的最後一步。目標是擋掉 X/FB 那種把標籤當強調色用的濫用，但不禁止開新標籤。決定只做編輯器 popup，行內 `#foo ` 不擋
   - [x] 依使用次數排序並顯示計數（編輯器 `#` popup 與 feed 標籤搜尋共用 `GetTagSuggest`）
   - [x] 編輯器 `#` popup：現成標籤排前面，「新標籤 #foo」是分隔線下的最後一列，Enter／Tab 都不會選它，要方向鍵或點擊。只剩新標籤可選時，Enter 就是換行。打 `#foo` 加空白照樣是標籤（行內 markdown，刻意不擋）
 - [ ] 一鍵鏡像 — 已經在經營 blog 的人怎麼同步過來？普通 blog 與密集連結的 hypertext blog 又是兩種做法
@@ -120,7 +120,7 @@
 - **Server**：Go `net/http` + `templ`（`html/template` 已於 2026-08-31 全部換掉，見下）+ `go:embed`，單一靜態 binary，不加 build 步驟。Postgres via `pgx/v5`，FTS 用 `tsvector`+GIN
 - **GraphQL / GraphDB：不用，問題不成立。** GraphQL 解的是「JSON client 過度或不足抓取」，我們的 handler 回的是 HTML fragment，沒有那個 client。GraphDB 解的是深度不定的遍歷，我們的圖查詢是有界的（一跳，之後兩跳），`links` 表加索引就夠——benchmark 裡 backlinks 走 bitmap scan 本來就快。真的要無界遍歷再回來看，別為了名字裡有 graph 就換資料庫
 - **htmx**：vendored + 手寫 `hx-*`。已用原生 `HX-Request` header（不是 `?partial=1`）。OOB swap、`HX-Trigger`、`hx-indicator`、`hx-boost` 有需要再逐個接，別預先鋪
-- **Alpine.js**：vendored 無 build（`static/alpine.min.js` 3.14.9，只在編輯頁載入）。[x] wiki／tag autocomplete 的 popup 狀態已改成 `Alpine.store("ac")`。[ ] feed 版型記憶還沒接。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
+- **Alpine.js**：vendored 無 build（`static/alpine.min.js` 3.14.9，只在編輯頁載入）。[x] wiki／tag autocomplete 的 popup 狀態已改成 `Alpine.store("ac")`。feed 版型記憶不需要了（list/grid 切換已 revert，只剩 masonry）。EasyMDE 跟 graph canvas 不要碰，Alpine 幫不上忙
 - [x] ~~**templ**：跟 Meta-App view substrate 重構**一起**做~~ — 2026-08-31 做完了，見最上面「Meta-App view substrate + templ — 已完成」
 
 ### 待還的技術債
@@ -156,16 +156,20 @@
 
 - [x] Postgres on Render，Go server 單一 binary，不走 serverless
 - [ ] Render.com more expensive tiers 
-- [ ] DDoS prevention
+- [x] DDoS — 量級攻擊由 Render 前面的 Cloudflare 擋（免費、自動）；應用層濫用由 app 內限流擋（#36，`go-chi/httprate`：每 IP、每登入者寫入、每登入 email）
+  - [ ] **prod 拿不到 `CF-Connecting-IP`（2026-10-15 部署後 log 出現 `ratelimit: request without CF-Connecting-IP; per-IP limits are off`）**。這行只在第一個缺 header 的請求印一次，所以還不知道是**所有**使用者請求都缺，還是只有 Render 內部請求缺。若是前者，每 IP 限流（全站 1200/分、匿名寫入、登入 300/10 分、email+IP）在 prod 等於沒開；每登入者寫入與每 email 每小時上限照常有效
+    - Render 沒有文件說它設哪個 client IP header。社群說法：`X-Forwarded-For` 第一個是真實 IP，但 Render 不清掉 client 自己送的，所以可偽造（[1](https://community.render.com/t/accessing-client-ips-in-a-node-express-app/36282)、[2](https://feedback.render.com/features/p/send-the-correct-xforwardedfor)）
+    - 下一步：加一次性診斷 log（第一個有／沒有 `CF-Connecting-IP` 的請求各印一行：path、有哪些轉送 header 的名稱、`X-Forwarded-For` 有幾段，不印 IP），部署後看實際 header 再決定 key 怎麼取（`internal/handlers/ratelimit.go` `clientIP`）
 - [ ] 並發：寫入佇列？讀取？
 
 - [x] **Tag chips 的修法** — 已有 5 分鐘 in-process cache（`feed.go` `topTagChips`）；100K 筆記時沒快取的聚合 36–49 ms，每 5 分鐘最多跑一次
 - [x] **並發測過了（2026-10-14，100K 筆記）** — 寫入不是問題（autosave 100/s p99 13 ms、同一篇按讚 300/s p99 16 ms、全部 200），不需要寫入佇列。讀取在混合流量 20→40 req/s 之間到頂，瓶頸是 4 核 CPU（97%），不是連線池大小：
-  - [ ] `SetMaxIdleConns` 沒設（預設 2）→ 每波流量都重連 Postgres。實驗設 25：便宜頁 200/s p50 147 → 7 ms、混合 40/s p50 30–127（不穩）→ 穩定 17 ms。`internal/db/db.go` 一行
-  - [ ] `/feed` recommended ~200 ms — per-author 上限的 `ROW_NUMBER()` 每次排序全部 85K 篇公開筆記
-  - [ ] `/search` ~280 ms — `search_tsv @@ query OR u.handle ILIKE` 的 OR 讓 GIN index 用不上，掃 94K 筆；只留 FTS 條件 13–23 ms。handle 分開查（或 UNION）
-  - [ ] 熱門標籤頁 135–270 ms — 相關標籤雲 join 該標籤的全部筆記（冷門標籤 2–3 ms）
-  - [ ] `/api/wiki/suggest` 77–151 ms — `lower(title) LIKE '%…%'` 全表掃，沒有 trigram index，每打一個字一次
+  - [x] `SetMaxIdleConns(25)`（#32）— 原本預設 2，每波流量都重連 Postgres
+  - [x] `/feed` recommended — 改成存好的 `feed_rank` + keyset（#42），~200 ms → 1–3 ms；順便修掉 per-author 上限讓筆記永遠被跳過的 bug。批次匯入收成一張卡、連發會被往後推，參數 `FEED_BATCH_MIN` / `FEED_BURST_STEP` / `FEED_BURST_WINDOW` 是先猜的，等真實資料調
+  - [x] `/search` — handle 條件改成 `author_id = ANY(...)`（#35），~280 ms → 選擇性高的詞 11–50 ms。只打一兩個字母、命中大部分 handle 時仍是全掃
+  - [x] 熱門標籤頁 — 相關標籤雲 5 分鐘快取（#33），快取命中 5–15 ms
+  - [x] `/api/wiki/suggest` — pg_trgm 索引（#39），少見的 3 字以上查詢 ~150–360 ms → <10 ms；1–2 字查詢 trigram 幫不上，維持原樣
+    - [x] prod log（2026-10-15）：`pg_trgm: CJK titles use trigram index = true`，中文 3 字以上查詢走索引
   - [ ] `/api/graph` 全域圖 19 MB 沒上限
 
 原始數字：`docs/BENCHMARK-2026-10-12.md`（取代 06-20 那份；重跑：`scripts/bench-seed.sql` + `scripts/bench-load.sh`）。
@@ -174,6 +178,7 @@
 
 - [x] 讚與收藏分開 — `saves` 表（migration 006）。**`/me/saved` 從空的開始**，006 只建表沒搬資料。要帶的話：`INSERT INTO saves SELECT user_id, note_id, created_at FROM likes ON CONFLICT DO NOTHING;`
 - [ ] 多清單 / playlist 管理 — 目前只有單一收藏清單
+- [ ] 兩個不同作者**同時**發布互相連結的筆記會 deadlock（Postgres `40P01`，其中一個發布失敗 500）。#42 之前就存在；同作者的已由 #42 的鎖順序修掉，跨作者的沒有。人少時幾乎碰不到
 - [ ] **上線前把 `001_init.sql`…`009_*.sql` 壓成一個檔**。趁 DB 還能隨便丟的時候做，有真用戶就沒這個自由了（`docs/DECISIONS.md` 3 的 "Revisit when"）
 - [x] 連結分區 — outbound（這篇連到誰）vs inbound（誰引用這篇），各自再分「自己的 vault」vs「其他人」
 - [x] 改 `@handle` — 連結靠 UUID 不斷鏈

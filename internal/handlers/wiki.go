@@ -103,7 +103,7 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
 			WHERE u.handle_ci = $1 AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
-			ORDER BY n.updated_at DESC LIMIT 6`
+			ORDER BY n.updated_at DESC, n.id DESC LIMIT 6`
 		args = []any{handleCI}
 	} else {
 		clause, vargs := likeAnyVariant("n.title", q, 2)
@@ -112,7 +112,7 @@ func (s *Server) suggestNotesForUser(ctx context.Context, w http.ResponseWriter,
 			FROM notes n
 			JOIN users u ON u.id = n.author_id
 			WHERE u.handle_ci = $1 AND ` + clause + ` AND n.hidden_at IS NULL AND n.deleted_at IS NULL` + pub + `
-			ORDER BY n.updated_at DESC LIMIT 6`
+			ORDER BY n.updated_at DESC, n.id DESC LIMIT 6`
 		args = append([]any{handleCI}, vargs...)
 	}
 	rows, err := s.DB.QueryContext(ctx, query, args...)
@@ -232,7 +232,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 			SELECT n.id, n.title, n.slug, $1::text AS handle
 			FROM notes n
 			WHERE n.author_id = $2 AND `+clause+` AND n.hidden_at IS NULL AND n.deleted_at IS NULL
-			ORDER BY n.updated_at DESC LIMIT 6`,
+			ORDER BY n.updated_at DESC, n.id DESC LIMIT 6`,
 			append([]any{myHandle, myID}, vargs...)...)
 
 		clause2, vargs2 := likeAnyVariant("n.title", q, 2)
@@ -242,7 +242,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 			JOIN users u   ON u.id = n.author_id
 			JOIN follows f ON f.followed_id = n.author_id
 			WHERE f.follower_id = $1 AND `+clause2+` AND `+readableNote+`
-			ORDER BY n.updated_at DESC LIMIT 6`,
+			ORDER BY n.updated_at DESC, n.id DESC LIMIT 6`,
 			append([]any{myID}, vargs2...)...)
 	}
 
@@ -252,7 +252,7 @@ func (s *Server) suggestNotes(ctx context.Context, w http.ResponseWriter, myID u
 		FROM notes n
 		JOIN users u ON u.id = n.author_id
 		WHERE `+clause3+` AND `+readableNote+`
-		ORDER BY n.updated_at DESC LIMIT 6`,
+		ORDER BY n.updated_at DESC, n.id DESC LIMIT 6`,
 		vargs3...)
 
 	for _, sg := range results {
