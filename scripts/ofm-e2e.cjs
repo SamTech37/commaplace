@@ -42,11 +42,12 @@ const check = (ok, msg) => {
   }, [title, body]);
 
   const guideURL = await write('E2E Guide ' + run,
-    '# Intro\nintro text\n## Install\nINSTALL-BODY\n## Usage\nUSAGE-BODY\n### Flags\nFLAGS-BODY\n# Appendix\nAPPENDIX-BODY\n\nA paragraph. ^blk1\n');
+    '# Intro\nintro text\n## Install\nINSTALL-BODY\n## Usage\nUSAGE-BODY\n### Flags\nFLAGS-BODY\n# Appendix\nAPPENDIX-BODY\n\nA paragraph. ^blk1\n' +
+    '# Long\n' + Array.from({ length: 40 }, (_, i) => 'Long line ' + i + '.').join('\n\n') + '\n');
   const guide = guideURL.split('/').pop();
   check(guide.startsWith('e2e-guide'), 'create guide note (' + guideURL + ')');
   const readerURL = await write('E2E Reader ' + run,
-    `See [[${guide}#Usage]] and [[${guide}#^blk1]].\n\n![[${guide}#Install]]\n\n![[${guide}#Missing]]\n\n![[${guide}#^blk1]]\n`);
+    `See [[${guide}#Usage]] and [[${guide}#^blk1]].\n\n![[${guide}#Install]]\n\n![[${guide}#Missing]]\n\n![[${guide}#^blk1]]\n\nLong: [[${guide}#Long]]\n`);
   check(readerURL.includes('/alice/e2e-reader'), 'create reader note (' + readerURL + ')');
 
   // Section embeds and hidden block markers.
@@ -67,6 +68,27 @@ const check = (ok, msg) => {
   check(cardText.includes('USAGE-BODY') && cardText.includes('FLAGS-BODY') && !cardText.includes('APPENDIX-BODY'),
     'hover on [[note#Usage]] previews the Usage section');
   await page.screenshot({ path: OUT + '/ofm-hover-section.png' });
+  await page.mouse.move(5, 5);
+
+  // A card too tall for either side of its link stays between the sticky
+  // topbar and the viewport bottom: the link sits mid-screen, where neither
+  // side fits 420px.
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const top = document.querySelector('a[data-anchor="Long"]').getBoundingClientRect().top;
+    window.scrollBy(0, top - innerHeight / 2);
+  });
+  await page.waitForTimeout(300);
+  await page.locator('a[data-anchor="Long"]').hover();
+  await card.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  const clear = await page.evaluate(() => {
+    const c = document.querySelector('.link-preview-card').getBoundingClientRect();
+    const body = document.querySelector('.link-preview-card .preview-section-body');
+    return { card: c.top, bottom: c.bottom, vh: innerHeight, scrolls: body.scrollHeight > body.clientHeight,
+      topbar: document.querySelector('.topbar').getBoundingClientRect().bottom };
+  });
+  check(clear.card >= clear.topbar && clear.bottom <= clear.vh - 8 && clear.scrolls,
+    'tall card fits between topbar and viewport bottom, scrolling inside ' + JSON.stringify(clear));
   await page.mouse.move(5, 5);
 
   // The preview script now lives in the layout: once per page, everywhere.

@@ -30,16 +30,25 @@
   // near the link — the card ended up floating disconnected from what you
   // were hovering. Stacking above/below always stays visually attached.
   function position(rect) {
+    popup.style.maxHeight = "";
     var pw = popup.offsetWidth;
     var ph = popup.offsetHeight;
 
     var left = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - pw - MARGIN));
 
+    // The sticky topbar covers the top of the viewport; a card above it hides.
+    var bar = document.querySelector(".topbar");
+    var minTop = Math.max(MARGIN, bar ? bar.getBoundingClientRect().bottom + 4 : 0);
     var below = window.innerHeight - MARGIN - (rect.bottom + 4);
-    var above = rect.top - 4 - MARGIN;
-    var top;
-    if (ph <= below || below >= above) top = rect.bottom + 4;
-    else top = Math.max(MARGIN, rect.top - ph - 4);
+    var above = rect.top - 4 - minTop;
+    var docksBelow = ph <= below || below >= above;
+    // Too tall for either side: shrink to the side it docks on.
+    var room = docksBelow ? below : above;
+    if (ph > room) {
+      ph = room;
+      popup.style.maxHeight = room + "px";
+    }
+    var top = docksBelow ? rect.bottom + 4 : rect.top - ph - 4;
 
     popup.style.left = left + "px";
     popup.style.top = top + "px";

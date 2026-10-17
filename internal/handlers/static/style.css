@@ -2120,7 +2120,8 @@ html[data-theme="dark"] .link-preview-card {
 .preview-section {
   display: flex;
   flex-direction: column;
-  max-height: min(420px, 70vh);
+  /* The card's cap, which linkpreview.js lowers when a side is short. */
+  max-height: inherit;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
